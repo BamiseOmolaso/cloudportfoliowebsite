@@ -22,8 +22,37 @@ if (typeof global.Response === 'undefined') {
     json() {
       return Promise.resolve(JSON.parse(this.body));
     }
+    static json(data, init) {
+      return new Response(JSON.stringify(data), {
+        ...init,
+        headers: {
+          'Content-Type': 'application/json',
+          ...init?.headers,
+        },
+      });
+    }
   };
 }
+
+// Mock NextResponse
+jest.mock('next/server', () => {
+  const actual = jest.requireActual('next/server');
+  return {
+    ...actual,
+    NextResponse: {
+      json: (data, init) => {
+        const response = new Response(JSON.stringify(data), {
+          ...init,
+          headers: {
+            'Content-Type': 'application/json',
+            ...init?.headers,
+          },
+        });
+        return response;
+      },
+    },
+  };
+});
 
 // Mock Next.js router
 jest.mock('next/navigation', () => ({
