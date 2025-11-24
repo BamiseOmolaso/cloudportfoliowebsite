@@ -7,12 +7,14 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { validateEnv } from '@/config/env';
 import CookieConsent from '@/components/CookieConsent';
 
+// Optimized font loading with fallbacks
 const inter = Inter({ 
   subsets: ['latin'],
-  display: 'swap',
-  fallback: ['system-ui', 'arial'],
+  display: 'swap', // Prevents invisible text during font load
+  fallback: ['system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Arial', 'sans-serif'],
   adjustFontFallback: true,
   preload: true,
+  variable: '--font-inter', // CSS variable for better performance
 });
 
 // Validate environment variables at startup
@@ -51,7 +53,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="manifest" href="/site.webmanifest" />
         <meta name="theme-color" content="#1F2937" />
       </head>
-      <body className={`${inter.className} bg-gray-950 text-white`}>
+      <body className={`${inter.variable} ${inter.className} bg-gray-950 text-white`}>
         <ErrorBoundary>
           <Navbar />
           <main className="min-h-screen pt-16">{children}</main>

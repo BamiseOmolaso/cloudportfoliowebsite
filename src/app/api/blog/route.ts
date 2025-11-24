@@ -43,7 +43,12 @@ export async function GET(request: Request) {
       status: post.status,
     }))
 
-    return NextResponse.json(transformedPosts)
+    const response = NextResponse.json(transformedPosts);
+    
+    // Add caching headers for better performance
+    response.headers.set('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300');
+    
+    return response;
   } catch (error) {
     console.error('Error fetching blog posts:', error)
     return NextResponse.json(

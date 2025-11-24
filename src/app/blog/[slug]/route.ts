@@ -52,7 +52,12 @@ export async function GET(
       status: post.status,
     }
 
-    return NextResponse.json(transformedPost)
+    const response = NextResponse.json(transformedPost);
+    
+    // Add caching headers for better performance
+    response.headers.set('Cache-Control', 'public, s-maxage=3600, stale-while-revalidate=86400');
+    
+    return response;
   } catch (error) {
     console.error('Error fetching blog post:', error)
     return NextResponse.json(
