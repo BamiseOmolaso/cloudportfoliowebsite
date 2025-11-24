@@ -62,9 +62,14 @@ export const POST = withRateLimit(contactFormLimiter, 'contact-form', async (req
 
     // Send email notification to admin
     try {
+      const contactEmail = process.env.CONTACT_EMAIL;
+      if (!contactEmail) {
+        throw new Error('CONTACT_EMAIL environment variable must be set');
+      }
+
       await resend.emails.send({
         from: `Bamise Omolaso <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
-        to: process.env.CONTACT_EMAIL || 'davidbams3@gmail.com',
+        to: contactEmail,
         subject: `New Contact Form Submission: ${sanitizedSubject || 'No Subject'}`,
         html: sanitizeHtmlServer(`
           <h2>New Contact Form Submission</h2>

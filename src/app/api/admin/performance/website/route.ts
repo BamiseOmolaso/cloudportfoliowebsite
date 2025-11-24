@@ -1,7 +1,10 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { secureAdminRoute, handleError } from '@/lib/api-security';
 
-export async function GET() {
+export const dynamic = 'force-dynamic';
+
+export const GET = secureAdminRoute(async (request: NextRequest) => {
   try {
     const metrics = await db.performanceMetric.findMany({
       orderBy: { timestamp: 'desc' },
@@ -23,10 +26,6 @@ export async function GET() {
 
     return NextResponse.json(transformed);
   } catch (error) {
-    console.error('Error fetching performance metrics:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch performance metrics' },
-      { status: 500 }
-    );
+    return handleError(error, 'Failed to fetch performance metrics');
   }
-}
+});

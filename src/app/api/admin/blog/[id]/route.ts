@@ -1,13 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { secureAdminRoute, handleError, mapPrismaError, sanitizeContent } from '@/lib/api-security';
+import { blogPostUpdateSchema, blogPostPatchSchema } from '@/lib/validation-schemas';
+import { z } from 'zod';
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export const dynamic = 'force-dynamic';
+
+async function getHandler(request: NextRequest, user: { id: string; email: string; role: string }, id: string) {
   try {
     const post = await db.blogPost.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!post) {
@@ -37,36 +39,32 @@ export async function GET(
 
     return NextResponse.json(transformed);
   } catch (error) {
-    console.error('Error fetching blog post:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch blog post' },
-      { status: 500 }
-    );
+    if (error && typeof error === 'object' && 'code' in error) {
+      const { message, status } = mapPrismaError(error);
+      return NextResponse.json({ error: message }, { status });
+    }
+    return handleError(error, 'Failed to fetch blog post');
   }
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  return secureAdminRoute((req, user) => getHandler(req, user, id))(request);
+}
+
+async function putHandler(request: NextRequest, user: { id: string; email: string; role: string }, id: string) {
   try {
     const body = await request.json();
-    const {
-      title,
-      slug,
-      content,
-      excerpt,
-      cover_image,
-      meta_title,
-      meta_description,
-      tags,
-      author,
-      status,
-    } = body;
+
+    // Validate input
+    const validated = blogPostUpdateSchema.parse(body);
 
     // Check if post exists
     const existing = await db.blogPost.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existing) {
@@ -77,43 +75,59 @@ export async function PUT(
     }
 
     // Check if slug is being changed and if new slug exists
-    if (slug && slug !== existing.slug) {
+    if (validated.slug && validated.slug !== existing.slug) {
       const slugExists = await db.blogPost.findUnique({
-        where: { slug },
+        where: { slug: validated.slug },
       });
 
       if (slugExists) {
         return NextResponse.json(
           { error: 'A post with this slug already exists' },
-          { status: 400 }
+          { status: 409 }
         );
       }
     }
 
+    // Prepare update data
     const updateData: any = {
-      title: title ?? existing.title,
-      slug: slug ?? existing.slug,
-      content: content ?? existing.content,
-      excerpt: excerpt !== undefined ? excerpt : existing.excerpt,
-      coverImage: cover_image !== undefined ? cover_image : existing.coverImage,
-      metaTitle: meta_title !== undefined ? meta_title : existing.metaTitle,
-      metaDescription: meta_description !== undefined ? meta_description : existing.metaDescription,
-      tags: tags ?? existing.tags,
-      author: author ?? existing.author,
-      status: status ?? existing.status,
       updatedAt: new Date(),
     };
 
-    // Update publishedAt if status changed to published
-    if (status === 'published' && existing.status !== 'published') {
-      updateData.publishedAt = new Date();
-    } else if (status !== 'published' && existing.status === 'published') {
-      updateData.publishedAt = null;
+    if (validated.title !== undefined) updateData.title = validated.title;
+    if (validated.slug !== undefined) updateData.slug = validated.slug;
+    if (validated.content !== undefined) updateData.content = sanitizeContent(validated.content);
+    if (validated.excerpt !== undefined) updateData.excerpt = validated.excerpt ? sanitizeContent(validated.excerpt) : null;
+    if (validated.cover_image !== undefined) updateData.coverImage = validated.cover_image || null;
+    if (validated.meta_title !== undefined) updateData.metaTitle = validated.meta_title || null;
+    if (validated.meta_description !== undefined) updateData.metaDescription = validated.meta_description || null;
+    if (validated.tags !== undefined) updateData.tags = validated.tags;
+    if (validated.author !== undefined) updateData.author = validated.author;
+    if (validated.status !== undefined) {
+      updateData.status = validated.status;
+      // Update publishedAt based on status
+      if (validated.status === 'published' && existing.status !== 'published') {
+        updateData.publishedAt = new Date();
+      } else if (validated.status !== 'published' && existing.status === 'published') {
+        updateData.publishedAt = null;
+      }
     }
 
     const post = await db.blogPost.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
+    });
+
+    // Log audit event
+    console.log('AUDIT:', {
+      userId: user.id,
+      userEmail: user.email,
+      action: 'blog_post_updated',
+      resourceType: 'BlogPost',
+      resourceId: post.id,
+      details: { title: post.title, slug: post.slug },
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+      userAgent: request.headers.get('user-agent') || null,
+      timestamp: new Date().toISOString(),
     });
 
     // Transform response
@@ -136,43 +150,87 @@ export async function PUT(
 
     return NextResponse.json(transformed);
   } catch (error) {
-    console.error('Error updating blog post:', error);
-    return NextResponse.json(
-      { error: 'Failed to update blog post' },
-      { status: 500 }
-    );
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.errors },
+        { status: 400 }
+      );
+    }
+    if (error && typeof error === 'object' && 'code' in error) {
+      const { message, status } = mapPrismaError(error);
+      return NextResponse.json({ error: message }, { status });
+    }
+    return handleError(error, 'Failed to update blog post');
   }
 }
 
-export async function DELETE(
-  request: Request,
-  { params }: { params: { id: string } }
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  return secureAdminRoute((req, user) => putHandler(req, user, id))(request);
+}
+
+async function deleteHandler(request: NextRequest, user: { id: string; email: string; role: string }, id: string) {
   try {
+    // Get post info before deletion for audit log
+    const post = await db.blogPost.findUnique({
+      where: { id },
+      select: { id: true, title: true, slug: true },
+    });
+
+    if (!post) {
+      return NextResponse.json(
+        { error: 'Post not found' },
+        { status: 404 }
+      );
+    }
+
     await db.blogPost.delete({
-      where: { id: params.id },
+      where: { id },
+    });
+
+    // Log audit event
+    console.log('AUDIT:', {
+      userId: user.id,
+      userEmail: user.email,
+      action: 'blog_post_deleted',
+      resourceType: 'BlogPost',
+      resourceId: post.id,
+      details: { title: post.title, slug: post.slug },
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+      userAgent: request.headers.get('user-agent') || null,
+      timestamp: new Date().toISOString(),
     });
 
     return NextResponse.json({ success: true });
   } catch (error) {
-    console.error('Error deleting blog post:', error);
-    return NextResponse.json(
-      { error: 'Failed to delete blog post' },
-      { status: 500 }
-    );
+    if (error && typeof error === 'object' && 'code' in error) {
+      const { message, status } = mapPrismaError(error);
+      return NextResponse.json({ error: message }, { status });
+    }
+    return handleError(error, 'Failed to delete blog post');
   }
 }
 
-export async function PATCH(
-  request: Request,
-  { params }: { params: { id: string } }
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  return secureAdminRoute((req, user) => deleteHandler(req, user, id))(request);
+}
+
+async function patchHandler(request: NextRequest, user: { id: string; email: string; role: string }, id: string) {
   try {
     const body = await request.json();
-    const { status, publishedAt } = body;
+
+    // Validate input
+    const validated = blogPostPatchSchema.parse(body);
 
     const existing = await db.blogPost.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existing) {
@@ -183,18 +241,34 @@ export async function PATCH(
     }
 
     const updateData: any = {};
-    if (status !== undefined) updateData.status = status;
-    if (publishedAt !== undefined) {
-      updateData.publishedAt = publishedAt ? new Date(publishedAt) : null;
-    } else if (status === 'published' && existing.status !== 'published') {
-      updateData.publishedAt = new Date();
-    } else if (status !== 'published' && existing.status === 'published') {
-      updateData.publishedAt = null;
+    if (validated.status !== undefined) {
+      updateData.status = validated.status;
+      if (validated.status === 'published' && existing.status !== 'published') {
+        updateData.publishedAt = new Date();
+      } else if (validated.status !== 'published' && existing.status === 'published') {
+        updateData.publishedAt = null;
+      }
+    }
+    if (validated.publishedAt !== undefined) {
+      updateData.publishedAt = validated.publishedAt ? new Date(validated.publishedAt) : null;
     }
 
     const post = await db.blogPost.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
+    });
+
+    // Log audit event
+    console.log('AUDIT:', {
+      userId: user.id,
+      userEmail: user.email,
+      action: 'blog_post_patched',
+      resourceType: 'BlogPost',
+      resourceId: post.id,
+      details: { status: post.status, publishedAt: post.publishedAt },
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+      userAgent: request.headers.get('user-agent') || null,
+      timestamp: new Date().toISOString(),
     });
 
     // Transform response
@@ -217,10 +291,24 @@ export async function PATCH(
 
     return NextResponse.json(transformed);
   } catch (error) {
-    console.error('Error updating blog post:', error);
-    return NextResponse.json(
-      { error: 'Failed to update blog post' },
-      { status: 500 }
-    );
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.errors },
+        { status: 400 }
+      );
+    }
+    if (error && typeof error === 'object' && 'code' in error) {
+      const { message, status } = mapPrismaError(error);
+      return NextResponse.json({ error: message }, { status });
+    }
+    return handleError(error, 'Failed to update blog post');
   }
+}
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  return secureAdminRoute((req, user) => patchHandler(req, user, id))(request);
 }

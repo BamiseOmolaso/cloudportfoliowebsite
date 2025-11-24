@@ -138,6 +138,12 @@ export const apiLimiter = new RateLimiter({
   prefix: 'api:',
 });
 
+export const adminLimiter = new RateLimiter({
+  maxRequests: 50,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  prefix: 'admin:',
+});
+
 export function withRateLimit(
   limiter: RateLimiter,
   identifier: string,

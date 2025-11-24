@@ -1,11 +1,23 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, NextRequest } from 'next/server';
 import { db } from '@/lib/db';
 import { cookies } from 'next/headers';
 import * as jwt from 'jsonwebtoken';
+import { withRateLimit, authLimiter } from '@/lib/rate-limit';
+import { addSecurityHeaders, handleError } from '@/lib/api-security';
 
-const JWT_SECRET = process.env.JWT_SECRET || process.env.AUTH_SECRET || 'your-secret-key-change-in-production';
+// Get JWT secret - must be set in environment variables
+function getJwtSecret(): string {
+  const secret = process.env.JWT_SECRET || process.env.AUTH_SECRET;
+  if (!secret || secret.length < 32) {
+    throw new Error(
+      'JWT_SECRET or AUTH_SECRET environment variable must be set and be at least 32 characters long. ' +
+      'This is required for secure authentication.'
+    );
+  }
+  return secret;
+}
 
-export async function POST(request: Request) {
+export const POST = withRateLimit(authLimiter, 'login', async (request: NextRequest) => {
   try {
     const body = await request.json();
     const { email, password } = body;
@@ -17,13 +29,13 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if admin credentials are in env (simple approach)
-    const adminEmail = process.env.ADMIN_EMAIL || 'admin@example.com';
+    // Admin credentials must be set in environment variables
+    const adminEmail = process.env.ADMIN_EMAIL;
     const adminPassword = process.env.ADMIN_PASSWORD;
 
-    if (!adminPassword) {
+    if (!adminEmail || !adminPassword) {
       return NextResponse.json(
-        { error: 'Admin authentication not configured' },
+        { error: 'Admin authentication not configured. ADMIN_EMAIL and ADMIN_PASSWORD must be set.' },
         { status: 500 }
       );
     }
@@ -59,7 +71,7 @@ export async function POST(request: Request) {
     // Create JWT token
     const token = jwt.sign(
       { email: profile.email, role: profile.role, id: profile.id },
-      JWT_SECRET,
+      getJwtSecret(),
       { expiresIn: '7d' }
     );
 
@@ -73,23 +85,20 @@ export async function POST(request: Request) {
       path: '/',
     });
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       success: true,
       user: {
         email: profile.email,
         role: profile.role,
       },
     });
+    return addSecurityHeaders(response);
   } catch (error) {
-    console.error('Error during login:', error);
-    return NextResponse.json(
-      { error: 'Failed to authenticate' },
-      { status: 500 }
-    );
+    return handleError(error, 'Failed to authenticate');
   }
-}
+});
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const cookieStore = await cookies();
     const token = cookieStore.get('auth-token')?.value;
@@ -100,7 +109,7 @@ export async function GET() {
 
     // Verify token
     try {
-      const decoded = jwt.verify(token, JWT_SECRET) as any;
+      const decoded = jwt.verify(token, getJwtSecret()) as any;
       
       const profile = await db.profile.findFirst({
         where: { email: decoded.email },
@@ -110,13 +119,14 @@ export async function GET() {
         return NextResponse.json({ authenticated: false }, { status: 401 });
       }
 
-      return NextResponse.json({
+      const response = NextResponse.json({
         authenticated: true,
         user: {
           email: profile.email,
           role: profile.role,
         },
       });
+      return addSecurityHeaders(response);
     } catch (jwtError) {
       return NextResponse.json({ authenticated: false }, { status: 401 });
     }

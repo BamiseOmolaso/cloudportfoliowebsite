@@ -1,14 +1,23 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { secureAdminRoute, handleError, mapPrismaError, sanitizeContent } from '@/lib/api-security';
+import { blogPostCreateSchema } from '@/lib/validation-schemas';
+import { z } from 'zod';
 
-export async function GET(request: Request) {
+export const dynamic = 'force-dynamic';
+
+export const GET = secureAdminRoute(async (request: NextRequest) => {
   try {
     const { searchParams } = new URL(request.url);
     const status = searchParams.get('status');
 
+    // Validate status parameter
+    const statusSchema = z.enum(['draft', 'published', 'scheduled', 'all']).optional();
+    const validatedStatus = statusSchema.parse(status || 'all');
+
     const where: any = {};
-    if (status && status !== 'all') {
-      where.status = status;
+    if (validatedStatus && validatedStatus !== 'all') {
+      where.status = validatedStatus;
     }
 
     const posts = await db.blogPost.findMany({
@@ -52,64 +61,66 @@ export async function GET(request: Request) {
 
     return NextResponse.json(transformed);
   } catch (error) {
-    console.error('Error fetching blog posts:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch blog posts' },
-      { status: 500 }
-    );
-  }
-}
-
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const {
-      title,
-      slug,
-      content,
-      excerpt,
-      cover_image,
-      meta_title,
-      meta_description,
-      tags,
-      author,
-      status,
-    } = body;
-
-    // Validate required fields
-    if (!title || !slug || !content) {
+    if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: 'Title, slug, and content are required' },
+        { error: 'Invalid status parameter', details: error.errors },
         { status: 400 }
       );
     }
+    return handleError(error, 'Failed to fetch blog posts');
+  }
+});
+
+export const POST = secureAdminRoute(async (request: NextRequest, user) => {
+  try {
+    const body = await request.json();
+
+    // Validate input with Zod
+    const validated = blogPostCreateSchema.parse(body);
 
     // Check if slug already exists
     const existing = await db.blogPost.findUnique({
-      where: { slug },
+      where: { slug: validated.slug },
     });
 
     if (existing) {
       return NextResponse.json(
         { error: 'A post with this slug already exists' },
-        { status: 400 }
+        { status: 409 }
       );
     }
 
+    // Sanitize HTML content
+    const sanitizedContent = sanitizeContent(validated.content);
+    const sanitizedExcerpt = validated.excerpt ? sanitizeContent(validated.excerpt) : null;
+
     const post = await db.blogPost.create({
       data: {
-        title,
-        slug,
-        content,
-        excerpt: excerpt || null,
-        coverImage: cover_image || null,
-        metaTitle: meta_title || null,
-        metaDescription: meta_description || null,
-        tags: tags || [],
-        author: author || 'Bamise',
-        status: status || 'draft',
-        publishedAt: status === 'published' ? new Date() : null,
+        title: validated.title,
+        slug: validated.slug,
+        content: sanitizedContent,
+        excerpt: sanitizedExcerpt,
+        coverImage: validated.cover_image || null,
+        metaTitle: validated.meta_title || null,
+        metaDescription: validated.meta_description || null,
+        tags: validated.tags,
+        author: validated.author,
+        status: validated.status,
+        publishedAt: validated.status === 'published' ? new Date() : null,
       },
+    });
+
+    // Log audit event (server-side logging for now)
+    console.log('AUDIT:', {
+      userId: user.id,
+      userEmail: user.email,
+      action: 'blog_post_created',
+      resourceType: 'BlogPost',
+      resourceId: post.id,
+      details: { title: post.title, slug: post.slug },
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+      userAgent: request.headers.get('user-agent') || null,
+      timestamp: new Date().toISOString(),
     });
 
     // Transform response
@@ -132,10 +143,19 @@ export async function POST(request: Request) {
 
     return NextResponse.json(transformed, { status: 201 });
   } catch (error) {
-    console.error('Error creating blog post:', error);
-    return NextResponse.json(
-      { error: 'Failed to create blog post' },
-      { status: 500 }
-    );
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.errors },
+        { status: 400 }
+      );
+    }
+
+    // Handle Prisma errors
+    if (error && typeof error === 'object' && 'code' in error) {
+      const { message, status } = mapPrismaError(error);
+      return NextResponse.json({ error: message }, { status });
+    }
+
+    return handleError(error, 'Failed to create blog post');
   }
-}
+});

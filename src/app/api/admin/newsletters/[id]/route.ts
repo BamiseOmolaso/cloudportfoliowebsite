@@ -1,13 +1,15 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { secureAdminRoute, handleError, mapPrismaError, sanitizeContent } from '@/lib/api-security';
+import { newsletterUpdateSchema } from '@/lib/validation-schemas';
+import { z } from 'zod';
 
-export async function GET(
-  request: Request,
-  { params }: { params: { id: string } }
-) {
+export const dynamic = 'force-dynamic';
+
+async function getHandler(request: NextRequest, user: { id: string; email: string; role: string }, id: string) {
   try {
     const newsletter = await db.newsletter.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         newsletterSends: {
           select: {
@@ -42,24 +44,31 @@ export async function GET(
 
     return NextResponse.json(transformed);
   } catch (error) {
-    console.error('Error fetching newsletter:', error);
-    return NextResponse.json(
-      { error: 'Failed to fetch newsletter' },
-      { status: 500 }
-    );
+    if (error && typeof error === 'object' && 'code' in error) {
+      const { message, status } = mapPrismaError(error);
+      return NextResponse.json({ error: message }, { status });
+    }
+    return handleError(error, 'Failed to fetch newsletter');
   }
 }
 
-export async function PUT(
-  request: Request,
-  { params }: { params: { id: string } }
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
 ) {
+  const { id } = await params;
+  return secureAdminRoute((req, user) => getHandler(req, user, id))(request);
+}
+
+async function putHandler(request: NextRequest, user: { id: string; email: string; role: string }, id: string) {
   try {
     const body = await request.json();
-    const { subject, content, status, scheduled_for } = body;
+
+    // Validate input
+    const validated = newsletterUpdateSchema.parse(body);
 
     const existing = await db.newsletter.findUnique({
-      where: { id: params.id },
+      where: { id },
     });
 
     if (!existing) {
@@ -70,19 +79,32 @@ export async function PUT(
     }
 
     const updateData: any = {
-      subject: subject ?? existing.subject,
-      content: content ?? existing.content,
-      status: status ?? existing.status,
       updatedAt: new Date(),
     };
 
-    if (scheduled_for !== undefined) {
-      updateData.scheduledFor = scheduled_for ? new Date(scheduled_for) : null;
+    if (validated.subject !== undefined) updateData.subject = validated.subject;
+    if (validated.content !== undefined) updateData.content = sanitizeContent(validated.content);
+    if (validated.status !== undefined) updateData.status = validated.status;
+    if (validated.scheduled_for !== undefined) {
+      updateData.scheduledFor = validated.scheduled_for ? new Date(validated.scheduled_for) : null;
     }
 
     const newsletter = await db.newsletter.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
+    });
+
+    // Log audit event
+    console.log('AUDIT:', {
+      userId: user.id,
+      userEmail: user.email,
+      action: 'newsletter_updated',
+      resourceType: 'Newsletter',
+      resourceId: newsletter.id,
+      details: { subject: newsletter.subject },
+      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+      userAgent: request.headers.get('user-agent') || null,
+      timestamp: new Date().toISOString(),
     });
 
     const transformed = {
@@ -97,10 +119,24 @@ export async function PUT(
 
     return NextResponse.json(transformed);
   } catch (error) {
-    console.error('Error updating newsletter:', error);
-    return NextResponse.json(
-      { error: 'Failed to update newsletter' },
-      { status: 500 }
-    );
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { error: 'Validation failed', details: error.errors },
+        { status: 400 }
+      );
+    }
+    if (error && typeof error === 'object' && 'code' in error) {
+      const { message, status } = mapPrismaError(error);
+      return NextResponse.json({ error: message }, { status });
+    }
+    return handleError(error, 'Failed to update newsletter');
   }
+}
+
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  return secureAdminRoute((req, user) => putHandler(req, user, id))(request);
 }

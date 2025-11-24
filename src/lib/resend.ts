@@ -3,7 +3,8 @@ import { db } from './db';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-const DOMAIN = 'oluwabamiseomolaso.com.ng';
+// Get domain from environment variable, fallback for backward compatibility
+const DOMAIN = process.env.RESEND_DOMAIN || 'oluwabamiseomolaso.com.ng';
 
 export async function sendWelcomeEmail(email: string, name: string, unsubscribeToken: string, preferencesToken: string) {
   try {
@@ -20,7 +21,10 @@ export async function sendWelcomeEmail(email: string, name: string, unsubscribeT
 
     const { data, error } = await resend.emails.send({
       from: `Bamise Omolaso <${process.env.RESEND_FROM_EMAIL}>`,
-      replyTo: "davidbams3@gmail.com",
+      replyTo: process.env.CONTACT_EMAIL || process.env.RESEND_FROM_EMAIL || (() => {
+        console.error('CONTACT_EMAIL or RESEND_FROM_EMAIL must be set');
+        return 'noreply@example.com'; // Fallback for development only
+      })(),
       to: email,
       subject: isResubscription ? `Welcome back, ${firstName}` : `Welcome, ${firstName}`,
       html: `
@@ -103,9 +107,14 @@ export async function sendAdminNotification(email: string, name?: string) {
       .map(([location, count]) => `${location}: ${count}`)
       .join('<br>');
 
+    const contactEmail = process.env.CONTACT_EMAIL;
+    if (!contactEmail) {
+      throw new Error('CONTACT_EMAIL environment variable must be set');
+    }
+
     const { data, error } = await resend.emails.send({
       from: `Bamise Omolaso <${process.env.RESEND_FROM_EMAIL}>`,
-      to: process.env.CONTACT_EMAIL || 'davidbams3@gmail.com',
+      to: contactEmail,
       subject: '🎉 New Newsletter Subscriber!',
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
