@@ -6,7 +6,10 @@ import { useEffect } from 'react';
 
 declare global {
   interface Window {
+    // Google Analytics gtag function signature
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     gtag: (...args: any[]) => void;
+    dataLayer?: unknown[];
   }
 }
 

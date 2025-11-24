@@ -23,6 +23,8 @@ export function truncateText(text: string, length: number): string {
   return text.slice(0, length) + '...';
 }
 
+// Generic debounce function - any is necessary for generic function type
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
   wait: number
