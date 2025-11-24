@@ -11,7 +11,9 @@
     "prepare": "husky install",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "type-check": "tsc --noEmit",
+    "predeploy": "bash scripts/predeploy.sh"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",

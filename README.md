@@ -1,5 +1,7 @@
 # Dr. Oluwabamise David Omolaso's Portfolio Website
 
+[![CI/CD Tests](https://github.com/BamiseOmolaso/cloudportfoliowebsite/actions/workflows/test.yml/badge.svg)](https://github.com/BamiseOmolaso/cloudportfoliowebsite/actions/workflows/test.yml)
+
 A modern, responsive portfolio website showcasing Dr. Oluwabamise David Omolaso's expertise in healthcare data science, AI applications, and cloud technologies.
 
 ## Features
@@ -35,6 +37,19 @@ A modern, responsive portfolio website showcasing Dr. Oluwabamise David Omolaso'
 - **Validation**: Zod
 - **Security**: Google reCAPTCHA, JWT
 - **Infrastructure**: AWS (RDS, ECS, ALB) with Terraform
+
+## CI/CD
+
+This project uses GitHub Actions for continuous integration and deployment:
+
+- **Automated Testing**: Runs on every push and pull request
+- **Multi-Node Testing**: Tests on Node.js 18.x and 20.x
+- **Code Quality**: ESLint and TypeScript type checking
+- **Security**: Automated security audits
+- **Build Verification**: Production build validation
+- **Coverage Reports**: Test coverage tracking
+
+See `.github/workflows/test.yml` for the complete CI/CD configuration.
 
 ## Getting Started
 
@@ -299,10 +314,18 @@ npm run dev          # Start development server
 # Production
 npm run build        # Build for production
 npm start            # Start production server
+npm run predeploy    # Run all pre-deployment checks
+npm run predeploy    # Run all pre-deployment checks
 
 # Code Quality
 npm run lint         # Run ESLint
 npm run format       # Format code with Prettier
+npm run type-check   # Run TypeScript type checking
+
+# Testing
+npm test             # Run tests
+npm run test:watch   # Run tests in watch mode
+npm run test:coverage # Run tests with coverage report
 
 # Database
 npx prisma generate  # Generate Prisma Client
@@ -312,11 +335,24 @@ npx prisma studio    # Open Prisma Studio
 
 ## Contributing
 
+We welcome contributions! Please see [CONTRIBUTING.md](./CONTRIBUTING.md) for guidelines.
+
+Quick start:
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+3. Make your changes and add tests
+4. Run `npm run predeploy` to ensure all checks pass
+5. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
+6. Push to the branch (`git push origin feature/AmazingFeature`)
+7. Open a Pull Request
+
+For detailed guidelines, testing requirements, and code style, see [CONTRIBUTING.md](./CONTRIBUTING.md).
+
+## Documentation
+
+- [Testing Guide](./TESTING.md) - How to write and run tests
+- [Contributing Guide](./CONTRIBUTING.md) - How to contribute to this project
+- [Security Policy](./SECURITY.md) - Security practices and vulnerability reporting
 
 ## License
 
