@@ -2,8 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import Editor from '../../../../components/Editor';
+import dynamic from 'next/dynamic';
 import { Calendar } from 'lucide-react';
+
+const Editor = dynamic(() => import('../../../../components/Editor'), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-gray-800 animate-pulse rounded-lg" />,
+});
 import { NewsletterFormData } from '@/types/newsletter';
 
 export default function NewsletterForm({ params }: { params: { action: string; id: string } }) {

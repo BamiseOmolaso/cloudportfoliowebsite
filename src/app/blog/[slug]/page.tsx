@@ -46,8 +46,30 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
       notFound();
     }
 
+    // Handle content - check if it's a JSON string or HTML
+    let content = data.content;
+    
+    // If content looks like a JSON object string, try to parse it
+    if (typeof content === 'string' && content.trim().startsWith('{')) {
+      try {
+        const parsed = JSON.parse(content);
+        // If it's the entire post object, extract the content field
+        if (parsed.content) {
+          content = parsed.content;
+        } else if (parsed.html) {
+          content = parsed.html;
+        } else {
+          // If it's not a post object, use the original content
+          content = data.content;
+        }
+      } catch (e) {
+        // Not valid JSON, use as-is
+        content = data.content;
+      }
+    }
+
     // Sanitize content
-    const sanitizedContent = DOMPurify.sanitize(data.content);
+    const sanitizedContent = DOMPurify.sanitize(content);
     setPost({ ...data, content: sanitizedContent });
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Failed to fetch post';

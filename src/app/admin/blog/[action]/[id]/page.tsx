@@ -3,8 +3,13 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import Editor from '../../../../components/Editor';
+import dynamic from 'next/dynamic';
 import { slugify } from '@/lib/utils';
+
+const Editor = dynamic(() => import('../../../../components/Editor'), {
+  ssr: false,
+  loading: () => <div className="h-64 bg-gray-800 animate-pulse rounded-lg" />,
+});
 
 interface BlogPost {
   id: string;

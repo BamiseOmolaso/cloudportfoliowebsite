@@ -7,7 +7,13 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { validateEnv } from '@/config/env';
 import CookieConsent from '@/components/CookieConsent';
 
-const inter = Inter({ subsets: ['latin'] });
+const inter = Inter({ 
+  subsets: ['latin'],
+  display: 'swap',
+  fallback: ['system-ui', 'arial'],
+  adjustFontFallback: true,
+  preload: true,
+});
 
 // Validate environment variables at startup
 validateEnv();

@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { AnimatedCard } from '@/components/admin/AnimatedCard';
 
 async function getStats() {
   const [
@@ -50,11 +50,7 @@ export default async function AdminDashboard() {
 
       {/* Stats Cards - Better spacing, consistent heights */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-gray-900 rounded-lg border border-gray-800 p-5 h-full shadow-lg hover:shadow-xl transition-all hover:border-gray-700"
-        >
+        <AnimatedCard className="bg-gray-900 rounded-lg border border-gray-800 p-5 h-full shadow-lg hover:shadow-xl transition-all hover:border-gray-700">
           <h2 className="text-lg font-medium text-gray-300 mb-2">Subscribers</h2>
           <p className="text-3xl font-bold text-white">{stats?.totalSubscribers}</p>
           <p className="text-sm text-gray-400 mt-2">
@@ -68,14 +64,9 @@ export default async function AdminDashboard() {
               View all →
             </Link>
           </div>
-        </motion.div>
+        </AnimatedCard>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="bg-gray-900 rounded-lg border border-gray-800 p-5 h-full shadow-lg hover:shadow-xl transition-all hover:border-gray-700"
-        >
+        <AnimatedCard delay={0.1} className="bg-gray-900 rounded-lg border border-gray-800 p-5 h-full shadow-lg hover:shadow-xl transition-all hover:border-gray-700">
           <h2 className="text-lg font-medium text-gray-300 mb-2">Newsletters</h2>
           <p className="text-3xl font-bold text-white">{stats?.totalNewsletters}</p>
           <p className="text-sm text-gray-400 mt-2">
@@ -89,14 +80,9 @@ export default async function AdminDashboard() {
               View all →
             </Link>
           </div>
-        </motion.div>
+        </AnimatedCard>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="bg-gray-900 rounded-lg border border-gray-800 p-5 h-full shadow-lg hover:shadow-xl transition-all hover:border-gray-700"
-        >
+        <AnimatedCard delay={0.2} className="bg-gray-900 rounded-lg border border-gray-800 p-5 h-full shadow-lg hover:shadow-xl transition-all hover:border-gray-700">
           <h2 className="text-lg font-medium text-gray-300 mb-2">Projects</h2>
           <p className="text-3xl font-bold text-white">{stats?.totalProjects}</p>
           <p className="text-sm text-gray-400 mt-2">
@@ -110,14 +96,9 @@ export default async function AdminDashboard() {
               View all →
             </Link>
           </div>
-        </motion.div>
+        </AnimatedCard>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
-          className="bg-gray-900 rounded-lg border border-gray-800 p-5 h-full shadow-lg hover:shadow-xl transition-all hover:border-gray-700"
-        >
+        <AnimatedCard delay={0.3} className="bg-gray-900 rounded-lg border border-gray-800 p-5 h-full shadow-lg hover:shadow-xl transition-all hover:border-gray-700">
           <h2 className="text-lg font-medium text-gray-300 mb-2">Newsletter Performance</h2>
           <p className="text-3xl font-bold text-white">
             {stats?.averageOpenRate?.toFixed(1) || "0"}%
@@ -133,17 +114,12 @@ export default async function AdminDashboard() {
               View metrics →
             </Link>
           </div>
-        </motion.div>
+        </AnimatedCard>
       </div>
 
       {/* Action Cards - Better spacing */}
       <div className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
-          className="bg-gray-900 rounded-lg border border-gray-800 p-6 shadow-lg hover:shadow-xl transition-all"
-        >
+        <AnimatedCard delay={0.4} className="bg-gray-900 rounded-lg border border-gray-800 p-6 shadow-lg hover:shadow-xl transition-all">
           <h2 className="text-xl font-semibold text-white mb-5">Quick Actions</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Link
@@ -171,14 +147,9 @@ export default async function AdminDashboard() {
               Import Subscribers
             </Link>
           </div>
-        </motion.div>
+        </AnimatedCard>
 
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.5 }}
-          className="bg-gray-900 rounded-lg border border-gray-800 p-6 shadow-lg hover:shadow-xl transition-all"
-        >
+        <AnimatedCard delay={0.5} className="bg-gray-900 rounded-lg border border-gray-800 p-6 shadow-lg hover:shadow-xl transition-all">
           <h2 className="text-xl font-semibold text-white mb-5">Recent Activity</h2>
           <div className="space-y-4">
             {/* Add recent activity items here */}
@@ -193,7 +164,7 @@ export default async function AdminDashboard() {
               View all activity →
             </Link>
           </div>
-        </motion.div>
+        </AnimatedCard>
       </div>
     </div>
   );
