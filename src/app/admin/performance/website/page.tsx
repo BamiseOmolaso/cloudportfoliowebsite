@@ -7,7 +7,13 @@ import Link from 'next/link';
 interface PerformanceMetric {
   id: string;
   url: string;
-  metrics: any;
+  metrics: {
+    load?: number;
+    domContentLoaded?: number;
+    firstContentfulPaint?: number;
+    timeToInteractive?: number;
+    [key: string]: unknown;
+  };
   timestamp: string;
 }
 

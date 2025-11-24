@@ -1,4 +1,5 @@
 import { db } from './db';
+import type { FailedAttemptWhere } from '@/types/database';
 
 // Check if IP is blacklisted
 export async function isIPBlacklisted(ip: string): Promise<boolean> {
@@ -64,7 +65,7 @@ export async function isCaptchaRequired(ip: string, email?: string): Promise<boo
   const oneHourAgo = new Date();
   oneHourAgo.setHours(oneHourAgo.getHours() - 1);
 
-  const whereClause: any = {
+  const whereClause: FailedAttemptWhere = {
     timestamp: { gte: oneHourAgo },
     OR: [{ ipAddress: ip }],
   };

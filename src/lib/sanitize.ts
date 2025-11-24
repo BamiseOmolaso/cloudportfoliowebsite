@@ -1,4 +1,8 @@
 // src/lib/sanitize.ts
+// Client-side HTML sanitization using DOMPurify
+// For server-side sanitization, use sanitize-server.ts
+// For text-only sanitization, use sanitize-text.ts
+
 import DOMPurify from 'isomorphic-dompurify';
 
 export function sanitizeHtml(html: string): string {
@@ -18,16 +22,4 @@ export function sanitizeHtml(html: string): string {
     ],
     ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|data):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
   });
-}
-
-export function sanitizeEmail(email: string): string {
-  return email.trim().toLowerCase();
-}
-
-export function sanitizeSubject(subject: string): string {
-  return subject.trim().replace(/[<>]/g, '');
-}
-
-export function sanitizeText(text: string): string {
-  return text.trim().replace(/[<>]/g, '');
 }

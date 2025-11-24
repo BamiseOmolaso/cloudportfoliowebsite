@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { secureAdminRoute, handleError, mapPrismaError, sanitizeContent } from '@/lib/api-security';
 import { newsletterUpdateSchema } from '@/lib/validation-schemas';
 import { z } from 'zod';
+import type { NewsletterUpdateData } from '@/types/database';
 
 export const dynamic = 'force-dynamic';
 
@@ -78,7 +79,7 @@ async function putHandler(request: NextRequest, user: { id: string; email: strin
       );
     }
 
-    const updateData: any = {
+    const updateData: NewsletterUpdateData = {
       updatedAt: new Date(),
     };
 

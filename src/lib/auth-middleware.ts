@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import * as jwt from 'jsonwebtoken';
 import { db } from './db';
+import type { JwtPayload } from '@/types/prisma';
 
 function getJwtSecret(): string {
   const secret = process.env.JWT_SECRET || process.env.AUTH_SECRET;
@@ -36,9 +37,9 @@ export async function requireAuth(request: NextRequest): Promise<AuthResult> {
     }
 
     // Verify JWT token
-    let decoded: any;
+    let decoded: JwtPayload;
     try {
-      decoded = jwt.verify(token, getJwtSecret());
+      decoded = jwt.verify(token, getJwtSecret()) as JwtPayload;
     } catch (jwtError) {
       return { authenticated: false, error: 'Invalid or expired token' };
     }

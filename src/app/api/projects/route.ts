@@ -120,17 +120,17 @@ export async function POST(request: Request) {
       created_at: project.createdAt.toISOString(),
       updated_at: project.updatedAt.toISOString(),
     })
-  } catch (error: any) {
-    console.error('Error creating project:', error)
-    if (error.code === 'P2002') {
+  } catch (error: unknown) {
+    console.error('Error creating project:', error);
+    if (error && typeof error === 'object' && 'code' in error && error.code === 'P2002') {
       return NextResponse.json(
         { error: 'A project with this slug already exists' },
         { status: 409 }
-      )
+      );
     }
     return NextResponse.json(
       { error: 'Failed to create project' },
       { status: 500 }
-    )
+    );
   }
 }

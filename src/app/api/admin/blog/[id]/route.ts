@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { secureAdminRoute, handleError, mapPrismaError, sanitizeContent } from '@/lib/api-security';
 import { blogPostUpdateSchema, blogPostPatchSchema } from '@/lib/validation-schemas';
 import { z } from 'zod';
+import type { BlogPostUpdateData } from '@/types/database';
 
 export const dynamic = 'force-dynamic';
 
@@ -89,7 +90,7 @@ async function putHandler(request: NextRequest, user: { id: string; email: strin
     }
 
     // Prepare update data
-    const updateData: any = {
+    const updateData: BlogPostUpdateData = {
       updatedAt: new Date(),
     };
 
@@ -240,7 +241,7 @@ async function patchHandler(request: NextRequest, user: { id: string; email: str
       );
     }
 
-    const updateData: any = {};
+    const updateData: Partial<{ status: 'draft' | 'published' | 'scheduled'; publishedAt: Date | null }> = {};
     if (validated.status !== undefined) {
       updateData.status = validated.status;
       if (validated.status === 'published' && existing.status !== 'published') {

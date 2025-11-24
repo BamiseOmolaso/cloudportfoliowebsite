@@ -15,7 +15,7 @@ export const GET = secureAdminRoute(async (request: NextRequest) => {
     const statusSchema = z.enum(['draft', 'published', 'scheduled', 'all']).optional();
     const validatedStatus = statusSchema.parse(status || 'all');
 
-    const where: any = {};
+    const where: { status?: string } = {};
     if (validatedStatus && validatedStatus !== 'all') {
       where.status = validatedStatus;
     }

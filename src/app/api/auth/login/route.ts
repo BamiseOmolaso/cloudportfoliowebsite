@@ -109,7 +109,7 @@ export async function GET(request: NextRequest) {
 
     // Verify token
     try {
-      const decoded = jwt.verify(token, getJwtSecret()) as any;
+      const decoded = jwt.verify(token, getJwtSecret()) as { email: string; role: string; id: string };
       
       const profile = await db.profile.findFirst({
         where: { email: decoded.email },

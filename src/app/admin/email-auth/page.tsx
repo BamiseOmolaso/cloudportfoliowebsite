@@ -2,8 +2,20 @@
 
 import { useState, useEffect } from 'react';
 
+interface EmailAuthStatus {
+  dkim?: boolean;
+  spf?: boolean;
+  dmarc?: boolean;
+  dnsRecords?: {
+    spf?: string;
+    dkim?: string[];
+    dmarc?: string;
+  };
+  [key: string]: unknown;
+}
+
 export default function EmailAuthPage() {
-  const [status, setStatus] = useState<any>(null);
+  const [status, setStatus] = useState<EmailAuthStatus | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [showDnsRecords, setShowDnsRecords] = useState(false);
@@ -151,7 +163,7 @@ export default function EmailAuthPage() {
                           <div className="bg-gray-50 p-4 rounded-lg">
                             <h5 className="text-sm font-medium text-gray-700">DKIM Records</h5>
                             <div className="mt-2 space-y-2">
-                              {status.dnsRecords.dkim.map((record: any, index: number) => (
+                              {status.dnsRecords.dkim?.map((record: string, index: number) => (
                                 <div key={index} className="bg-white p-3 rounded border border-gray-200">
                                   <code className="text-sm">{record}</code>
                                 </div>

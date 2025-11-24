@@ -38,7 +38,8 @@ class RateLimiter {
     } catch (error) {
       console.error('Failed to initialize Redis client:', error);
       // Initialize with default config but mark as non-functional
-      this.redis = null as any;
+      // This is a workaround for the Redis type - in practice, check() handles null
+      this.redis = null as unknown as Redis;
     }
     this.config = {
       prefix: 'rate-limit:',

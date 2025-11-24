@@ -83,12 +83,15 @@ export function handleError(error: unknown, defaultMessage: string = 'An error o
 /**
  * Map Prisma errors to user-friendly messages
  */
-export function mapPrismaError(error: any): { message: string; status: number } {
+export function mapPrismaError(error: unknown): { message: string; status: number } {
   // Log the actual error server-side
   console.error('Prisma Error:', error);
 
+  // Type guard for Prisma error
+  const prismaError = error as { code?: string; meta?: { target?: string[]; cause?: string } };
+  
   // Return user-friendly messages
-  switch (error?.code) {
+  switch (prismaError?.code) {
     case 'P2002':
       return { message: 'A record with this value already exists', status: 409 };
     case 'P2025':
@@ -106,12 +109,12 @@ export function mapPrismaError(error: any): { message: string; status: number } 
  * Wrapper for admin routes with auth, rate limiting, and security headers
  */
 export function secureAdminRoute(
-  handler: (request: NextRequest, user: { id: string; email: string; role: string }, context?: any) => Promise<NextResponse>
+  handler: (request: NextRequest, user: { id: string; email: string; role: string }, context?: unknown) => Promise<NextResponse>
 ) {
   return withRateLimit(
     adminLimiter,
     'admin-route',
-    withAuth(async (request: NextRequest, user: { id: string; email: string; role: string }, context?: any) => {
+    withAuth(async (request: NextRequest, user: { id: string; email: string; role: string }, context?: unknown) => {
       // Check CSRF for mutation methods
       if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(request.method)) {
         if (!verifyCSRF(request)) {
