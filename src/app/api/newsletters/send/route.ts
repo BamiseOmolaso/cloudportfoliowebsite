@@ -2,8 +2,7 @@ import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { Resend } from 'resend';
 import { convert } from 'html-to-text';
-import DOMPurify from 'dompurify';
-import { JSDOM } from 'jsdom';
+import { sanitizeHtmlServer } from '@/lib/sanitize-server';
 import { withRateLimit, apiLimiter } from '@/lib/rate-limit';
 import { randomBytes } from 'crypto';
 
@@ -12,13 +11,8 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 
 // Secure HTML sanitization and text conversion utility
 const sanitizeAndConvertToText = (dirtyHtml: string): string => {
-  // Step 1: Sanitize HTML
-  const { window } = new JSDOM('');
-  const cleanHtml = DOMPurify(window).sanitize(dirtyHtml, {
-    USE_PROFILES: { html: true },
-    FORBID_TAGS: ['script', 'style', 'iframe'],
-    FORBID_ATTR: ['on*'], // Block all event handlers
-  });
+  // Step 1: Sanitize HTML (server-safe)
+  const cleanHtml = sanitizeHtmlServer(dirtyHtml);
 
   // Step 2: Convert to plain text
   const plainText = convert(cleanHtml, {
@@ -75,13 +69,8 @@ export const POST = withRateLimit(apiLimiter, 'newsletter-send', async (request:
       },
     });
 
-    // Sanitize HTML content
-    const { window } = new JSDOM('');
-    const sanitizedHtml = DOMPurify(window).sanitize(newsletter.content, {
-      USE_PROFILES: { html: true },
-      FORBID_TAGS: ['script', 'style', 'iframe'],
-      FORBID_ATTR: ['on*'],
-    });
+    // Sanitize HTML content (server-safe)
+    const sanitizedHtml = sanitizeHtmlServer(newsletter.content);
 
     // Create plain text version using the secure utility
     const plainText = sanitizeAndConvertToText(sanitizedHtml);

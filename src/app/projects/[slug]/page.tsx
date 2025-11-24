@@ -72,7 +72,7 @@ async function getProject(slug: string): Promise<Project | null> {
       author: project.author,
       created_at: project.createdAt.toISOString(),
       updated_at: project.updatedAt.toISOString(),
-      status: project.status,
+      status: project.status as 'draft' | 'published' | 'scheduled',
       published_at: project.publishedAt?.toISOString() || null,
     };
   } catch (error) {

@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { withRateLimit, contactFormLimiter } from '@/lib/rate-limit';
-import { sanitizeHtml, sanitizeEmail, sanitizeSubject, sanitizeText } from '@/lib/sanitize';
+import { sanitizeEmail, sanitizeSubject, sanitizeText } from '@/lib/sanitize-text';
+import { sanitizeHtmlServer } from '@/lib/sanitize-server';
 import { db } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
@@ -65,7 +66,7 @@ export const POST = withRateLimit(contactFormLimiter, 'contact-form', async (req
         from: `Bamise Omolaso <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
         to: process.env.CONTACT_EMAIL || 'davidbams3@gmail.com',
         subject: `New Contact Form Submission: ${sanitizedSubject || 'No Subject'}`,
-        html: sanitizeHtml(`
+        html: sanitizeHtmlServer(`
           <h2>New Contact Form Submission</h2>
           <p><strong>From:</strong> ${sanitizedName} (${sanitizedEmail})</p>
           <p><strong>Subject:</strong> ${sanitizedSubject || 'No Subject'}</p>
@@ -83,7 +84,7 @@ export const POST = withRateLimit(contactFormLimiter, 'contact-form', async (req
         from: `Bamise Omolaso <${process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev'}>`,
         to: sanitizedEmail,
         subject: `Re: ${sanitizedSubject || 'Your Message'}`,
-        html: sanitizeHtml(responseMessage)
+        html: sanitizeHtmlServer(responseMessage)
       });
     } catch (err: unknown) {
       console.error('Response email error:', err instanceof Error ? err.message : err);

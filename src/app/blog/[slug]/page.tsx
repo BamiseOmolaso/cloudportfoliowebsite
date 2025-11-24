@@ -64,7 +64,7 @@ async function getBlogPost(slug: string): Promise<BlogPost | null> {
       author: post.author,
       created_at: post.createdAt.toISOString(),
       updated_at: post.updatedAt.toISOString(),
-      status: post.status,
+      status: post.status as 'draft' | 'published' | 'scheduled',
     };
   } catch (error) {
     console.error('Error fetching blog post:', error);
