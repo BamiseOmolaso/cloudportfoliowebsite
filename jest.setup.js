@@ -1,6 +1,30 @@
 // Learn more: https://github.com/testing-library/jest-dom
 import '@testing-library/jest-dom'
 
+// Mock Next.js Request/Response for server-side tests
+if (typeof global.Request === 'undefined') {
+  global.Request = class Request {
+    constructor(url, init) {
+      this.url = url;
+      this.method = init?.method || 'GET';
+      this.headers = new Headers(init?.headers);
+    }
+  };
+}
+
+if (typeof global.Response === 'undefined') {
+  global.Response = class Response {
+    constructor(body, init) {
+      this.body = body;
+      this.status = init?.status || 200;
+      this.headers = new Headers(init?.headers);
+    }
+    json() {
+      return Promise.resolve(JSON.parse(this.body));
+    }
+  };
+}
+
 // Mock Next.js router
 jest.mock('next/navigation', () => ({
   useRouter() {
@@ -27,6 +51,9 @@ process.env.NEXT_PUBLIC_SITE_URL = 'http://localhost:3000'
 process.env.NEXT_PUBLIC_BASE_URL = 'http://localhost:3000'
 process.env.NEXT_PUBLIC_GA_ID = 'G-TEST123'
 process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY = 'test-site-key'
+process.env.UPSTASH_REDIS_REST_URL = 'https://test-redis.upstash.io'
+process.env.UPSTASH_REDIS_REST_TOKEN = 'test-token'
+process.env.RECAPTCHA_SECRET_KEY = 'test-secret-key'
 
 // Suppress console errors in tests (optional - remove if you want to see all errors)
 const originalError = console.error
