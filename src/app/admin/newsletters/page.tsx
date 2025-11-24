@@ -3,14 +3,15 @@
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { supabase } from '@/lib/supabase';
 
 interface Newsletter {
   id: string;
   subject: string;
   status: 'draft' | 'sent' | 'scheduled';
   recipients_count: number;
+  sent_count?: number;
   created_at: string;
+  sent_at?: string | null;
 }
 
 export default function NewslettersPage() {
@@ -24,12 +25,9 @@ export default function NewslettersPage() {
 
   const fetchNewsletters = async () => {
     try {
-      const { data, error } = await supabase
-        .from('newsletters')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const response = await fetch('/api/admin/newsletters');
+      if (!response.ok) throw new Error('Failed to fetch newsletters');
+      const data = await response.json();
       setNewsletters(data || []);
     } catch (error) {
       console.error('Error fetching newsletters:', error);

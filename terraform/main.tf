@@ -156,7 +156,7 @@ resource "aws_secretsmanager_secret" "app_secrets" {
 }
 
 # You'll need to manually add the secret values after creation:
-# aws secretsmanager put-secret-value --secret-id omolaso-portfolio/env/production --secret-string '{"SUPABASE_SERVICE_ROLE_KEY":"xxx","RESEND_API_KEY":"xxx","RECAPTCHA_SECRET_KEY":"xxx"}'
+# aws secretsmanager put-secret-value --secret-id omolaso-portfolio/env/production --secret-string '{"RESEND_API_KEY":"xxx","RECAPTCHA_SECRET_KEY":"xxx"}'
 
 # ECS Cluster and Service
 module "ecs" {

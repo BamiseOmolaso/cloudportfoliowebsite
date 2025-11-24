@@ -1,17 +1,11 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
+import { db } from '@/lib/db';
 import { Resend } from 'resend';
 import { convert } from 'html-to-text';
 import DOMPurify from 'dompurify';
 import { JSDOM } from 'jsdom';
 import { withRateLimit, apiLimiter } from '@/lib/rate-limit';
 import { randomBytes } from 'crypto';
-
-// Initialize Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 // Initialize Resend client
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -55,13 +49,11 @@ export const POST = withRateLimit(apiLimiter, 'newsletter-send', async (request:
     }
 
     // Get newsletter content
-    const { data: newsletter, error: newsletterError } = await supabase
-      .from('newsletters')
-      .select('*')
-      .eq('id', newsletterId)
-      .single();
+    const newsletter = await db.newsletter.findUnique({
+      where: { id: newsletterId },
+    });
 
-    if (newsletterError || !newsletter) {
+    if (!newsletter) {
       return NextResponse.json(
         { error: 'Newsletter not found' },
         { status: 404 }
@@ -69,17 +61,19 @@ export const POST = withRateLimit(apiLimiter, 'newsletter-send', async (request:
     }
 
     // Get subscribers
-    const { data: subscribers, error: subscribersError } = await supabase
-      .from('newsletter_subscribers')
-      .select('id, email, name, unsubscribe_token')
-      .eq('is_subscribed', true);
-
-    if (subscribersError || !subscribers) {
-      return NextResponse.json(
-        { error: 'Failed to fetch subscribers' },
-        { status: 500 }
-      );
-    }
+    const subscribers = await db.newsletterSubscriber.findMany({
+      where: { 
+        isSubscribed: true,
+        isDeleted: false,
+      },
+      select: { 
+        id: true, 
+        email: true, 
+        name: true, 
+        unsubscribeToken: true,
+        unsubscribeTokenExpiresAt: true,
+      },
+    });
 
     // Sanitize HTML content
     const { window } = new JSDOM('');
@@ -94,22 +88,25 @@ export const POST = withRateLimit(apiLimiter, 'newsletter-send', async (request:
 
     // Send emails to subscribers
     const emailPromises = subscribers.map(async subscriber => {
-      // Generate unsubscribe token if not exists
-      if (!subscriber.unsubscribe_token) {
-        const unsubscribeToken = randomBytes(32).toString('hex');
+      let unsubscribeToken = subscriber.unsubscribeToken;
+      
+      // Generate unsubscribe token if not exists or expired
+      if (!unsubscribeToken || (subscriber.unsubscribeTokenExpiresAt && subscriber.unsubscribeTokenExpiresAt < new Date())) {
+        unsubscribeToken = randomBytes(32).toString('hex');
         const tokenExpiresAt = new Date();
         tokenExpiresAt.setDate(tokenExpiresAt.getDate() + 30); // Token expires in 30 days
 
-        await supabase
-          .from('newsletter_subscribers')
-          .update({ 
-            unsubscribe_token: unsubscribeToken,
-            unsubscribe_token_expires_at: tokenExpiresAt.toISOString()
-          })
-          .eq('id', subscriber.id);
+        await db.newsletterSubscriber.update({
+          where: { id: subscriber.id },
+          data: { 
+            unsubscribeToken,
+            unsubscribeTokenExpiresAt: tokenExpiresAt,
+          },
+        });
       }
 
-      const unsubscribeLink = `${process.env.NEXT_PUBLIC_BASE_URL}/unsubscribe?token=${subscriber.unsubscribe_token}`;
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+      const unsubscribeLink = `${baseUrl}/unsubscribe?token=${unsubscribeToken}`;
       const personalizedContent = sanitizedHtml.replace(
         /{name}/g,
         subscriber.name || 'there'
@@ -125,33 +122,58 @@ export const POST = withRateLimit(apiLimiter, 'newsletter-send', async (request:
         </div>
       `;
 
-      return resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
-        to: subscriber.email,
-        subject: newsletter.subject,
-        html: emailContent,
-        text: plainText + `\n\nTo unsubscribe, visit: ${unsubscribeLink}\n\nNote: This link will expire in 30 days.`,
-        headers: {
-          'List-Unsubscribe': `<${unsubscribeLink}>`,
-          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
-        },
-      });
+      try {
+        const emailResult = await resend.emails.send({
+          from: process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev',
+          to: subscriber.email,
+          subject: newsletter.subject,
+          html: emailContent,
+          text: plainText + `\n\nTo unsubscribe, visit: ${unsubscribeLink}\n\nNote: This link will expire in 30 days.`,
+          headers: {
+            'List-Unsubscribe': `<${unsubscribeLink}>`,
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          },
+        });
+
+        // Create send record
+        await db.newsletterSend.create({
+          data: {
+            newsletterId: newsletter.id,
+            subscriberId: subscriber.id,
+            status: 'sent',
+            sentAt: new Date(),
+          },
+        });
+
+        return emailResult;
+      } catch (error) {
+        console.error(`Error sending email to ${subscriber.email}:`, error);
+        
+        // Create failed send record
+        await db.newsletterSend.create({
+          data: {
+            newsletterId: newsletter.id,
+            subscriberId: subscriber.id,
+            status: 'failed',
+            errorMessage: error instanceof Error ? error.message : 'Unknown error',
+            sentAt: new Date(),
+          },
+        });
+
+        throw error;
+      }
     });
 
-    await Promise.all(emailPromises);
+    await Promise.allSettled(emailPromises);
 
     // Update newsletter status
-    const { error: updateError } = await supabase
-      .from('newsletters')
-      .update({
+    await db.newsletter.update({
+      where: { id: newsletterId },
+      data: {
         status: 'sent',
-        sent_at: new Date().toISOString(),
-      })
-      .eq('id', newsletterId);
-
-    if (updateError) {
-      console.error('Error updating newsletter status:', updateError);
-    }
+        sentAt: new Date(),
+      },
+    });
 
     return NextResponse.json({ message: 'Newsletter sent successfully' });
   } catch (error) {

@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { createBrowserClient } from '@/lib/client-auth';
 import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
@@ -13,44 +12,24 @@ export default function LoginPage() {
   const [isLocked, setIsLocked] = useState(false);
   const [lockoutTime, setLockoutTime] = useState<Date | null>(null);
   const router = useRouter();
-  const supabase = createBrowserClient();
 
   useEffect(() => {
     // Check if user is already logged in
     const checkSession = async () => {
       try {
-        const { data: { session }, error } = await supabase.auth.getSession();
-        
-        if (error) {
-          setError('Failed to check session: ' + error.message);
-          return;
-        }
-
-        if (session) {
-          // Check if user is an admin
-          const { data: profile, error: profileError } = await supabase
-            .from('profiles')
-            .select('role')
-            .eq('id', session.user.id)
-            .single();
-
-          if (profileError) {
-            setError('Failed to check user role');
-            return;
-          }
-
-          if (profile && profile.role === 'admin') {
+        const response = await fetch('/api/auth/login');
+        if (response.ok) {
+          const data = await response.json();
+          if (data.authenticated && data.user?.role === 'admin') {
             router.replace('/admin');
-          } else {
-            router.replace('/');
           }
         }
       } catch (err) {
-        setError('Failed to check session');
+        // Not logged in, continue to login form
       }
     };
     checkSession();
-  }, [router, supabase.auth]);
+  }, [router]);
 
   useEffect(() => {
     // Reset failed attempts after 15 minutes
@@ -91,47 +70,24 @@ export default function LoginPage() {
     }
 
     try {
-      // Test database connection first
-      try {
-        const { error: testError } = await supabase
-          .from('blog_posts')
-          .select('count')
-          .limit(1);
-
-        if (testError) {
-          throw new Error('Database connection failed: ' + testError.message);
-        }
-      } catch (testErr) {
-        throw new Error('Failed to connect to the database');
-      }
-
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       });
 
-      if (error) {
+      const data = await response.json();
+
+      if (!response.ok) {
         setFailedAttempts(prev => prev + 1);
-        throw error;
+        throw new Error(data.error || 'Failed to login');
       }
 
-      // Check if user is an admin
-      const { data: profile, error: profileError } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', data.user.id)
-        .single();
-
-      if (profileError) {
-        throw new Error('Failed to check user role');
-      }
-
-      if (!profile || profile.role !== 'admin') {
+      if (data.success && data.user?.role === 'admin') {
+        router.replace('/admin');
+      } else {
         router.replace('/');
-        return;
       }
-
-      router.replace('/admin');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Failed to login');
     } finally {

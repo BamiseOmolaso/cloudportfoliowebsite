@@ -127,10 +127,10 @@ const Newsletter = () => {
                 {error && <p className="mt-1 text-sm text-red-500">{error}</p>}
               </div>
 
-              {requiresCaptcha && (
+              {requiresCaptcha && process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY && (
                 <div className="flex justify-center">
                   <ReCAPTCHA
-                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!}
+                    sitekey={process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY}
                     onChange={handleCaptchaChange}
                   />
                 </div>

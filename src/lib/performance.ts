@@ -1,9 +1,6 @@
 export function measurePerformance() {
   if (typeof window !== 'undefined' && 'performance' in window) {
     const timing = window.performance.timing;
-    const navigation = window.performance.getEntriesByType(
-      'navigation'
-    )[0] as PerformanceNavigationTiming;
 
     const metrics = {
       dnsLookup: timing.domainLookupEnd - timing.domainLookupStart,

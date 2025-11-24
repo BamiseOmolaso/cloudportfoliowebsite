@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
 
@@ -41,30 +40,17 @@ export default function ProjectsPage() {
   const [publishingId, setPublishingId] = useState<string | null>(null);
   const [unpublishingId, setUnpublishingId] = useState<string | null>(null);
   const [isSearchFocused, setIsSearchFocused] = useState(false);
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   const fetchProjects = useCallback(async () => {
     try {
       setLoading(true);
       setError(null);
       
-      const { data, error, count } = await supabase
-        .from('projects')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false });
-
-      console.log('Projects fetch result:', {
-        data: data ? `Found ${data?.length} projects` : 'No data',
-        error: error ? error.message : 'No error'
-      });
-
-      if (error) throw error;
+      const response = await fetch('/api/projects');
+      if (!response.ok) throw new Error('Failed to fetch projects');
+      const data = await response.json();
 
       setProjects(data || []);
-      setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
+      setTotalPages(Math.ceil((data?.length || 0) / ITEMS_PER_PAGE));
       updateAvailableTags(data || []);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch projects';
@@ -73,7 +59,7 @@ export default function ProjectsPage() {
     } finally {
       setLoading(false);
     }
-  }, [supabase]);
+  }, []);
 
   useEffect(() => {
     fetchProjects();
@@ -94,12 +80,11 @@ export default function ProjectsPage() {
 
     setDeletingId(id);
     try {
-      const { error } = await supabase
-        .from('projects')
-        .delete()
-        .eq('id', id);
+      const response = await fetch(`/api/admin/projects/${id}`, {
+        method: 'DELETE',
+      });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to delete project');
 
       setProjects(prevProjects => prevProjects.filter(project => project.id !== id));
     } catch (err: unknown) {
@@ -109,17 +94,21 @@ export default function ProjectsPage() {
     } finally {
       setDeletingId(null);
     }
-  }, [supabase]);
+  }, []);
 
   const handlePublish = useCallback(async (id: string) => {
     setPublishingId(id);
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update({ status: 'published', published_at: new Date().toISOString() })
-        .eq('id', id);
+      const response = await fetch(`/api/admin/projects/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'published',
+          publishedAt: new Date().toISOString(),
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to publish project');
 
       setProjects(prevProjects => prevProjects.map(project =>
         project.id === id
@@ -133,17 +122,21 @@ export default function ProjectsPage() {
     } finally {
       setPublishingId(null);
     }
-  }, [supabase]);
+  }, []);
 
   const handleUnpublish = useCallback(async (id: string) => {
     setUnpublishingId(id);
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update({ status: 'draft', published_at: null })
-        .eq('id', id);
+      const response = await fetch(`/api/admin/projects/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'draft',
+          publishedAt: null,
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) throw new Error('Failed to unpublish project');
 
       setProjects(prevProjects => prevProjects.map(project =>
         project.id === id
@@ -157,7 +150,7 @@ export default function ProjectsPage() {
     } finally {
       setUnpublishingId(null);
     }
-  }, [supabase]);
+  }, []);
 
   const handleSearchKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Escape') {

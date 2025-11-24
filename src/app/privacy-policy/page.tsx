@@ -2,7 +2,7 @@ import React from 'react';
 
 export const metadata = {
   title: 'Privacy Policy | Dr. Oluwabamise David Omolaso',
-  description: 'Privacy policy and cookie information for Dr. Oluwabamise David Omolaso\'s portfolio website.',
+  description: 'Privacy policy and cookie information for Dr. Oluwabamise David Omolaso&apos;s portfolio website.',
 };
 
 export default function PrivacyPolicy() {
@@ -13,7 +13,7 @@ export default function PrivacyPolicy() {
       <section className="mb-8">
         <h2 className="text-2xl font-semibold mb-4">Introduction</h2>
         <p className="mb-4">
-          This Privacy Policy explains how Dr. Oluwabamise David Omolaso ("we", "us", or "our") collects, uses, and shares your personal information when you visit our portfolio website.
+          This Privacy Policy explains how Dr. Oluwabamise David Omolaso (&quot;we&quot;, &quot;us&quot;, or &quot;our&quot;) collects, uses, and shares your personal information when you visit our portfolio website.
         </p>
         <p className="mb-4">
           We respect your privacy and are committed to protecting your personal data. This privacy policy will inform you about how we look after your personal data when you visit our website and tell you about your privacy rights and how the law protects you.
@@ -93,7 +93,7 @@ export default function PrivacyPolicy() {
       <section className="mb-8">
         <h2 className="text-2xl font-semibold mb-4">Changes to This Privacy Policy</h2>
         <p className="mb-4">
-          We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date.
+          We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the &quot;Last Updated&quot; date.
         </p>
         <p className="mb-4">
           Last Updated: {new Date().toLocaleDateString()}

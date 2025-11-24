@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { createBrowserClient } from '@/lib/client-auth';
 import { format } from 'date-fns';
 
 interface BlogPost {
@@ -42,16 +41,12 @@ export default function BlogPosts() {
     try {
       setLoading(true);
       setError(null);
-      const supabase = createBrowserClient();
-      const { data, error, count } = await supabase
-        .from('blog_posts')
-        .select('*', { count: 'exact' })
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
+      const response = await fetch('/api/admin/blog');
+      if (!response.ok) throw new Error('Failed to fetch posts');
+      const data = await response.json();
 
       setPosts(data || []);
-      setTotalPages(Math.ceil((count || 0) / ITEMS_PER_PAGE));
+      setTotalPages(Math.ceil((data?.length || 0) / ITEMS_PER_PAGE));
       updateAvailableTags(data || []);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch posts';
@@ -79,13 +74,10 @@ export default function BlogPosts() {
 
     setDeletingId(id);
     try {
-      const supabase = createBrowserClient();
-      const { error } = await supabase
-        .from('blog_posts')
-        .delete()
-        .eq('id', id);
-
-      if (error) throw error;
+      const response = await fetch(`/api/admin/blog/${id}`, {
+        method: 'DELETE',
+      });
+      if (!response.ok) throw new Error('Failed to delete post');
 
       setPosts(prevPosts => prevPosts.filter(post => post.id !== id));
     } catch (err: unknown) {
@@ -100,13 +92,15 @@ export default function BlogPosts() {
   const handlePublish = useCallback(async (id: string) => {
     setPublishingId(id);
     try {
-      const supabase = createBrowserClient();
-      const { error } = await supabase
-        .from('blog_posts')
-        .update({ status: 'published', published_at: new Date().toISOString() })
-        .eq('id', id);
-
-      if (error) throw error;
+      const response = await fetch(`/api/admin/blog/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'published',
+          publishedAt: new Date().toISOString(),
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to publish post');
 
       setPosts(prevPosts => prevPosts.map(post =>
         post.id === id
@@ -125,13 +119,15 @@ export default function BlogPosts() {
   const handleUnpublish = useCallback(async (id: string) => {
     setUnpublishingId(id);
     try {
-      const supabase = createBrowserClient();
-      const { error } = await supabase
-        .from('blog_posts')
-        .update({ status: 'draft', published_at: null })
-        .eq('id', id);
-
-      if (error) throw error;
+      const response = await fetch(`/api/admin/blog/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          status: 'draft',
+          publishedAt: null,
+        }),
+      });
+      if (!response.ok) throw new Error('Failed to unpublish post');
 
       setPosts(prevPosts => prevPosts.map(post =>
         post.id === id

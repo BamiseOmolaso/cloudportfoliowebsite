@@ -1,15 +1,9 @@
 'use client';
 
 import { useEffect } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
 
 export function PerformanceMonitor() {
   useEffect(() => {
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    );
-
     // Track LCP
     const trackLCP = async () => {
       try {
@@ -17,17 +11,16 @@ export function PerformanceMonitor() {
         const lastEntry = lcpEntries[lcpEntries.length - 1];
 
         if (lastEntry) {
-          const { error } = await supabase
-            .from('lcp_metrics')
-            .insert([
-              {
-                value: lastEntry.startTime,
-                url: window.location.href,
-                user_agent: navigator.userAgent,
-              },
-            ]);
+          const response = await fetch('/api/performance/lcp', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              value: lastEntry.startTime,
+              url: window.location.href,
+            }),
+          });
 
-          if (error) throw error;
+          if (!response.ok) throw new Error('Failed to track LCP');
         }
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to track LCP metric';
@@ -48,17 +41,13 @@ export function PerformanceMonitor() {
           load: performance.timing.loadEventEnd - performance.timing.navigationStart,
         };
 
-        const { error } = await supabase
-          .from('performance_metrics')
-          .insert([
-            {
-              metrics,
-              url: window.location.href,
-              user_agent: navigator.userAgent,
-            },
-          ]);
+        const response = await fetch('/api/performance', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(metrics),
+        });
 
-        if (error) throw error;
+        if (!response.ok) throw new Error('Failed to track performance');
       } catch (err: unknown) {
         const errorMessage = err instanceof Error ? err.message : 'Failed to track performance metrics';
         console.error('Error tracking performance:', errorMessage);

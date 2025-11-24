@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useState, useEffect } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
 
 interface BlogPost {
   id: string;
@@ -39,10 +38,6 @@ export default function Home() {
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(true);
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
   useEffect(() => {
     fetchBlogPosts();
@@ -51,15 +46,10 @@ export default function Home() {
 
   const fetchBlogPosts = async () => {
     try {
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select('*')
-        .eq('status', 'published')
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      if (error) throw error;
-      setBlogPosts(data || []);
+      const response = await fetch('/api/blog?status=published');
+      if (!response.ok) throw new Error('Failed to fetch blog posts');
+      const data = await response.json();
+      setBlogPosts(data.slice(0, 3));
     } catch (err) {
       console.error('Error fetching blog posts:', err);
     } finally {
@@ -69,15 +59,10 @@ export default function Home() {
 
   const fetchProjects = async () => {
     try {
-      const { data, error } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('status', 'published')
-        .order('created_at', { ascending: false })
-        .limit(3);
-
-      if (error) throw error;
-      setProjects(data || []);
+      const response = await fetch('/api/projects?status=published');
+      if (!response.ok) throw new Error('Failed to fetch projects');
+      const data = await response.json();
+      setProjects(data.slice(0, 3));
     } catch (err) {
       console.error('Error fetching projects:', err);
     }
@@ -144,7 +129,7 @@ export default function Home() {
             </div>
 
             <h1 className="text-4xl md:text-6xl font-bold mb-4">
-              Hi, I'm <span className="text-purple-400">Bamise</span>
+              Hi, I&apos;m <span className="text-purple-400">Bamise</span>
             </h1>
             <h2 className="text-xl md:text-2xl text-gray-300 mb-6">
               Data Scientist & Cloud Specialist

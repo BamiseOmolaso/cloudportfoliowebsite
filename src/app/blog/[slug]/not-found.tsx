@@ -7,7 +7,7 @@ export default function NotFound() {
         <div className="text-center">
           <h1 className="text-4xl font-bold text-white mb-4">Blog Post Not Found</h1>
           <p className="text-gray-400 mb-8">
-            The blog post you're looking for doesn't exist or hasn't been published yet.
+            The blog post you&apos;re looking for doesn&apos;t exist or hasn&apos;t been published yet.
           </p>
           <Link
             href="/blog"

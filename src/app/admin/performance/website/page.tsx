@@ -2,14 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { supabase } from '@/lib/supabase';
 import Link from 'next/link';
 
 interface PerformanceMetric {
   id: string;
-  page: string;
-  load_time: number;
-  created_at: string;
+  url: string;
+  metrics: any;
+  timestamp: string;
 }
 
 export default function WebsitePerformancePage() {
@@ -24,14 +23,13 @@ export default function WebsitePerformancePage() {
 
   const fetchMetrics = async () => {
     try {
-      let query = supabase
-        .from('performance_metrics')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const response = await fetch('/api/admin/performance/website');
+      if (!response.ok) throw new Error('Failed to fetch metrics');
+      const data = await response.json();
 
       // Apply time range filter
       const now = new Date();
-      let startDate = new Date();
+      const startDate = new Date();
       
       switch (timeRange) {
         case '24h':
@@ -47,13 +45,12 @@ export default function WebsitePerformancePage() {
           startDate.setDate(now.getDate() - 7);
       }
 
-      query = query.gte('created_at', startDate.toISOString());
+      const filtered = data.filter((metric: PerformanceMetric) => {
+        const metricDate = new Date(metric.timestamp);
+        return metricDate >= startDate;
+      });
 
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      setMetrics(data || []);
+      setMetrics(filtered || []);
     } catch (error) {
       setError('Failed to fetch performance metrics');
       console.error(error);
@@ -64,22 +61,29 @@ export default function WebsitePerformancePage() {
 
   const getAverageLoadTime = () => {
     if (metrics.length === 0) return 0;
-    const total = metrics.reduce((sum, metric) => sum + metric.load_time, 0);
+    const total = metrics.reduce((sum, metric) => {
+      const loadTime = metric.metrics?.load || 0;
+      return sum + loadTime;
+    }, 0);
     return (total / metrics.length).toFixed(2);
   };
 
   const getSlowestPage = () => {
     if (metrics.length === 0) return null;
-    return metrics.reduce((slowest, current) => 
-      current.load_time > slowest.load_time ? current : slowest
-    );
+    return metrics.reduce((slowest, current) => {
+      const currentLoad = current.metrics?.load || 0;
+      const slowestLoad = slowest.metrics?.load || 0;
+      return currentLoad > slowestLoad ? current : slowest;
+    });
   };
 
   const getFastestPage = () => {
     if (metrics.length === 0) return null;
-    return metrics.reduce((fastest, current) => 
-      current.load_time < fastest.load_time ? current : fastest
-    );
+    return metrics.reduce((fastest, current) => {
+      const currentLoad = current.metrics?.load || Infinity;
+      const fastestLoad = fastest.metrics?.load || Infinity;
+      return currentLoad < fastestLoad ? current : fastest;
+    });
   };
 
   if (loading) {
@@ -97,7 +101,7 @@ export default function WebsitePerformancePage() {
           <div>
             <h1 className="text-2xl font-bold text-white">Website Performance</h1>
             <p className="mt-2 text-sm text-gray-400">
-              Monitor your website's performance metrics
+              Monitor your website&apos;s performance metrics
             </p>
           </div>
           <div className="flex items-center space-x-4">
@@ -153,10 +157,10 @@ export default function WebsitePerformancePage() {
           >
             <h3 className="text-sm font-medium text-gray-400">Slowest Page</h3>
             <p className="mt-2 text-3xl font-semibold text-white">
-              {getSlowestPage()?.load_time.toFixed(2)}ms
+              {getSlowestPage()?.metrics?.load?.toFixed(2) || 'N/A'}ms
             </p>
             <p className="mt-1 text-sm text-gray-400">
-              {getSlowestPage()?.page}
+              {getSlowestPage()?.url || 'N/A'}
             </p>
           </motion.div>
 
@@ -168,10 +172,10 @@ export default function WebsitePerformancePage() {
           >
             <h3 className="text-sm font-medium text-gray-400">Fastest Page</h3>
             <p className="mt-2 text-3xl font-semibold text-white">
-              {getFastestPage()?.load_time.toFixed(2)}ms
+              {getFastestPage()?.metrics?.load?.toFixed(2) || 'N/A'}ms
             </p>
             <p className="mt-1 text-sm text-gray-400">
-              {getFastestPage()?.page}
+              {getFastestPage()?.url || 'N/A'}
             </p>
           </motion.div>
         </div>
@@ -200,13 +204,13 @@ export default function WebsitePerformancePage() {
                 {metrics.map((metric) => (
                   <tr key={metric.id}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                      {metric.page}
+                      {metric.url}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                      {metric.load_time.toFixed(2)}
+                      {metric.metrics?.load?.toFixed(2) || 'N/A'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                      {new Date(metric.created_at).toLocaleString()}
+                      {new Date(metric.timestamp).toLocaleString()}
                     </td>
                   </tr>
                 ))}

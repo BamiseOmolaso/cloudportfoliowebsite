@@ -52,7 +52,6 @@ export default function Editor({
   onPreview,
   className = '',
 }: EditorProps): React.ReactElement {
-  const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
   const [isPreview, setIsPreview] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

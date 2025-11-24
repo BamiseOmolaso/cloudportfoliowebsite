@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { supabase } from '@/lib/supabase';
 
 export default function CreateNewsletterPage() {
   const router = useRouter();
@@ -21,40 +20,25 @@ export default function CreateNewsletterPage() {
     setError('');
 
     try {
-      // First, get the list of recipients based on the selection
-      let recipientsQuery = supabase
-        .from('subscribers')
-        .select('email');
+      const response = await fetch('/api/admin/newsletters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: formData.subject,
+          content: formData.content,
+          status: 'draft',
+        }),
+      });
 
-      if (formData.recipients !== 'all') {
-        recipientsQuery = recipientsQuery.eq('status', formData.recipients);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create newsletter');
       }
 
-      const { data: subscribers, error: subscribersError } = await recipientsQuery;
-
-      if (subscribersError) throw subscribersError;
-
-      // Create the newsletter
-      const { data: newsletter, error: newsletterError } = await supabase
-        .from('newsletters')
-        .insert([
-          {
-            subject: formData.subject,
-            content: formData.content,
-            status: 'draft',
-            recipients_count: subscribers?.length || 0
-          }
-        ])
-        .select()
-        .single();
-
-      if (newsletterError) throw newsletterError;
-
-      // Redirect to the newsletters list page
       router.push('/admin/newsletters');
     } catch (error) {
       console.error('Error creating newsletter:', error);
-      setError('Failed to create newsletter. Please try again.');
+      setError(error instanceof Error ? error.message : 'Failed to create newsletter. Please try again.');
     } finally {
       setLoading(false);
     }

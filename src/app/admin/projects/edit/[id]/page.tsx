@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { createBrowserClient } from '@supabase/ssr';
 import { motion } from 'framer-motion';
 
 interface Project {
@@ -12,6 +11,8 @@ interface Project {
   excerpt: string;
   content: string;
   cover_image: string;
+  meta_title?: string;
+  meta_description?: string;
   technologies: string[];
   github_url?: string;
   live_url?: string;
@@ -34,25 +35,20 @@ export default function EditProject() {
   const [success, setSuccess] = useState<string | null>(null);
   const [techInput, setTechInput] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
-  
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
   useEffect(() => {
     const fetchProject = async () => {
       try {
         setLoading(true);
         
-        const { data, error } = await supabase
-          .from('projects')
-          .select('*')
-          .eq('id', params.id)
-          .single();
-          
-        if (error) throw error;
-        if (!data) throw new Error('Project not found');
+        const response = await fetch(`/api/admin/projects/${params.id}`);
+        if (!response.ok) {
+          if (response.status === 404) {
+            throw new Error('Project not found');
+          }
+          throw new Error('Failed to fetch project');
+        }
+        const data = await response.json();
         
         setProject(data);
         setOriginalProject(JSON.parse(JSON.stringify(data))); // Deep copy
@@ -65,7 +61,7 @@ export default function EditProject() {
     };
     
     fetchProject();
-  }, [params.id, supabase]);
+  }, [params.id]);
 
   // Check for changes
   useEffect(() => {
@@ -132,22 +128,40 @@ export default function EditProject() {
       setError(null);
       setSuccess(null);
       
+      const response = await fetch(`/api/admin/projects/${project.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: project.title,
+          slug: project.slug,
+          excerpt: project.excerpt,
+          content: project.content,
+          cover_image: project.cover_image,
+          meta_title: project.meta_title || '',
+          meta_description: project.meta_description || '',
+          technologies: project.technologies,
+          github_url: project.github_url,
+          live_url: project.live_url,
+          author: project.author,
+          status: shouldPublish ? 'published' : project.status,
+        }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save project');
+      }
+
+      const updatedData = await response.json();
       const updates = {
-        ...project,
-        updated_at: new Date().toISOString(),
-        status: shouldPublish ? 'published' : project.status,
-        published_at: shouldPublish ? new Date().toISOString() : project.published_at
+        ...updatedData,
+        updated_at: updatedData.updated_at,
+        published_at: updatedData.published_at,
       };
-      
-      const { error } = await supabase
-        .from('projects')
-        .update(updates)
-        .eq('id', project.id);
-        
-      if (error) throw error;
       
       // Update the original project to reflect saved changes
       setOriginalProject(JSON.parse(JSON.stringify(updates)));
+      setProject(updates);
       setSuccess(shouldPublish ? 'Project published successfully!' : 'Project saved successfully!');
       
       setTimeout(() => {

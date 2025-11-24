@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
-import { createBrowserClient } from '@supabase/ssr';
 
 interface Project {
   id: string;
@@ -27,41 +26,25 @@ interface Project {
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
-  const [availableTags, setAvailableTags] = useState<string[]>([]);
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const { data, error } = await supabase
-          .from('projects')
-          .select('*')
-          .order('published_at', { ascending: false });
+        const response = await fetch('/api/projects');
+        if (!response.ok) throw new Error('Failed to fetch projects');
+        const data = await response.json();
 
-        if (error) throw error;
-
-        const normalizedData = data.map(project => ({
+        const normalizedData = data.map((project: Project) => ({
           ...project,
           technologies: project.technologies || [],
           tags: project.technologies || []
         }));
 
         setProjects(normalizedData);
-        
-        // Get unique tags
-        const tags = new Set<string>();
-        normalizedData.forEach(project => {
-          project.technologies.forEach((tag: string) => tags.add(tag));
-        });
-        setAvailableTags(Array.from(tags));
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'An error occurred');
+        console.error('Error fetching projects:', err);
       } finally {
         setLoading(false);
       }

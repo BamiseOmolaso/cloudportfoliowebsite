@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import Editor from '../../../components/Editor';
 
@@ -39,10 +38,6 @@ export default function NewProject() {
   const [techInput, setTechInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,48 +50,34 @@ export default function NewProject() {
     setLoading(true);
     
     try {
-      // Log the project data before insertion
-      console.log('Attempting to create project with data:', {
-        title: project.title,
-        slug: project.slug,
-        description: project.excerpt,
-        tags: project.technologies,
-        image_url: project.cover_image,
-        github_url: project.github_url,
-        live_url: project.live_url,
-        status: 'published',
-        technologies: project.technologies,
-        created_at: new Date().toISOString(),
-        updated_at: new Date().toISOString(),
+      const response = await fetch('/api/projects', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: project.title,
+          slug: project.slug,
+          excerpt: project.excerpt,
+          content: project.content,
+          cover_image: project.cover_image,
+          meta_title: project.meta_title,
+          meta_description: project.meta_description,
+          technologies: project.technologies,
+          github_url: project.github_url,
+          live_url: project.live_url,
+          author: project.author,
+          status: project.status,
+        }),
       });
-      
-      const { data, error } = await supabase
-        .from('projects')
-        .insert([
-          {
-            title: project.title,
-            slug: project.slug,
-            description: project.excerpt,
-            tags: project.technologies,
-            image_url: project.cover_image,
-            github_url: project.github_url,
-            live_url: project.live_url,
-            status: 'published',
-            technologies: project.technologies,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString(),
-          }
-        ])
-        .select();
-        
-      console.log('Project creation result:', { data, error });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create project');
+      }
 
       router.push('/admin/projects');
     } catch (error) {
       console.error('Error creating project:', error);
-      setError('Failed to create project');
+      setError(error instanceof Error ? error.message : 'Failed to create project');
     } finally {
       setLoading(false);
     }

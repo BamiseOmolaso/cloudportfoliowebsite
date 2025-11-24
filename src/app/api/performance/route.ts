@@ -1,27 +1,19 @@
 import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
+import { db } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
     const metrics = await request.json();
+    const referer = request.headers.get('referer') || request.headers.get('referrer') || 'unknown';
 
-    // Store metrics in Supabase
-    const { error } = await supabase.from('performance_metrics').insert({
-      metrics,
-      url: request.headers.get('referer'),
-      user_agent: request.headers.get('user-agent'),
-      timestamp: new Date().toISOString(),
+    // Store metrics in database using Prisma
+    await db.performanceMetric.create({
+      data: {
+        url: referer,
+        metrics: metrics,
+        timestamp: new Date(),
+      },
     });
-
-    if (error) {
-      console.error('Error storing performance metrics:', error);
-      return NextResponse.json({ error: 'Failed to store metrics' }, { status: 500 });
-    }
 
     return NextResponse.json({ success: true });
   } catch (err: unknown) {

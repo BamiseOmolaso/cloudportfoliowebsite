@@ -1,32 +1,21 @@
 import { Resend } from 'resend';
-import crypto from 'crypto';
-import { createClient } from '@supabase/supabase-js';
-
-// Use the types from the Resend package
-type ResendDomainResponse = Awaited<ReturnType<typeof resend.domains.get>>['data'];
+import { db } from './db';
 
 const resend = new Resend(process.env.RESEND_API_KEY);
-
-// Create Supabase client
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
 
 const DOMAIN = 'oluwabamiseomolaso.com.ng';
 
 export async function sendWelcomeEmail(email: string, name: string, unsubscribeToken: string, preferencesToken: string) {
   try {
-    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/unsubscribe?token=${unsubscribeToken}`;
-    const preferencesUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/newsletter/preferences?token=${preferencesToken}`;
+    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/unsubscribe?token=${unsubscribeToken}`;
+    const preferencesUrl = `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/newsletter/preferences?token=${preferencesToken}`;
     
-    const { data: subscriber } = await supabase
-      .from('newsletter_subscribers')
-      .select('unsubscribe_reason, unsubscribe_feedback')
-      .eq('email', email)
-      .single();
+    const subscriber = await db.newsletterSubscriber.findUnique({
+      where: { email },
+      select: { unsubscribeReason: true, unsubscribeFeedback: true },
+    });
 
-    const isResubscription = subscriber?.unsubscribe_reason != null;
+    const isResubscription = subscriber?.unsubscribeReason != null;
     const firstName = name.split(' ')[0];
 
     const { data, error } = await resend.emails.send({
@@ -90,20 +79,17 @@ export async function sendWelcomeEmail(email: string, name: string, unsubscribeT
 export async function sendAdminNotification(email: string, name?: string) {
   try {
     // Get total subscriber count and location data
-    const { data: subscribers, error: countError } = await supabase
-      .from('newsletter_subscribers')
-      .select('id, created_at, location')
-      .eq('is_subscribed', true);
-
-    if (countError) {
-      console.error('Error fetching subscriber data:', countError);
-      throw countError;
-    }
+    const subscribers = await db.newsletterSubscriber.findMany({
+      where: { isSubscribed: true, isDeleted: false },
+      select: { id: true, createdAt: true, location: true },
+    });
 
     // Calculate subscriber growth
     const totalSubscribers = subscribers.length;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const newSubscribersToday = subscribers.filter(
-      sub => new Date(sub.created_at).toDateString() === new Date().toDateString()
+      sub => sub.createdAt >= today
     ).length;
 
     // Get location statistics

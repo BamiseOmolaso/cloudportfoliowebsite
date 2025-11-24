@@ -1,5 +1,4 @@
 import { ReactNode } from 'react';
-import { LucideIcon } from 'lucide-react';
 
 declare global {
   namespace JSX {

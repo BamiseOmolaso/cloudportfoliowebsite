@@ -3,10 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
-import DOMPurify from 'dompurify';
 import Editor from '../../../../components/Editor';
-import { createBrowserClient } from '@/lib/client-auth';
 import { slugify } from '@/lib/utils';
 
 interface BlogPost {
@@ -93,16 +90,14 @@ export default function EditBlogPost({ params }: { params: { id: string } }) {
     try {
       setLoading(true);
       setError(null);
-      const supabase = createBrowserClient();
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .select('*')
-        .eq('id', params.id)
-        .single();
-
-      if (error) throw error;
-      if (!data) throw new Error('Post not found');
-      
+      const response = await fetch(`/api/admin/blog/${params.id}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Post not found');
+        }
+        throw new Error('Failed to fetch post');
+      }
+      const data = await response.json();
       setPost(data);
     } catch (err: unknown) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch post';
@@ -133,19 +128,27 @@ export default function EditBlogPost({ params }: { params: { id: string } }) {
     }
 
     try {
-      const supabase = createBrowserClient();
-      const postData = {
-        ...post,
-        updated_at: new Date().toISOString(),
-        published_at: post.status === 'published' ? new Date().toISOString() : null,
-      };
+      const response = await fetch(`/api/admin/blog/${post.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: post.title,
+          slug: post.slug,
+          content: post.content,
+          excerpt: post.excerpt,
+          cover_image: post.cover_image,
+          meta_title: post.meta_title,
+          meta_description: post.meta_description,
+          tags: post.tags,
+          author: post.author,
+          status: post.status,
+        }),
+      });
 
-      const { error } = await supabase
-        .from('blog_posts')
-        .update(postData)
-        .eq('id', post.id);
-
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save post');
+      }
 
       router.push('/admin/blog');
     } catch (err: unknown) {

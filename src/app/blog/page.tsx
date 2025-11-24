@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
+import Image from 'next/image';
 import { format } from 'date-fns';
 
 interface BlogPost {
@@ -226,10 +227,12 @@ const BlogPage = () => {
             >
               {post.cover_image ? (
                 <div className="relative h-48">
-                  <img
+                  <Image
                     src={post.cover_image}
                     alt={post.title}
-                    className="w-full h-full object-cover"
+                    fill
+                    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                    className="object-cover"
                   />
                 </div>
               ) : (

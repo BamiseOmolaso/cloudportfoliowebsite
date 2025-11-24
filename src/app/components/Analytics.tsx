@@ -15,8 +15,11 @@ export default function Analytics() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
+    const gaId = process.env.NEXT_PUBLIC_GA_ID;
+    if (!gaId) return;
+    
     const url = pathname + searchParams.toString();
-    window.gtag('config', process.env.NEXT_PUBLIC_GA_ID!, {
+    window.gtag('config', gaId, {
       page_path: url,
     });
   }, [pathname, searchParams]);

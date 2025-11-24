@@ -75,7 +75,7 @@ output "next_steps" {
     1. Add application secrets:
        aws secretsmanager put-secret-value \
          --secret-id omolaso-portfolio/env/production \
-         --secret-string '{"SUPABASE_SERVICE_ROLE_KEY":"your_key","RESEND_API_KEY":"your_key","RECAPTCHA_SECRET_KEY":"your_key"}'
+         --secret-string '{"RESEND_API_KEY":"your_key","RECAPTCHA_SECRET_KEY":"your_key"}'
     
     2. Build and push Docker image:
        aws ecr get-login-password --region ${var.aws_region} | docker login --username AWS --password-stdin ${aws_ecr_repository.app.repository_url}

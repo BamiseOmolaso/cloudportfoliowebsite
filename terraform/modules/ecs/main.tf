@@ -145,10 +145,6 @@ resource "aws_ecs_task_definition" "app" {
           valueFrom = var.db_secret_arn
         },
         {
-          name      = "SUPABASE_SERVICE_ROLE_KEY"
-          valueFrom = "${var.app_secrets_arn}:SUPABASE_SERVICE_ROLE_KEY::"
-        },
-        {
           name      = "RESEND_API_KEY"
           valueFrom = "${var.app_secrets_arn}:RESEND_API_KEY::"
         },

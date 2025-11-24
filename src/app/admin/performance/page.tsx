@@ -2,17 +2,14 @@
 
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { supabase } from '@/lib/supabase';
 
 interface NewsletterMetrics {
   id: string;
   subject: string;
   sent_at: string;
   recipients_count: number;
-  open_rate: number;
-  click_rate: number;
-  bounce_rate: number;
-  unsubscribes: number;
+  sent_count: number;
+  failed_count: number;
 }
 
 export default function PerformancePage() {
@@ -28,14 +25,14 @@ export default function PerformancePage() {
 
   const fetchMetrics = async () => {
     try {
-      let query = supabase
-        .from('newsletter_metrics')
-        .select('*')
-        .order('sent_at', { ascending: false });
+      const response = await fetch('/api/admin/newsletters');
+      if (!response.ok) throw new Error('Failed to fetch metrics');
+      const data = await response.json();
 
+      let filtered = data;
       if (timeRange !== 'all') {
         const now = new Date();
-        let startDate = new Date();
+        const startDate = new Date();
 
         switch (timeRange) {
           case '24h':
@@ -49,14 +46,13 @@ export default function PerformancePage() {
             break;
         }
 
-        query = query.gte('sent_at', startDate.toISOString());
+        filtered = data.filter((item: NewsletterMetrics) => {
+          if (!item.sent_at) return false;
+          return new Date(item.sent_at) >= startDate;
+        });
       }
 
-      const { data, error } = await query;
-
-      if (error) throw error;
-
-      setMetrics(data || []);
+      setMetrics(filtered || []);
     } catch (error) {
       setError('Failed to fetch metrics');
       console.error(error);
@@ -65,20 +61,18 @@ export default function PerformancePage() {
     }
   };
 
-  const calculateAverage = (field: keyof NewsletterMetrics) => {
+  const calculateSuccessRate = () => {
     if (metrics.length === 0) return 0;
-    const sum = metrics.reduce((acc, metric) => {
-      const value = metric[field];
-      return acc + (typeof value === 'number' ? value : 0);
-    }, 0);
-    return (sum / metrics.length).toFixed(1);
+    const totalSent = metrics.reduce((acc, metric) => acc + (metric.sent_count || 0), 0);
+    const totalRecipients = metrics.reduce((acc, metric) => acc + metric.recipients_count, 0);
+    return totalRecipients > 0 ? ((totalSent / totalRecipients) * 100).toFixed(1) : 0;
   };
 
-  const calculateUnsubscribeRate = () => {
+  const calculateFailureRate = () => {
     if (metrics.length === 0) return 0;
-    const totalUnsubscribes = metrics.reduce((acc, metric) => acc + metric.unsubscribes, 0);
+    const totalFailed = metrics.reduce((acc, metric) => acc + (metric.failed_count || 0), 0);
     const totalRecipients = metrics.reduce((acc, metric) => acc + metric.recipients_count, 0);
-    return totalRecipients > 0 ? ((totalUnsubscribes / totalRecipients) * 100).toFixed(1) : 0;
+    return totalRecipients > 0 ? ((totalFailed / totalRecipients) * 100).toFixed(1) : 0;
   };
 
   if (loading) {
@@ -152,19 +146,21 @@ export default function PerformancePage() {
         >
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             <div className="bg-gray-800 rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-300">Open Rate</h3>
-              <p className="text-3xl font-bold text-white mt-2">{calculateAverage('open_rate')}%</p>
-              <p className="text-sm text-gray-400 mt-2">Average open rate</p>
+              <h3 className="text-lg font-medium text-gray-300">Total Sent</h3>
+              <p className="text-3xl font-bold text-white mt-2">
+                {metrics.reduce((acc, m) => acc + (m.sent_count || 0), 0)}
+              </p>
+              <p className="text-sm text-gray-400 mt-2">Newsletters sent</p>
             </div>
             <div className="bg-gray-800 rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-300">Click Rate</h3>
-              <p className="text-3xl font-bold text-white mt-2">{calculateAverage('click_rate')}%</p>
-              <p className="text-sm text-gray-400 mt-2">Average click rate</p>
+              <h3 className="text-lg font-medium text-gray-300">Success Rate</h3>
+              <p className="text-3xl font-bold text-white mt-2">{calculateSuccessRate()}%</p>
+              <p className="text-sm text-gray-400 mt-2">Successful deliveries</p>
             </div>
             <div className="bg-gray-800 rounded-lg p-6">
-              <h3 className="text-lg font-medium text-gray-300">Unsubscribe Rate</h3>
-              <p className="text-3xl font-bold text-white mt-2">{calculateUnsubscribeRate()}%</p>
-              <p className="text-sm text-gray-400 mt-2">Total unsubscribe rate</p>
+              <h3 className="text-lg font-medium text-gray-300">Failure Rate</h3>
+              <p className="text-3xl font-bold text-white mt-2">{calculateFailureRate()}%</p>
+              <p className="text-sm text-gray-400 mt-2">Failed deliveries</p>
             </div>
           </div>
 
@@ -176,9 +172,9 @@ export default function PerformancePage() {
                   <tr>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Newsletter</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Sent</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Opens</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Clicks</th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Unsubscribes</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Recipients</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Successful</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">Failed</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700">
@@ -186,16 +182,16 @@ export default function PerformancePage() {
                     <tr key={metric.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-white">{metric.subject}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {new Date(metric.sent_at).toLocaleDateString()}
+                        {metric.sent_at ? new Date(metric.sent_at).toLocaleDateString() : 'Not sent'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {metric.open_rate.toFixed(1)}%
+                        {metric.recipients_count}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {metric.click_rate.toFixed(1)}%
+                        {metric.sent_count || 0}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                        {metric.unsubscribes}
+                        {metric.failed_count || 0}
                       </td>
                     </tr>
                   ))}

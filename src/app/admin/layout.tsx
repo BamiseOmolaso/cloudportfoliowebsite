@@ -1,10 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
-import { createBrowserClient } from '@/lib/client-auth';
 
 export default function AdminLayout({
   children,
@@ -14,88 +13,6 @@ export default function AdminLayout({
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const pathname = usePathname();
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(true);
-
-  useEffect(() => {
-    // Check admin access on mount
-    const checkAccess = async () => {
-      try {
-        const supabase = createBrowserClient();
-        const { data: { user }, error: userError } = await supabase.auth.getUser();
-        
-        if (userError) {
-          console.error('User error:', userError);
-          router.replace('/login');
-          return;
-        }
-
-        if (!user) {
-          console.log('No user found');
-          router.replace('/login');
-          return;
-        }
-
-        // First try to get the profile
-        let { data: profile, error: profileError } = await supabase
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .single();
-
-        // If profile doesn't exist, create one with default role
-        if (profileError?.code === 'PGRST116') {
-          const { data: newProfile, error: createError } = await supabase
-            .from('profiles')
-            .insert([
-              { 
-                id: user.id,
-                email: user.email,
-                role: 'user' // Default role
-              }
-            ])
-            .select('role')
-            .single();
-
-          if (createError) {
-            console.error('Error creating profile:', createError);
-            router.replace('/');
-            return;
-          }
-
-          profile = newProfile;
-        } else if (profileError) {
-          console.error('Profile error:', profileError);
-          router.replace('/');
-          return;
-        }
-
-        if (!profile || profile.role !== 'admin') {
-          console.log('User is not an admin');
-          router.replace('/');
-          return;
-        }
-
-        console.log('User is an admin, allowing access');
-        setIsLoading(false);
-      } catch (error) {
-        console.error('Error checking admin access:', error);
-        router.replace('/');
-      }
-    };
-
-    checkAccess();
-  }, [router]);
-
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold mb-4 text-white">Loading...</h1>
-        </div>
-      </div>
-    );
-  }
 
   const navigation = [
     { 

@@ -3,10 +3,7 @@
 import { useEffect, useState, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import dynamic from 'next/dynamic';
-import DOMPurify from 'dompurify';
 import Editor from '../../../components/Editor';
-import { createBrowserClient } from '@/lib/client-auth';
 import { slugify } from '@/lib/utils';
 
 interface BlogPost {
@@ -116,20 +113,27 @@ export default function NewBlogPost() {
     }
 
     try {
-      const supabase = createBrowserClient();
-      const postData = {
-        ...post,
-        updated_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
-        published_at: post.status === 'published' ? new Date().toISOString() : null,
-      };
+      const response = await fetch('/api/admin/blog', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: post.title,
+          slug: post.slug,
+          content: post.content,
+          excerpt: post.excerpt,
+          cover_image: post.cover_image,
+          meta_title: post.meta_title,
+          meta_description: post.meta_description,
+          tags: post.tags,
+          author: post.author,
+          status: post.status,
+        }),
+      });
 
-      const { data, error } = await supabase
-        .from('blog_posts')
-        .insert([postData])
-        .select();
-
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to save post');
+      }
 
       router.push('/admin/blog');
     } catch (err: unknown) {

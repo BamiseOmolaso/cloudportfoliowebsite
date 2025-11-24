@@ -1,111 +1,48 @@
-'use client';
-
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { db } from '@/lib/db';
 import Link from 'next/link';
-import { createBrowserClient } from '@/lib/client-auth';
+import { motion } from 'framer-motion';
 
-interface DashboardStats {
-  totalSubscribers: number;
-  activeSubscribers: number;
-  totalNewsletters: number;
-  sentNewsletters: number;
-  totalProjects: number;
-  activeProjects: number;
-  averageOpenRate: number;
-  averageClickRate: number;
+async function getStats() {
+  const [
+    totalSubscribers,
+    activeSubscribers,
+    totalNewsletters,
+    sentNewsletters,
+    totalProjects,
+    activeProjects,
+    averageOpenRate,
+    averageClickRate,
+  ] = await Promise.all([
+    db.newsletterSubscriber.count(),
+    db.newsletterSubscriber.count({ where: { isSubscribed: true } }),
+    db.newsletter.count(),
+    db.newsletter.count({ where: { status: 'sent' } }),
+    db.project.count(),
+    db.project.count({ where: { status: 'published' } }),
+    db.newsletter.aggregate({
+      _avg: { openRate: true },
+      where: { status: 'sent' },
+    }),
+    db.newsletter.aggregate({
+      _avg: { clickRate: true },
+      where: { status: 'sent' },
+    }),
+  ]);
+
+  return {
+    totalSubscribers,
+    activeSubscribers,
+    totalNewsletters,
+    sentNewsletters,
+    totalProjects,
+    activeProjects,
+    averageOpenRate: averageOpenRate._avg.openRate ?? 0,
+    averageClickRate: averageClickRate._avg.clickRate ?? 0,
+  };
 }
 
-export default function AdminDashboard() {
-  const [stats, setStats] = useState<DashboardStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchStats();
-  }, []);
-
-  const fetchStats = async () => {
-    try {
-      const supabase = createBrowserClient();
-      
-      // Fetch subscribers
-      const { data: subscribers, error: subscribersError } = await supabase
-        .from('subscribers')
-        .select('*');
-
-      if (subscribersError) throw subscribersError;
-
-      // Fetch newsletters
-      const { data: newsletters, error: newslettersError } = await supabase
-        .from('newsletters')
-        .select('*');
-
-      if (newslettersError) throw newslettersError;
-
-      // Fetch projects
-      const { data: projects, error: projectsError } = await supabase
-        .from('projects')
-        .select('*');
-
-      if (projectsError) throw projectsError;
-
-      // Calculate stats
-      const totalSubscribers = subscribers.length;
-      const activeSubscribers = subscribers.filter(s => s.status === 'active').length;
-      const totalNewsletters = newsletters.length;
-      const sentNewsletters = newsletters.filter(n => n.status === 'sent').length;
-      const totalProjects = projects.length;
-      const activeProjects = projects.filter(p => p.status === 'active').length;
-
-      // Calculate average rates
-      const sentNewslettersWithMetrics = newsletters.filter(n => n.status === 'sent');
-      const averageOpenRate = sentNewslettersWithMetrics.length > 0
-        ? sentNewslettersWithMetrics.reduce((acc, n) => acc + (n.open_rate || 0), 0) / sentNewslettersWithMetrics.length
-        : 0;
-      const averageClickRate = sentNewslettersWithMetrics.length > 0
-        ? sentNewslettersWithMetrics.reduce((acc, n) => acc + (n.click_rate || 0), 0) / sentNewslettersWithMetrics.length
-        : 0;
-
-      setStats({
-        totalSubscribers,
-        activeSubscribers,
-        totalNewsletters,
-        sentNewsletters,
-        totalProjects,
-        activeProjects,
-        averageOpenRate,
-        averageClickRate,
-      });
-    } catch (err: unknown) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch stats';
-      setError(errorMessage);
-      console.error('Error fetching stats:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="animate-pulse">
-        <div className="h-8 bg-gray-800 rounded w-1/4 mb-8"></div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-32 bg-gray-800 rounded"></div>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-500/10 border border-red-500 text-red-500 px-4 py-3 rounded">
-        {error}
-      </div>
-    );
-  }
+export default async function AdminDashboard() {
+  const stats = await getStats();
 
   return (
     <div className="p-4 pt-6">

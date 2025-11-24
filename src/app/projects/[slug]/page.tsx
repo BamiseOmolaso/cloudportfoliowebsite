@@ -1,11 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Metadata } from 'next';
 import { Helmet } from 'react-helmet';
 import DOMPurify from 'isomorphic-dompurify';
 
@@ -33,11 +31,6 @@ export default function ProjectPage({ params }: { params: { slug: string } }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   useEffect(() => {
     fetchProject();
   }, [params.slug]);
@@ -49,24 +42,17 @@ export default function ProjectPage({ params }: { params: { slug: string } }) {
         return;
       }
 
-      const { data, error: supabaseError } = await supabase
-        .from('projects')
-        .select('*')
-        .eq('slug', params.slug)
-        .eq('status', 'published')
-        .single();
-
-      if (supabaseError) {
-        console.error('Supabase error:', supabaseError);
-        setError(supabaseError.message);
+      const response = await fetch(`/projects/${params.slug}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          setError('Project not found');
+        } else {
+          setError('Failed to fetch project');
+        }
         return;
       }
 
-      if (!data) {
-        setError('Project not found');
-        return;
-      }
-      
+      const data = await response.json();
       setProject(data);
     } catch (err) {
       console.error('Error fetching project:', err);
@@ -101,7 +87,7 @@ export default function ProjectPage({ params }: { params: { slug: string } }) {
       <div className="min-h-screen bg-gray-950 py-20">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h1 className="text-3xl font-bold text-white mb-4">404 - Project Not Found</h1>
-          <p className="text-gray-400 mb-8">The project you're looking for doesn't exist or has been removed.</p>
+          <p className="text-gray-400 mb-8">The project you&apos;re looking for doesn&apos;t exist or has been removed.</p>
           <Link
             href="/projects"
             className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"

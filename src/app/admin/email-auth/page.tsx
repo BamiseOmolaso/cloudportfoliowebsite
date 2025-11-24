@@ -166,7 +166,7 @@ export default function EmailAuthPage() {
                           </div>
                         </div>
                         <div className="mt-4 text-sm text-gray-500">
-                          <p>Add these records to your domain's DNS settings. After adding the records, click "Verify Authentication" to check if everything is working.</p>
+                          <p>Add these records to your domain&apos;s DNS settings. After adding the records, click &quot;Verify Authentication&quot; to check if everything is working.</p>
                         </div>
                       </div>
                     )}

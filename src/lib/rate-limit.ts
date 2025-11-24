@@ -19,10 +19,17 @@ class RateLimiter {
   public config: RateLimiterConfig;
 
   constructor(config: RateLimiterConfig) {
+    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
+    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+    
+    if (!redisUrl || !redisToken) {
+      throw new Error('UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set');
+    }
+    
     try {
       this.redis = new Redis({
-        url: process.env.UPSTASH_REDIS_REST_URL!,
-        token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+        url: redisUrl,
+        token: redisToken,
         retry: {
           retries: 3,
           backoff: (retryCount) => Math.min(retryCount * 50, 1000),

@@ -1,7 +1,6 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import Editor from '../../../../components/Editor';
 import { Calendar } from 'lucide-react';
@@ -18,10 +17,6 @@ export default function NewsletterForm({ params }: { params: { action: string; i
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showSchedule, setShowSchedule] = useState(false);
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
   useEffect(() => {
     if (params.action === 'edit' && params.id) {
@@ -31,14 +26,18 @@ export default function NewsletterForm({ params }: { params: { action: string; i
 
   const fetchNewsletter = async () => {
     try {
-      const { data, error } = await supabase
-        .from('newsletters')
-        .select('*')
-        .eq('id', params.id)
-        .single();
-
-      if (error) throw error;
-      setNewsletter(data);
+      const response = await fetch(`/api/admin/newsletters/${params.id}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Newsletter not found');
+        }
+        throw new Error('Failed to fetch newsletter');
+      }
+      const data = await response.json();
+      setNewsletter({
+        ...data,
+        scheduled_for: data.scheduled_for || null,
+      });
       if (data.scheduled_for) {
         setShowSchedule(true);
       }
@@ -62,23 +61,38 @@ export default function NewsletterForm({ params }: { params: { action: string; i
         throw new Error('Subject and content are required');
       }
 
-      const newsletterData = {
-        ...newsletter,
-        updated_at: new Date().toISOString(),
-        created_at: params.action === 'new' ? new Date().toISOString() : newsletter.created_at || new Date().toISOString(),
-      };
-
       if (params.action === 'new') {
-        const { error } = await supabase.from('newsletters').insert([newsletterData]);
+        const response = await fetch('/api/admin/newsletters', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject: newsletter.subject,
+            content: newsletter.content,
+            status: newsletter.status,
+            scheduled_for: newsletter.scheduled_for,
+          }),
+        });
 
-        if (error) throw error;
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to create newsletter');
+        }
       } else {
-        const { error } = await supabase
-          .from('newsletters')
-          .update(newsletterData)
-          .eq('id', params.id);
+        const response = await fetch(`/api/admin/newsletters/${params.id}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            subject: newsletter.subject,
+            content: newsletter.content,
+            status: newsletter.status,
+            scheduled_for: newsletter.scheduled_for,
+          }),
+        });
 
-        if (error) throw error;
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update newsletter');
+        }
       }
 
       router.push('/admin/newsletters');

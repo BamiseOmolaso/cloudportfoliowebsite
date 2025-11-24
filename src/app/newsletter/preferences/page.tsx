@@ -2,7 +2,6 @@
 
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { createClient } from '@supabase/supabase-js';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 
@@ -16,11 +15,6 @@ function PreferencesContent() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'saving' | 'success' | 'error'>('loading');
   const [message, setMessage] = useState('');
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
-
   useEffect(() => {
     if (token) {
       fetchSubscriberData();
@@ -32,23 +26,18 @@ function PreferencesContent() {
 
   const fetchSubscriberData = async () => {
     try {
-      const { data, error } = await supabase
-        .from('newsletter_subscribers')
-        .select('email, name, preferences')
-        .eq('preferences_token', token)
-        .eq('is_subscribed', true)
-        .single();
-
-      if (error) {
-        if (error.code === 'PGRST116') {
+      const response = await fetch(`/api/newsletter/preferences?token=${token}`);
+      if (!response.ok) {
+        if (response.status === 404) {
           setStatus('error');
           setMessage('Subscriber not found. Please use the link from your email.');
         } else {
-          throw error;
+          throw new Error('Failed to fetch subscriber data');
         }
         return;
       }
 
+      const data = await response.json();
       if (!data) {
         setStatus('error');
         setMessage('Subscriber not found. Please use the link from your email.');
@@ -73,25 +62,23 @@ function PreferencesContent() {
     setMessage('');
 
     try {
-      const { error } = await supabase
-        .from('newsletter_subscribers')
-        .update({
+      const response = await fetch('/api/newsletter/preferences', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token,
           name,
           preferences: {
             frequency,
             categories
           }
-        })
-        .eq('preferences_token', token)
-        .eq('is_subscribed', true);
+        }),
+      });
 
-      if (error) {
-        if (error.code === 'PGRST116') {
-          setStatus('error');
-          setMessage('Subscriber not found. Please use the link from your email.');
-        } else {
-          throw error;
-        }
+      if (!response.ok) {
+        const errorData = await response.json();
+        setStatus('error');
+        setMessage(errorData.error || 'Failed to update preferences');
         return;
       }
 

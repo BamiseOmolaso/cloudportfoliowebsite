@@ -3,7 +3,6 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 
 export default function NewNewsletterPage() {
   const router = useRouter();
@@ -22,21 +21,25 @@ export default function NewNewsletterPage() {
     setError('');
 
     try {
-      const { error } = await supabase
-        .from('newsletters')
-        .insert([{
-          ...formData,
-          recipients_count: 0,
-          open_rate: 0,
-          click_rate: 0,
-          created_at: new Date().toISOString(),
-        }]);
+      const response = await fetch('/api/admin/newsletters', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: formData.subject,
+          content: formData.content,
+          status: formData.status,
+          scheduled_for: formData.status === 'scheduled' && formData.scheduled_at ? formData.scheduled_at : null,
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to create newsletter');
+      }
 
       router.push('/admin/newsletters');
     } catch (error) {
-      setError('Failed to create newsletter');
+      setError(error instanceof Error ? error.message : 'Failed to create newsletter');
       console.error(error);
     } finally {
       setLoading(false);

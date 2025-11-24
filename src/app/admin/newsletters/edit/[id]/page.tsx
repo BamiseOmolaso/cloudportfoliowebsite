@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { supabase } from '@/lib/supabase';
 
 interface Newsletter {
   id: string;
@@ -36,17 +35,20 @@ export default function EditNewsletterPage({ params }: { params: { id: string } 
 
   const fetchNewsletter = async () => {
     try {
-      const { data, error } = await supabase
-        .from('newsletters')
-        .select('*')
-        .eq('id', params.id)
-        .single();
-
-      if (error) throw error;
-
-      setFormData(data);
+      const response = await fetch(`/api/admin/newsletters/${params.id}`);
+      if (!response.ok) {
+        if (response.status === 404) {
+          throw new Error('Newsletter not found');
+        }
+        throw new Error('Failed to fetch newsletter');
+      }
+      const data = await response.json();
+      setFormData({
+        ...data,
+        scheduled_at: data.scheduled_for || '',
+      });
     } catch (error) {
-      setError('Failed to fetch newsletter');
+      setError(error instanceof Error ? error.message : 'Failed to fetch newsletter');
       console.error(error);
     } finally {
       setLoading(false);
@@ -59,19 +61,25 @@ export default function EditNewsletterPage({ params }: { params: { id: string } 
     setError('');
 
     try {
-      const { error } = await supabase
-        .from('newsletters')
-        .update({
-          ...formData,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', params.id);
+      const response = await fetch(`/api/admin/newsletters/${params.id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          subject: formData.subject,
+          content: formData.content,
+          status: formData.status,
+          scheduled_for: formData.status === 'scheduled' && formData.scheduled_at ? formData.scheduled_at : null,
+        }),
+      });
 
-      if (error) throw error;
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update newsletter');
+      }
 
       router.push('/admin/newsletters');
     } catch (error) {
-      setError('Failed to update newsletter');
+      setError(error instanceof Error ? error.message : 'Failed to update newsletter');
       console.error(error);
     } finally {
       setSaving(false);
