@@ -1,0 +1,39 @@
+alb_dns_name = "prod-portfolio-alb-1659125561.us-east-1.elb.amazonaws.com"
+alb_zone_id = "Z35SXDOTRQ7X7K"
+application_url = "http://prod-portfolio-alb-1659125561.us-east-1.elb.amazonaws.com"
+cloudwatch_log_group = "/ecs/prod-portfolio"
+db_secret_arn = "arn:aws:secretsmanager:us-east-1:827327671360:secret:omolasowebportfolio/db/credentials-IPftJt"
+ecr_repository_url = "827327671360.dkr.ecr.us-east-1.amazonaws.com/omolaso-portfolio"
+ecs_cluster_name = "prod-portfolio-cluster"
+ecs_service_name = "prod-portfolio-service"
+ecs_task_definition_family = "prod-portfolio-task"
+next_steps = <<EOT
+    
+✅ Infrastructure deployed successfully!
+    
+Next steps:
+    
+1. Add application secrets:
+   aws secretsmanager put-secret-value \
+     --secret-id omolaso-portfolio/env/production \
+     --secret-string '{"SUPABASE_SERVICE_ROLE_KEY":"your_key","RESEND_API_KEY":"your_key","RECAPTCHA_SECRET_KEY":"your_key"}'
+    
+2. Build and push Docker image:
+   aws ecr get-login-password --region us-east-1 | docker login --username AWS --password-stdin 827327671360.dkr.ecr.us-east-1.amazonaws.com/omolaso-portfolio
+   docker build -t 827327671360.dkr.ecr.us-east-1.amazonaws.com/omolaso-portfolio:latest .
+   docker push 827327671360.dkr.ecr.us-east-1.amazonaws.com/omolaso-portfolio:latest
+    
+3. Force ECS service update:
+   aws ecs update-service --cluster prod-portfolio-cluster --service prod-portfolio-service --force-new-deployment
+    
+4. Check your application:
+   http://prod-portfolio-alb-1659125561.us-east-1.elb.amazonaws.com
+    
+5. View logs:
+   aws logs tail /ecs/prod-portfolio --follow
+
+EOT
+rds_address = "prod-portfolio-db.c6ri2g846qvc.us-east-1.rds.amazonaws.com"
+rds_endpoint = "prod-portfolio-db.c6ri2g846qvc.us-east-1.rds.amazonaws.com:5432"
+target_group_arn = "arn:aws:elasticloadbalancing:us-east-1:827327671360:targetgroup/prod-portfolio-tg/6f752b2020ad448c"
+vpc_id = "vpc-0997137f405e52a17"

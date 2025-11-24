@@ -1,0 +1,281 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// prisma/schema.prisma
+// Generated from your Supabase SQL migrations
+
+
+// ============================================
+// Performance Monitoring Tables
+// ============================================
+
+model PerformanceMetric {
+  id        String   @id @default(uuid())
+  url       String
+  metrics   Json     // JSONB in PostgreSQL
+  timestamp DateTime @default(now()) @db.Timestamptz
+
+  @@index([timestamp])
+  @@map("performance_metrics")
+}
+
+model LcpMetric {
+  id        String   @id @default(uuid())
+  url       String
+  value     Float    @db.DoublePrecision
+  timestamp DateTime @default(now()) @db.Timestamptz
+
+  @@index([timestamp])
+  @@index([url])
+  @@map("lcp_metrics")
+}
+
+// ============================================
+// Newsletter System
+// ============================================
+
+model NewsletterSubscriber {
+  id                          String    @id @default(uuid())
+  email                       String    @unique
+  name                        String?
+  isSubscribed                Boolean   @default(true) @map("is_subscribed")
+  unsubscribeToken            String?   @unique @map("unsubscribe_token") @db.VarChar(64)
+  unsubscribeTokenExpiresAt   DateTime? @map("unsubscribe_token_expires_at") @db.Timestamptz
+  unsubscribeReason           String?   @map("unsubscribe_reason") @db.VarChar(50)
+  unsubscribeFeedback         String?   @map("unsubscribe_feedback")
+  location                    String?
+  preferences                 Json?     @default("{\"frequency\": \"weekly\", \"categories\": []}") // JSONB
+  preferencesToken            String?   @map("preferences_token")
+  preferencesTokenExpiresAt   DateTime? @map("preferences_token_expires_at") @db.Timestamptz
+  subscriptionCount           Int       @default(1) @map("subscription_count")
+  isDeleted                   Boolean   @default(false) @map("is_deleted")
+  deletedAt                   DateTime? @map("deleted_at") @db.Timestamptz
+  deletedReason               String?   @map("deleted_reason")
+  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+  lastUpdatedAt               DateTime  @default(now()) @map("last_updated_at") @db.Timestamptz
+
+  // Relations
+  newsletterSends NewsletterSend[]
+  subscriberTags  SubscriberTag[]
+  auditLogs       NewsletterAuditLog[]
+
+  @@index([isSubscribed])
+  @@index([unsubscribeToken])
+  @@index([preferencesToken])
+  @@index([unsubscribeTokenExpiresAt])
+  @@index([unsubscribeReason])
+  @@map("newsletter_subscribers")
+}
+
+model Newsletter {
+  id           String    @id @default(uuid())
+  subject      String
+  content      String
+  status       String    @default("draft") // draft, scheduled, sent
+  scheduledFor DateTime? @map("scheduled_for") @db.Timestamptz
+  sentAt       DateTime? @map("sent_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  // Relations
+  newsletterSends NewsletterSend[]
+
+  @@index([status])
+  @@index([scheduledFor])
+  @@map("newsletters")
+}
+
+model NewsletterSend {
+  id           String    @id @default(uuid())
+  newsletterId String    @map("newsletter_id")
+  subscriberId String    @map("subscriber_id")
+  sentAt       DateTime  @default(now()) @map("sent_at") @db.Timestamptz
+  status       String    @default("pending") // pending, sent, failed
+  errorMessage String?   @map("error_message")
+
+  // Relations
+  newsletter Newsletter           @relation(fields: [newsletterId], references: [id], onDelete: Cascade)
+  subscriber NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+
+  @@unique([newsletterId, subscriberId])
+  @@index([status])
+  @@map("newsletter_sends")
+}
+
+model NewsletterTag {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  subscriberTags SubscriberTag[]
+
+  @@map("newsletter_tags")
+}
+
+model SubscriberTag {
+  subscriberId String   @map("subscriber_id")
+  tagId        String   @map("tag_id")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  subscriber NewsletterSubscriber @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
+  tag        NewsletterTag        @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([subscriberId, tagId])
+  @@index([subscriberId])
+  @@index([tagId])
+  @@map("subscriber_tags")
+}
+
+model NewsletterAuditLog {
+  id           String    @id @default(uuid())
+  subscriberId String?   @map("subscriber_id")
+  action       String
+  details      Json?
+  ipAddress    String?   @map("ip_address")
+  userAgent    String?   @map("user_agent")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  // Relations
+  subscriber NewsletterSubscriber? @relation(fields: [subscriberId], references: [id])
+
+  @@index([subscriberId])
+  @@index([createdAt])
+  @@map("newsletter_audit_log")
+}
+
+// ============================================
+// Security Tables
+// ============================================
+
+model BlacklistedIp {
+  id        String    @id @default(uuid())
+  ipAddress String    @unique @map("ip_address")
+  reason    String
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  expiresAt DateTime? @map("expires_at") @db.Timestamptz
+  createdBy String    @default("system") @map("created_by")
+
+  @@index([ipAddress])
+  @@index([expiresAt])
+  @@map("blacklisted_ips")
+}
+
+model FailedAttempt {
+  id         String   @id @default(uuid())
+  ipAddress  String   @map("ip_address")
+  email      String
+  timestamp  DateTime @default(now()) @db.Timestamptz
+  userAgent  String?  @map("user_agent")
+  actionType String   @map("action_type")
+
+  @@index([ipAddress])
+  @@index([email])
+  @@index([timestamp])
+  @@map("failed_attempts")
+}
+
+// ============================================
+// Content Tables (Blog & Projects)
+// ============================================
+
+model BlogPost {
+  id              String    @id @default(uuid())
+  title           String
+  slug            String    @unique
+  content         String
+  excerpt         String?
+  coverImage      String?   @map("cover_image")
+  metaTitle       String?   @map("meta_title")
+  metaDescription String?   @map("meta_description")
+  tags            String[]  @default([])
+  author          String
+  status          String    @default("draft") // draft, published
+  publishedAt     DateTime? @map("published_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([slug])
+  @@index([status])
+  @@index([publishedAt])
+  @@map("blog_posts")
+}
+
+model Project {
+  id              String    @id @default(uuid())
+  title           String
+  slug            String    @unique
+  content         String
+  excerpt         String?
+  coverImage      String?   @map("cover_image")
+  metaTitle       String?   @map("meta_title")
+  metaDescription String?   @map("meta_description")
+  technologies    String[]  @default([])
+  githubUrl       String?   @map("github_url")
+  liveUrl         String?   @map("live_url")
+  author          String
+  status          String    @default("draft") // draft, published
+  publishedAt     DateTime? @map("published_at") @db.Timestamptz
+  createdAt       DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt       DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([slug])
+  @@index([status])
+  @@index([publishedAt])
+  @@map("projects")
+}
+
+// ============================================
+// User Profiles (Auth)
+// ============================================
+
+// Note: This assumes you're using Supabase Auth or will handle auth separately
+// If using NextAuth or AWS Cognito, adjust accordingly
+
+model Profile {
+  id        String   @id @default(uuid())
+  email     String
+  role      String   @default("user")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@index([email])
+  @@index([role])
+  @@map("profiles")
+}
+
+// ============================================
+// Contact Messages
+// ============================================
+
+model ContactMessage {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  subject   String?
+  message   String   @db.Text
+  read      Boolean  @default(false)
+  replied   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([email])
+  @@index([read])
+  @@index([createdAt])
+  @@map("contact_messages")
+}
