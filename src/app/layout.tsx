@@ -35,10 +35,6 @@ export const metadata: Metadata = {
         sizes: 'any',
       },
     ],
-    apple: {
-      url: '/apple-touch-icon.png',
-      sizes: '180x180',
-    },
   },
   manifest: '/site.webmanifest',
 };
@@ -49,7 +45,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
         <link rel="icon" href="/favicon.ico" sizes="any" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <link rel="manifest" href="/site.webmanifest" />
         <meta name="theme-color" content="#1F2937" />
       </head>

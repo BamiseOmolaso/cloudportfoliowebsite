@@ -10,8 +10,6 @@ async function getStats() {
     sentNewsletters,
     totalProjects,
     activeProjects,
-    averageOpenRate,
-    averageClickRate,
   ] = await Promise.all([
     db.newsletterSubscriber.count(),
     db.newsletterSubscriber.count({ where: { isSubscribed: true } }),
@@ -19,16 +17,10 @@ async function getStats() {
     db.newsletter.count({ where: { status: 'sent' } }),
     db.project.count(),
     db.project.count({ where: { status: 'published' } }),
-    db.newsletter.aggregate({
-      _avg: { openRate: true },
-      where: { status: 'sent' },
-    }),
-    db.newsletter.aggregate({
-      _avg: { clickRate: true },
-      where: { status: 'sent' },
-    }),
   ]);
 
+  // Note: openRate and clickRate are not stored in the Newsletter model
+  // These would need to be calculated from tracking data or stored separately
   return {
     totalSubscribers,
     activeSubscribers,
@@ -36,8 +28,8 @@ async function getStats() {
     sentNewsletters,
     totalProjects,
     activeProjects,
-    averageOpenRate: averageOpenRate._avg.openRate ?? 0,
-    averageClickRate: averageClickRate._avg.clickRate ?? 0,
+    averageOpenRate: 0,
+    averageClickRate: 0,
   };
 }
 
@@ -141,10 +133,10 @@ export default async function AdminDashboard() {
               Create Newsletter
             </Link>
             <Link
-              href="/admin/subscribers/import"
+              href="/admin/subscribers"
               className="flex items-center justify-center px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md"
             >
-              Import Subscribers
+              Manage Subscribers
             </Link>
           </div>
         </AnimatedCard>
