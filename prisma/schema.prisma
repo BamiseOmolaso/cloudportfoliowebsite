@@ -17,7 +17,6 @@ datasource db {
 // prisma/schema.prisma
 // Generated from your Supabase SQL migrations
 
-
 // ============================================
 // Performance Monitoring Tables
 // ============================================
@@ -25,10 +24,12 @@ datasource db {
 model PerformanceMetric {
   id        String   @id @default(uuid())
   url       String
-  metrics   Json     // JSONB in PostgreSQL
+  metrics   Json // JSONB in PostgreSQL
   timestamp DateTime @default(now()) @db.Timestamptz
 
   @@index([timestamp])
+  @@index([url])
+  @@index([url, timestamp])
   @@map("performance_metrics")
 }
 
@@ -48,25 +49,24 @@ model LcpMetric {
 // ============================================
 
 model NewsletterSubscriber {
-  id                          String    @id @default(uuid())
-  email                       String    @unique
-  name                        String?
-  isSubscribed                Boolean   @default(true) @map("is_subscribed")
-  unsubscribeToken            String?   @unique @map("unsubscribe_token") @db.VarChar(64)
-  unsubscribeTokenExpiresAt   DateTime? @map("unsubscribe_token_expires_at") @db.Timestamptz
-  unsubscribeReason           String?   @map("unsubscribe_reason") @db.VarChar(50)
-  unsubscribeFeedback         String?   @map("unsubscribe_feedback")
-  location                    String?
-  preferences                 Json?     @default("{\"frequency\": \"weekly\", \"categories\": []}") // JSONB
-  preferencesToken            String?   @map("preferences_token")
-  preferencesTokenExpiresAt   DateTime? @map("preferences_token_expires_at") @db.Timestamptz
-  subscriptionCount           Int       @default(1) @map("subscription_count")
-  isDeleted                   Boolean   @default(false) @map("is_deleted")
-  deletedAt                   DateTime? @map("deleted_at") @db.Timestamptz
-  deletedReason               String?   @map("deleted_reason")
-  createdAt                   DateTime  @default(now()) @map("created_at") @db.Timestamptz
-  updatedAt                   DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
-  lastUpdatedAt               DateTime  @default(now()) @map("last_updated_at") @db.Timestamptz
+  id                        String    @id @default(uuid())
+  email                     String    @unique
+  name                      String?
+  isSubscribed              Boolean   @default(true) @map("is_subscribed")
+  unsubscribeToken          String?   @unique @map("unsubscribe_token") @db.VarChar(64)
+  unsubscribeTokenExpiresAt DateTime? @map("unsubscribe_token_expires_at") @db.Timestamptz
+  unsubscribeReason         String?   @map("unsubscribe_reason") @db.VarChar(50)
+  unsubscribeFeedback       String?   @map("unsubscribe_feedback")
+  location                  String?
+  preferences               Json?     @default("{\"frequency\": \"weekly\", \"categories\": []}") // JSONB
+  preferencesToken          String?   @map("preferences_token")
+  preferencesTokenExpiresAt DateTime? @map("preferences_token_expires_at") @db.Timestamptz
+  subscriptionCount         Int       @default(1) @map("subscription_count")
+  isDeleted                 Boolean   @default(false) @map("is_deleted")
+  deletedAt                 DateTime? @map("deleted_at") @db.Timestamptz
+  deletedReason             String?   @map("deleted_reason")
+  createdAt                 DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt                 DateTime  @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
   // Relations
   newsletterSends NewsletterSend[]
@@ -78,6 +78,8 @@ model NewsletterSubscriber {
   @@index([preferencesToken])
   @@index([unsubscribeTokenExpiresAt])
   @@index([unsubscribeReason])
+  @@index([createdAt])
+  @@index([isDeleted])
   @@map("newsletter_subscribers")
 }
 
@@ -96,16 +98,18 @@ model Newsletter {
 
   @@index([status])
   @@index([scheduledFor])
+  @@index([createdAt])
+  @@index([sentAt])
   @@map("newsletters")
 }
 
 model NewsletterSend {
-  id           String    @id @default(uuid())
-  newsletterId String    @map("newsletter_id")
-  subscriberId String    @map("subscriber_id")
-  sentAt       DateTime  @default(now()) @map("sent_at") @db.Timestamptz
-  status       String    @default("pending") // pending, sent, failed
-  errorMessage String?   @map("error_message")
+  id           String   @id @default(uuid())
+  newsletterId String   @map("newsletter_id")
+  subscriberId String   @map("subscriber_id")
+  sentAt       DateTime @default(now()) @map("sent_at") @db.Timestamptz
+  status       String   @default("pending") // pending, sent, failed
+  errorMessage String?  @map("error_message")
 
   // Relations
   newsletter Newsletter           @relation(fields: [newsletterId], references: [id], onDelete: Cascade)
@@ -113,6 +117,9 @@ model NewsletterSend {
 
   @@unique([newsletterId, subscriberId])
   @@index([status])
+  @@index([newsletterId, status])
+  @@index([subscriberId, status])
+  @@index([sentAt])
   @@map("newsletter_sends")
 }
 
@@ -144,19 +151,20 @@ model SubscriberTag {
 }
 
 model NewsletterAuditLog {
-  id           String    @id @default(uuid())
-  subscriberId String?   @map("subscriber_id")
+  id           String   @id @default(uuid())
+  subscriberId String?  @map("subscriber_id")
   action       String
   details      Json?
-  ipAddress    String?   @map("ip_address")
-  userAgent    String?   @map("user_agent")
-  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  ipAddress    String?  @map("ip_address")
+  userAgent    String?  @map("user_agent")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   // Relations
-  subscriber NewsletterSubscriber? @relation(fields: [subscriberId], references: [id])
+  subscriber NewsletterSubscriber? @relation(fields: [subscriberId], references: [id], onDelete: Cascade)
 
   @@index([subscriberId])
   @@index([createdAt])
+  @@index([action])
   @@map("newsletter_audit_log")
 }
 
@@ -188,6 +196,9 @@ model FailedAttempt {
   @@index([ipAddress])
   @@index([email])
   @@index([timestamp])
+  @@index([actionType])
+  @@index([ipAddress, actionType])
+  @@index([timestamp, actionType])
   @@map("failed_attempts")
 }
 
@@ -214,6 +225,8 @@ model BlogPost {
   @@index([slug])
   @@index([status])
   @@index([publishedAt])
+  @@index([createdAt])
+  @@index([status, publishedAt])
   @@map("blog_posts")
 }
 
@@ -238,6 +251,8 @@ model Project {
   @@index([slug])
   @@index([status])
   @@index([publishedAt])
+  @@index([createdAt])
+  @@index([status, publishedAt])
   @@map("projects")
 }
 
@@ -250,12 +265,12 @@ model Project {
 
 model Profile {
   id        String   @id @default(uuid())
-  email     String
+  email     String   @unique
   role      String   @default("user")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
 
-  @@index([email])
+  @@index([email]) // Keep index for performance even though unique
   @@index([role])
   @@map("profiles")
 }
@@ -276,6 +291,8 @@ model ContactMessage {
 
   @@index([email])
   @@index([read])
+  @@index([replied])
+  @@index([read, replied])
   @@index([createdAt])
   @@map("contact_messages")
 }
