@@ -42,7 +42,7 @@ export const GET = secureAdminRoute(async (request: NextRequest) => {
     });
 
     // Transform to match frontend format
-    const transformed = posts.map(post => ({
+    const transformed = posts.map((post: typeof posts[0]) => ({
       id: post.id,
       title: post.title,
       slug: post.slug,

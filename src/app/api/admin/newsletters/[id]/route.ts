@@ -28,7 +28,7 @@ async function getHandler(request: NextRequest, user: { id: string; email: strin
       );
     }
 
-    const sentCount = newsletter.newsletterSends.filter(s => s.status === 'sent').length;
+    const sentCount = newsletter.newsletterSends.filter((s: typeof newsletter.newsletterSends[0]) => s.status === 'sent').length;
     const totalCount = newsletter.newsletterSends.length;
 
     const transformed = {

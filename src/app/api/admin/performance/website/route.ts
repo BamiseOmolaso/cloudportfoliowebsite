@@ -17,7 +17,7 @@ export const GET = secureAdminRoute(async (request: NextRequest) => {
       },
     });
 
-    const transformed = metrics.map(metric => ({
+    const transformed = metrics.map((metric: typeof metrics[0]) => ({
       id: metric.id,
       url: metric.url,
       metrics: metric.metrics,

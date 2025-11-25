@@ -30,7 +30,7 @@ export async function GET(request: Request) {
     })
 
     // Transform to match frontend format
-    const transformedProjects = projects.map(project => ({
+    const transformedProjects = projects.map((project: typeof projects[0]) => ({
       id: project.id,
       title: project.title,
       slug: project.slug,

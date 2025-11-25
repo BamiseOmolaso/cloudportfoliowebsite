@@ -29,7 +29,7 @@ export async function GET(request: Request) {
     })
 
     // Transform snake_case to camelCase for frontend
-    const transformedPosts = posts.map(post => ({
+    const transformedPosts = posts.map((post: typeof posts[0]) => ({
       id: post.id,
       title: post.title,
       slug: post.slug,

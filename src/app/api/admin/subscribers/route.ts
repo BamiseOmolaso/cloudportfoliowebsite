@@ -20,7 +20,7 @@ export const GET = secureAdminRoute(async (request: NextRequest) => {
       },
     });
 
-    const transformed = subscribers.map(sub => ({
+    const transformed = subscribers.map((sub: typeof subscribers[0]) => ({
       id: sub.id,
       email: sub.email,
       name: sub.name,

@@ -76,7 +76,7 @@ export const POST = withRateLimit(apiLimiter, 'newsletter-send', async (request:
     const plainText = sanitizeAndConvertToText(sanitizedHtml);
 
     // Send emails to subscribers
-    const emailPromises = subscribers.map(async subscriber => {
+    const emailPromises = subscribers.map(async (subscriber: typeof subscribers[0]) => {
       let unsubscribeToken = subscriber.unsubscribeToken;
       
       // Generate unsubscribe token if not exists or expired

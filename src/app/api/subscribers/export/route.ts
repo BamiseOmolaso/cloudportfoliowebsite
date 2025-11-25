@@ -39,9 +39,9 @@ export const GET = secureAdminRoute(async (request: NextRequest, user) => {
 
     // Convert to CSV format
     const headers = ['Email', 'Name', 'Subscribed At', 'Tags'];
-    const rows = subscribers.map(subscriber => {
+    const rows = subscribers.map((subscriber: typeof subscribers[0]) => {
       const tags = subscriber.subscriberTags
-        .map((st) => st.tag.name)
+        .map((st: typeof subscriber.subscriberTags[0]) => st.tag.name)
         .join('; ');
       return [
         subscriber.email,
@@ -53,7 +53,7 @@ export const GET = secureAdminRoute(async (request: NextRequest, user) => {
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
+      ...rows.map((row: typeof rows[0]) => row.map((cell: string | number) => `"${String(cell).replace(/"/g, '""')}"`).join(',')),
     ].join('\n');
 
     // Create response with CSV content

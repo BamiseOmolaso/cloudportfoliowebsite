@@ -20,9 +20,9 @@ export const GET = secureAdminRoute(async (request: NextRequest) => {
       },
     });
 
-    const transformed = newsletters.map(newsletter => {
-      const sentCount = newsletter.newsletterSends.filter(s => s.status === 'sent').length;
-      const failedCount = newsletter.newsletterSends.filter(s => s.status === 'failed').length;
+    const transformed = newsletters.map((newsletter: typeof newsletters[0]) => {
+      const sentCount = newsletter.newsletterSends.filter((s: typeof newsletter.newsletterSends[0]) => s.status === 'sent').length;
+      const failedCount = newsletter.newsletterSends.filter((s: typeof newsletter.newsletterSends[0]) => s.status === 'failed').length;
       const totalCount = newsletter.newsletterSends.length;
 
       return {
