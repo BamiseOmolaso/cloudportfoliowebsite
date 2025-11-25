@@ -68,6 +68,15 @@ export async function GET(
     return response;
   } catch (error) {
     console.error('Error fetching project:', error)
+    
+    // Handle database connection errors gracefully
+    if (error && typeof error === 'object' && 'name' in error && error.name === 'PrismaClientInitializationError') {
+      return NextResponse.json(
+        { error: 'Project not found' },
+        { status: 404 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Failed to fetch project' },
       { status: 500 }

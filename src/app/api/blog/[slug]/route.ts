@@ -60,6 +60,15 @@ export async function GET(
     return response;
   } catch (error) {
     console.error('Error fetching blog post:', error)
+    
+    // Handle database connection errors gracefully
+    if (error && typeof error === 'object' && 'name' in error && error.name === 'PrismaClientInitializationError') {
+      return NextResponse.json(
+        { error: 'Post not found' },
+        { status: 404 }
+      )
+    }
+    
     return NextResponse.json(
       { error: 'Failed to fetch blog post' },
       { status: 500 }
