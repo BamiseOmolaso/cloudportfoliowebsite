@@ -27,3 +27,22 @@ variable "db_username" {
   description = "Database username"
   type        = string
 }
+
+variable "db_password" {
+  description = "Database password (if not provided, random password will be generated)"
+  type        = string
+  default     = ""
+  sensitive   = true
+}
+
+variable "instance_class" {
+  description = "RDS instance class"
+  type        = string
+  default     = "db.t4g.micro"
+}
+
+variable "allocated_storage" {
+  description = "RDS allocated storage in GB"
+  type        = number
+  default     = 20
+}

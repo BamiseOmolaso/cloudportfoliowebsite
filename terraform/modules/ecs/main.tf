@@ -118,7 +118,7 @@ resource "aws_ecs_task_definition" "app" {
   container_definitions = jsonencode([
     {
       name      = "portfolio-app"
-      image     = "${var.ecr_repository_url}:latest"
+      image     = "${var.ecr_repository_url}:${var.image_tag}"
       essential = true
 
       portMappings = [
@@ -151,6 +151,34 @@ resource "aws_ecs_task_definition" "app" {
         {
           name      = "RECAPTCHA_SECRET_KEY"
           valueFrom = "${var.app_secrets_arn}:RECAPTCHA_SECRET_KEY::"
+        },
+        {
+          name      = "JWT_SECRET"
+          valueFrom = "${var.app_secrets_arn}:JWT_SECRET::"
+        },
+        {
+          name      = "ADMIN_EMAIL"
+          valueFrom = "${var.app_secrets_arn}:ADMIN_EMAIL::"
+        },
+        {
+          name      = "ADMIN_PASSWORD"
+          valueFrom = "${var.app_secrets_arn}:ADMIN_PASSWORD::"
+        },
+        {
+          name      = "CONTACT_EMAIL"
+          valueFrom = "${var.app_secrets_arn}:CONTACT_EMAIL::"
+        },
+        {
+          name      = "RESEND_FROM_EMAIL"
+          valueFrom = "${var.app_secrets_arn}:RESEND_FROM_EMAIL::"
+        },
+        {
+          name      = "RESEND_DOMAIN"
+          valueFrom = "${var.app_secrets_arn}:RESEND_DOMAIN::"
+        },
+        {
+          name      = "REDIS_URL"
+          valueFrom = "${var.app_secrets_arn}:REDIS_URL::"
         }
       ]
 

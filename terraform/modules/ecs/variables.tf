@@ -33,6 +33,12 @@ variable "ecr_repository_url" {
   type        = string
 }
 
+variable "image_tag" {
+  description = "Docker image tag to deploy"
+  type        = string
+  default     = "latest"
+}
+
 variable "db_secret_arn" {
   description = "Database credentials secret ARN"
   type        = string

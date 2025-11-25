@@ -1,7 +1,12 @@
-# Random password for RDS
+# Random password for RDS (only if not provided)
 resource "random_password" "db_password" {
+  count   = var.db_password == "" ? 1 : 0
   length  = 32
   special = false
+}
+
+locals {
+  db_password = var.db_password != "" ? var.db_password : random_password.db_password[0].result
 }
 
 # DB Subnet Group
@@ -20,14 +25,14 @@ resource "aws_db_instance" "main" {
   identifier        = "${var.environment}-portfolio-db"
   engine            = "postgres"
   # engine_version    = "14.7"
-  instance_class    = "db.t4g.micro"
-  allocated_storage = 20
+  instance_class    = var.instance_class
+  allocated_storage = var.allocated_storage
   storage_type      = "gp2"
   storage_encrypted = true
 
   db_name  = var.db_name
   username = var.db_username
-  password = random_password.db_password.result
+  password = local.db_password
 
   db_subnet_group_name   = aws_db_subnet_group.main.name
   vpc_security_group_ids = [var.security_group_id]
@@ -62,11 +67,11 @@ resource "aws_secretsmanager_secret_version" "db_credentials" {
   secret_id = aws_secretsmanager_secret.db_credentials.id
   secret_string = jsonencode({
     username = aws_db_instance.main.username
-    password = random_password.db_password.result
+    password = local.db_password
     engine   = "postgres"
     host     = aws_db_instance.main.address
     port     = aws_db_instance.main.port
     dbname   = aws_db_instance.main.db_name
-    url      = "postgresql://${aws_db_instance.main.username}:${random_password.db_password.result}@${aws_db_instance.main.address}:${aws_db_instance.main.port}/${aws_db_instance.main.db_name}"
+    url      = "postgresql://${aws_db_instance.main.username}:${local.db_password}@${aws_db_instance.main.address}:${aws_db_instance.main.port}/${aws_db_instance.main.db_name}"
   })
 }
