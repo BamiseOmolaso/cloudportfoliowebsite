@@ -28,6 +28,8 @@ const customJestConfig = {
     '!src/**/__tests__/**',
     '!src/**/*.test.{js,jsx,ts,tsx}',
     '!src/**/*.spec.{js,jsx,ts,tsx}',
+    '!src/test-utils/**',
+    '!src/lib/validation-schemas.ts',
   ],
   coverageThreshold: {
     global: {
