@@ -31,7 +31,7 @@ A modern, responsive portfolio website showcasing Dr. Oluwabamise David Omolaso'
 - **Database**: PostgreSQL on AWS RDS
 - **ORM**: Prisma
 - **Email**: Resend
-- **Rate Limiting**: Upstash Redis
+- **Rate Limiting**: Redis Cloud (production) / In-memory (local/dev)
 - **Rich Text Editor**: TipTap
 - **HTML Sanitization**: DOMPurify
 - **Validation**: Zod
@@ -108,9 +108,10 @@ RESEND_API_KEY="re_your_api_key"
 RESEND_FROM_EMAIL="noreply@yourdomain.com"
 CONTACT_EMAIL="your-contact-email@example.com"
 
-# Rate Limiting (Upstash Redis)
-UPSTASH_REDIS_REST_URL="https://your-redis-instance.upstash.io"
-UPSTASH_REDIS_REST_TOKEN="your_redis_token"
+# Rate Limiting (Redis Cloud - Production Only)
+# Redis is only used in production (NODE_ENV=production)
+# Local development uses in-memory rate limiting (no Redis needed)
+# REDIS_URL="redis://default:password@host:port"  # Only for production
 
 # reCAPTCHA (Google)
 NEXT_PUBLIC_RECAPTCHA_SITE_KEY="your_recaptcha_site_key"
