@@ -8,16 +8,16 @@ type AsyncMock<Args extends any[] = any[], Return = unknown> = jest.MockedFuncti
 
 type RedisMockInstance = {
   isOpen: boolean;
-  connect: AsyncMock;
-  ping: AsyncMock<[], string>;
+  connect: jest.Mock;
+  ping: jest.Mock;
   multi: jest.Mock;
-  zRemRangeByScore: AsyncMock;
-  zCard: AsyncMock;
-  zAdd: AsyncMock;
-  expire: AsyncMock;
-  keys: AsyncMock;
-  del: AsyncMock;
-  quit: AsyncMock;
+  zRemRangeByScore: jest.Mock;
+  zCard: jest.Mock;
+  zAdd: jest.Mock;
+  expire: jest.Mock;
+  keys: jest.Mock;
+  del: jest.Mock;
+  quit: jest.Mock;
 };
 
 type RateLimitCheckResult = {
@@ -37,10 +37,19 @@ const createRedisMock = (): RedisMockInstance => {
     exec: jest.fn(),
   };
 
+  const connectMock = jest.fn() as any;
+  connectMock.mockResolvedValue(undefined);
+  
+  const pingMock = jest.fn() as any;
+  pingMock.mockResolvedValue('PONG');
+  
+  const quitMock = jest.fn() as any;
+  quitMock.mockResolvedValue(undefined);
+
   return {
     isOpen: true,
-    connect: jest.fn().mockResolvedValue(undefined),
-    ping: jest.fn().mockResolvedValue('PONG'),
+    connect: connectMock,
+    ping: pingMock,
     multi: jest.fn().mockReturnValue(mockMulti),
     zRemRangeByScore: jest.fn(),
     zCard: jest.fn(),
@@ -48,7 +57,7 @@ const createRedisMock = (): RedisMockInstance => {
     expire: jest.fn(),
     keys: jest.fn(),
     del: jest.fn(),
-    quit: jest.fn().mockResolvedValue(undefined),
+    quit: quitMock,
   };
 };
 
@@ -59,9 +68,17 @@ jest.mock('@/lib/redis-client', () => {
     getRedisClient: jest.fn(() => {
       // In tests, we can control whether Redis is available
       return process.env.MOCK_REDIS_AVAILABLE === 'true' ? redisMockInstance : null;
-    }),
-    checkRedisHealth: jest.fn().mockResolvedValue(true),
-    disconnectRedis: jest.fn().mockResolvedValue(undefined),
+    }) as jest.Mock,
+    checkRedisHealth: (() => {
+      const mock = jest.fn() as any;
+      mock.mockResolvedValue(true);
+      return mock;
+    })(),
+    disconnectRedis: (() => {
+      const mock = jest.fn() as any;
+      mock.mockResolvedValue(undefined);
+      return mock;
+    })(),
   };
 });
 
@@ -90,7 +107,11 @@ describe('RateLimiter', () => {
     
     // Default to in-memory (no Redis) for most tests
     process.env.MOCK_REDIS_AVAILABLE = 'false';
-    process.env.NODE_ENV = 'development';
+    Object.defineProperty(process, 'env', {
+      value: { ...process.env, NODE_ENV: 'development' },
+      writable: true,
+      configurable: true
+    });
 
     limiter = new RateLimiter({
       maxRequests: 5,
@@ -142,12 +163,16 @@ describe('RateLimiter', () => {
   describe('check - Redis mode', () => {
     beforeEach(() => {
       process.env.MOCK_REDIS_AVAILABLE = 'true';
-      process.env.NODE_ENV = 'production';
+      Object.defineProperty(process, 'env', {
+        value: { ...process.env, NODE_ENV: 'production' },
+        writable: true,
+        configurable: true
+      });
       redisMock = getRedisMock();
     });
 
     it('should use Redis when available', async () => {
-      const mockMulti = redisMock.multi();
+      const mockMulti: any = redisMock.multi();
       mockMulti.exec.mockResolvedValue([
         [null, 0], // zRemRangeByScore result
         [null, 0], // zCard result (count before adding)
@@ -164,7 +189,7 @@ describe('RateLimiter', () => {
     });
 
     it('should reject when over limit in Redis', async () => {
-      const mockMulti = redisMock.multi();
+      const mockMulti: any = redisMock.multi();
       // Simulate 5 requests already in window
       mockMulti.exec.mockResolvedValue([
         [null, 0],
@@ -180,7 +205,7 @@ describe('RateLimiter', () => {
     });
 
     it('should fallback to in-memory on Redis error', async () => {
-      const mockMulti = redisMock.multi();
+      const mockMulti: any = redisMock.multi();
       mockMulti.exec.mockRejectedValue(new Error('Redis error'));
 
       // eslint-disable-next-line @typescript-eslint/no-empty-function
@@ -204,9 +229,13 @@ describe('RateLimiter', () => {
 
     it('should cleanup Redis keys when Redis is available', async () => {
       process.env.MOCK_REDIS_AVAILABLE = 'true';
-      process.env.NODE_ENV = 'production';
-      redisMock.keys.mockResolvedValue(['test:key1', 'test:key2']);
-      redisMock.del.mockResolvedValue(2);
+      Object.defineProperty(process, 'env', {
+        value: { ...process.env, NODE_ENV: 'production' },
+        writable: true,
+        configurable: true
+      });
+      ((redisMock.keys as jest.Mock) as any).mockResolvedValue(['test:key1', 'test:key2']);
+      ((redisMock.del as jest.Mock) as any).mockResolvedValue(2);
 
       await limiter.cleanup();
 

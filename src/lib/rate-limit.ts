@@ -32,11 +32,13 @@ class InMemoryRateLimiter {
 
   private cleanup() {
     const now = Date.now();
-    for (const [key, value] of this.store.entries()) {
+    const keysToDelete: string[] = [];
+    this.store.forEach((value, key) => {
       if (now > value.resetTime) {
-        this.store.delete(key);
+        keysToDelete.push(key);
       }
-    }
+    });
+    keysToDelete.forEach(key => this.store.delete(key));
   }
 
   async check(identifier: string, limit: number, windowMs: number): Promise<RateLimitResult> {
