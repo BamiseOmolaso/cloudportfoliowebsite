@@ -133,7 +133,9 @@ describe('RateLimiter', () => {
     });
 
     it('should bypass rate limit when Redis is not initialized', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Mock Redis constructor to throw
@@ -159,7 +161,9 @@ describe('RateLimiter', () => {
     it('should handle Redis errors gracefully', async () => {
       redisMock.lrange.mockRejectedValue(new Error('Redis error'));
 
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       const result = await limiter.check('test-identifier');
@@ -198,6 +202,7 @@ describe('RateLimiter', () => {
     it('should handle Redis errors during cleanup', async () => {
       redisMock.keys.mockRejectedValue(new Error('Redis error'));
 
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       await limiter.cleanup();

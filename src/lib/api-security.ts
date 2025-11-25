@@ -69,7 +69,7 @@ export function sanitizeContent(content: string | null | undefined): string {
 /**
  * Generic error handler that doesn't leak information
  */
-export function handleError(error: unknown, defaultMessage: string = 'An error occurred'): NextResponse {
+export function handleError(error: unknown, defaultMessage = 'An error occurred'): NextResponse {
   // Log detailed error server-side only
   console.error('API Error:', error);
 
