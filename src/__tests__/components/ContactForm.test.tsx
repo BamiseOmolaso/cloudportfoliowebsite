@@ -1,15 +1,24 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { render, screen, waitFor } from '@testing-library/react';
+import { describe, it, expect, beforeEach, afterEach, beforeAll, jest } from '@jest/globals';
+import { render, screen, waitFor, act } from '@testing-library/react';
+import '@testing-library/jest-dom';
 import userEvent from '@testing-library/user-event';
-import ContactForm from '@/app/components/ContactForm';
+import { createMockResponse } from '../utils/test-helpers';
 
-// Mock next/navigation
+// Mock next/navigation - same pattern as Newsletter test
 const mockPush = jest.fn();
 jest.mock('next/navigation', () => ({
   useRouter: () => ({
     push: mockPush,
   }),
 }));
+
+// Dynamic import pattern - same as Newsletter test
+type ContactFormModule = typeof import('@/app/components/ContactForm');
+let ContactForm: ContactFormModule['default'];
+
+beforeAll(async () => {
+  ({ default: ContactForm } = await import('@/app/components/ContactForm'));
+});
 
 // Mock framer-motion to avoid animation issues in tests
 jest.mock('framer-motion', () => ({
@@ -19,13 +28,14 @@ jest.mock('framer-motion', () => ({
 }));
 
 // Mock fetch
-global.fetch = jest.fn() as jest.Mock;
+const mockFetch: jest.MockedFunction<typeof fetch> = jest.fn();
+global.fetch = mockFetch as unknown as typeof fetch;
 
 describe('ContactForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     jest.useFakeTimers();
-    (global.fetch as jest.Mock).mockClear();
+    mockFetch.mockReset();
   });
 
   afterEach(() => {
@@ -58,11 +68,10 @@ describe('ContactForm', () => {
 
   it('should show loading state when submitting', async () => {
     const user = userEvent.setup({ delay: null });
-    (global.fetch as jest.Mock).mockImplementation(
-      () => new Promise(resolve => setTimeout(() => resolve({
-        ok: true,
-        json: async () => ({ message: 'Message sent successfully' }),
-      }), 100))
+    mockFetch.mockImplementation(
+      () => new Promise(resolve => setTimeout(() => resolve(
+        createMockResponse({ message: 'Message sent successfully' })
+      ), 100))
     );
 
     render(<ContactForm />);
@@ -80,10 +89,9 @@ describe('ContactForm', () => {
 
   it('should submit form with valid data', async () => {
     const user = userEvent.setup({ delay: null });
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({ message: 'Message sent successfully' }),
-    });
+    mockFetch.mockResolvedValue(
+      createMockResponse({ message: 'Message sent successfully' })
+    );
 
     render(<ContactForm />);
 
@@ -95,7 +103,7 @@ describe('ContactForm', () => {
     await user.click(screen.getByRole('button', { name: /send message/i }));
 
     await waitFor(() => {
-      expect(global.fetch).toHaveBeenCalledWith('/api/contact', {
+      expect(mockFetch).toHaveBeenCalledWith('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -112,10 +120,9 @@ describe('ContactForm', () => {
 
   it('should show success message on successful submission', async () => {
     const user = userEvent.setup({ delay: null });
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({ message: 'Message sent successfully' }),
-    });
+    mockFetch.mockResolvedValue(
+      createMockResponse({ message: 'Message sent successfully' })
+    );
 
     render(<ContactForm />);
 
@@ -133,10 +140,9 @@ describe('ContactForm', () => {
 
   it('should clear form after successful submission', async () => {
     const user = userEvent.setup({ delay: null });
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({ message: 'Message sent successfully' }),
-    });
+    mockFetch.mockResolvedValue(
+      createMockResponse({ message: 'Message sent successfully' })
+    );
 
     render(<ContactForm />);
 
@@ -158,10 +164,9 @@ describe('ContactForm', () => {
 
   it('should show error message on failed submission', async () => {
     const user = userEvent.setup({ delay: null });
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: false,
-      json: async () => ({ error: 'Failed to send message' }),
-    });
+    mockFetch.mockResolvedValue(
+      createMockResponse({ error: 'Failed to send message' }, { ok: false })
+    );
 
     render(<ContactForm />);
 
@@ -179,10 +184,9 @@ describe('ContactForm', () => {
 
   it('should redirect to home page after successful submission', async () => {
     const user = userEvent.setup({ delay: null });
-    (global.fetch as jest.Mock).mockResolvedValue({
-      ok: true,
-      json: async () => ({ message: 'Message sent successfully' }),
-    });
+    mockFetch.mockResolvedValue(
+      createMockResponse({ message: 'Message sent successfully' })
+    );
 
     render(<ContactForm />);
 
@@ -193,26 +197,26 @@ describe('ContactForm', () => {
 
     await user.click(screen.getByRole('button', { name: /send message/i }));
 
+    // Wait for success message to appear (this ensures setTimeout is scheduled)
     await waitFor(() => {
       expect(screen.getByText(/message sent successfully/i)).toBeInTheDocument();
     });
 
-    // Fast-forward time to trigger redirect
+    // Fast-forward time to trigger redirect (same pattern as Newsletter test)
     jest.advanceTimersByTime(2000);
 
     // Wait for redirect to be called
     await waitFor(() => {
       expect(mockPush).toHaveBeenCalledWith('/');
-    }, { timeout: 1000 });
+    });
   });
 
   it('should disable submit button while loading', async () => {
     const user = userEvent.setup({ delay: null });
-    (global.fetch as jest.Mock).mockImplementation(
-      () => new Promise(resolve => setTimeout(() => resolve({
-        ok: true,
-        json: async () => ({ message: 'Message sent successfully' }),
-      }), 100))
+    mockFetch.mockImplementation(
+      () => new Promise(resolve => setTimeout(() => resolve(
+        createMockResponse({ message: 'Message sent successfully' })
+      ), 100))
     );
 
     render(<ContactForm />);
@@ -230,7 +234,7 @@ describe('ContactForm', () => {
 
   it('should handle network errors', async () => {
     const user = userEvent.setup({ delay: null });
-    (global.fetch as jest.Mock).mockRejectedValue(new Error('Network error'));
+    mockFetch.mockRejectedValue(new Error('Network error'));
 
     render(<ContactForm />);
 

@@ -1,7 +1,4 @@
-/**
- * Example test file to verify Jest setup
- * This file can be deleted once real tests are added
- */
+import { describe, it, expect } from '@jest/globals';
 
 describe('Jest Setup', () => {
   it('should run tests successfully', () => {

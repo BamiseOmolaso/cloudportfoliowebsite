@@ -7,7 +7,7 @@ export function sanitizeHtmlServer(html: string): string {
   }
 
   // Basic XSS protection - remove script tags and event handlers
-  let sanitized = html
+  const sanitized = html
     // Remove script tags and their content
     .replace(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, '')
     // Remove event handlers (onclick, onerror, etc.)

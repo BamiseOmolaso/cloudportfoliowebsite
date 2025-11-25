@@ -1,10 +1,21 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
 import { render } from '@testing-library/react';
-import { db } from '@/lib/db';
-import BlogPostPage from '@/app/blog/[slug]/page';
+import '@testing-library/jest-dom';
+
+type AsyncMock<Args extends any[] = any[], Return = unknown> = jest.MockedFunction<
+  (...args: Args) => Promise<Return>
+>;
+
+const mockFindFirst: AsyncMock = jest.fn();
 
 // Mock dependencies
-jest.mock('@/lib/db');
+jest.mock('@/lib/db', () => ({
+  db: {
+    blogPost: {
+      findFirst: mockFindFirst,
+    },
+  },
+}));
 jest.mock('next/navigation', () => ({
   notFound: () => {
     throw new Error('NOT_FOUND');
@@ -23,11 +34,15 @@ jest.mock('next/link', () => ({
   ),
 }));
 
-const mockFindFirst = jest.fn();
+type BlogPageModule = typeof import('@/app/blog/[slug]/page');
+let BlogPostPage: BlogPageModule['default'];
+
+beforeAll(async () => {
+  ({ default: BlogPostPage } = await import('@/app/blog/[slug]/page'));
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
-  (db.blogPost.findFirst as jest.Mock) = mockFindFirst;
 });
 
 describe('BlogPostPage', () => {
@@ -216,9 +231,8 @@ describe('BlogPostPage', () => {
 
     const params = Promise.resolve({ slug: 'test-blog-post' });
 
-    // Should return null on error (component handles it)
-    const result = await BlogPostPage({ params });
-    expect(result).toBeNull();
+    // When getBlogPost returns null (due to error), component calls notFound() which throws
+    await expect(BlogPostPage({ params })).rejects.toThrow('NOT_FOUND');
   });
 });
 

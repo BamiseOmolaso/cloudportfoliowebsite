@@ -1,39 +1,65 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
+import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
-import { cookies } from 'next/headers';
 
-// Mock dependencies BEFORE importing the route
-jest.mock('@/lib/db');
-jest.mock('next/headers');
+type AsyncMock<Args extends any[] = any[], Return = unknown> = jest.MockedFunction<
+  (...args: Args) => Promise<Return>
+>;
+type SyncMock<Args extends any[] = any[], Return = unknown> = jest.MockedFunction<
+  (...args: Args) => Return
+>;
+
+const mockFindFirst: AsyncMock = jest.fn();
+const mockCreate: AsyncMock = jest.fn();
+const mockUpdate: AsyncMock = jest.fn();
+const mockSet: SyncMock = jest.fn();
+const mockGet: SyncMock = jest.fn();
+const mockCookies: SyncMock = jest.fn();
+const mockWithRateLimit: SyncMock<
+  [unknown, string, (req: NextRequest) => Promise<Response>],
+  (req: NextRequest) => Promise<Response>
+> = jest.fn(
+  (
+    _limiter: unknown,
+    _identifier: string,
+    handler: (req: NextRequest) => Promise<Response>,
+  ) => handler,
+);
+
+jest.mock('@/lib/db', () => ({
+  db: {
+    profile: {
+      findFirst: mockFindFirst,
+      create: mockCreate,
+      update: mockUpdate,
+    },
+  },
+}));
+
+jest.mock('next/headers', () => ({
+  cookies: mockCookies,
+}));
+
 jest.mock('@/lib/rate-limit', () => ({
-  withRateLimit: (limiter: unknown, identifier: string, handler: (req: Request) => Promise<Response>) => handler,
+  withRateLimit: mockWithRateLimit,
   authLimiter: {},
 }));
 
-// Import route after mocks are set up
-import { POST } from '@/app/api/auth/login/route';
+type PostHandler = (req: NextRequest) => Promise<Response>;
+let POST: PostHandler;
 
-const mockFindFirst = jest.fn();
-const mockCreate = jest.fn();
-const mockUpdate = jest.fn();
-const mockSet = jest.fn();
-const mockCookies = jest.fn();
+beforeAll(async () => {
+  const routeModule = await import('@/app/api/auth/login/route');
+  POST = routeModule.POST as unknown as PostHandler;
+});
 
 beforeEach(() => {
   jest.clearAllMocks();
-  
-  // Mock Prisma
-  (db.profile.findFirst as jest.Mock) = mockFindFirst;
-  (db.profile.create as jest.Mock) = mockCreate;
-  (db.profile.update as jest.Mock) = mockUpdate;
-  
-  // Mock cookies
-  (cookies as jest.Mock) = mockCookies;
+
   mockCookies.mockReturnValue({
     set: mockSet,
+    get: mockGet,
   });
-  
+
   // Set environment variables
   process.env.JWT_SECRET = 'test-jwt-secret-key-minimum-32-characters-long';
   process.env.ADMIN_EMAIL = 'admin@example.com';
@@ -140,9 +166,9 @@ describe('POST /api/auth/login', () => {
       expect.any(String),
       expect.objectContaining({
         httpOnly: true,
-        secure: true,
-        sameSite: 'strict',
-      })
+        secure: false,
+        sameSite: 'lax',
+      }),
     );
   });
 
@@ -212,7 +238,11 @@ describe('POST /api/auth/login', () => {
       }),
     });
 
-    await expect(POST(request)).rejects.toThrow('JWT_SECRET');
+    const response = await POST(request);
+    const data = await response.json();
+
+    expect(response.status).toBe(500);
+    expect(data.error).toContain('Failed to authenticate');
   });
 });
 

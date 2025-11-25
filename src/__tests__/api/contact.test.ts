@@ -1,15 +1,27 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { NextRequest } from 'next/server';
 
-// Create mock functions that can be accessed in tests
-const mockCreate = jest.fn();
-const mockSend = jest.fn();
+type AsyncMock<Args extends any[] = any[], Return = unknown> = jest.MockedFunction<
+  (...args: Args) => Promise<Return>
+>;
+type SyncMock<Args extends any[] = any[], Return = unknown> = jest.MockedFunction<
+  (...args: Args) => Return
+>;
+
+const mockCreate: AsyncMock = jest.fn();
+const mockSend: AsyncMock = jest.fn();
+const mockLimiterCheck: AsyncMock<[string], { success: boolean; remaining: number; resetTime: number }> =
+  jest.fn();
+const mockWithRateLimit: SyncMock<
+  [unknown, string, (req: NextRequest) => Promise<Response>],
+  (req: NextRequest) => Promise<Response>
+> = jest.fn((_, __, handler) => handler);
 
 // Mock dependencies BEFORE importing the route
 jest.mock('@/lib/db', () => ({
   db: {
     contactMessage: {
-      create: (...args: unknown[]) => mockCreate(...args),
+      create: mockCreate,
     },
   },
 }));
@@ -17,25 +29,32 @@ jest.mock('@/lib/db', () => ({
 jest.mock('resend', () => ({
   Resend: jest.fn().mockImplementation(() => ({
     emails: {
-      send: (...args: unknown[]) => mockSend(...args),
+      send: mockSend,
     },
   })),
 }));
 
-// Mock rate-limit to prevent Redis initialization - must be before route import
-const mockWithRateLimit = jest.fn((limiter: unknown, identifier: string, handler: (req: Request) => Promise<Response>) => {
-  return handler;
-});
-
 jest.mock('@/lib/rate-limit', () => ({
   withRateLimit: mockWithRateLimit,
   contactFormLimiter: {
-    check: jest.fn().mockResolvedValue({ success: true, remaining: 5, resetTime: Date.now() + 3600000 }),
+    check: mockLimiterCheck,
+    config: { maxRequests: 5, windowMs: 3600000 },
   },
 }));
 
-// Import after mocks
-import { POST } from '@/app/api/contact/route';
+type ContactRouteModule = typeof import('@/app/api/contact/route');
+let POST: ContactRouteModule['POST'];
+
+beforeAll(async () => {
+  ({ POST } = await import('@/app/api/contact/route'));
+});
+
+const createRequest = (body: Record<string, unknown>) =>
+  new NextRequest('http://localhost:3000/api/contact', {
+    method: 'POST',
+    headers: new Headers({ 'Content-Type': 'application/json' }),
+    body: JSON.stringify(body),
+  });
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -48,17 +67,19 @@ beforeEach(() => {
   // Reset mocks
   mockCreate.mockClear();
   mockSend.mockClear();
+  mockLimiterCheck.mockResolvedValue({
+    success: true,
+    remaining: 5,
+    resetTime: Date.now() + 3600000,
+  });
+  mockWithRateLimit.mockImplementation((_, __, handler) => handler);
 });
 
 describe('POST /api/contact', () => {
   it('should return 400 if name is missing', async () => {
-    const request = new Request('http://localhost:3000/api/contact', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        email: 'test@example.com',
-        message: 'Test message',
-      }),
+    const request = createRequest({
+      email: 'test@example.com',
+      message: 'Test message',
     });
 
     const response = await POST(request);
@@ -69,13 +90,9 @@ describe('POST /api/contact', () => {
   });
 
   it('should return 400 if email is missing', async () => {
-    const request = new Request('http://localhost:3000/api/contact', {
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-      body: JSON.stringify({
-        name: 'Test User',
-        message: 'Test message',
-      }),
+    const request = createRequest({
+      name: 'Test User',
+      message: 'Test message',
     });
 
     const response = await POST(request);
@@ -86,13 +103,9 @@ describe('POST /api/contact', () => {
   });
 
   it('should return 400 if message is missing', async () => {
-    const request = new Request('http://localhost:3000/api/contact', {
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-      body: JSON.stringify({
-        name: 'Test User',
-        email: 'test@example.com',
-      }),
+    const request = createRequest({
+      name: 'Test User',
+      email: 'test@example.com',
     });
 
     const response = await POST(request);
@@ -103,14 +116,10 @@ describe('POST /api/contact', () => {
   });
 
   it('should return 400 if email format is invalid', async () => {
-    const request = new Request('http://localhost:3000/api/contact', {
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-      body: JSON.stringify({
-        name: 'Test User',
-        email: 'invalid-email',
-        message: 'Test message',
-      }),
+    const request = createRequest({
+      name: 'Test User',
+      email: 'invalid-email',
+      message: 'Test message',
     });
 
     const response = await POST(request);
@@ -131,15 +140,11 @@ describe('POST /api/contact', () => {
 
     mockSend.mockResolvedValue({ id: 'email-id' });
 
-    const request = new Request('http://localhost:3000/api/contact', {
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-      body: JSON.stringify({
-        name: 'Test User',
-        email: 'test@example.com',
-        subject: 'Test Subject',
-        message: 'Test message',
-      }),
+    const request = createRequest({
+      name: 'Test User',
+      email: 'test@example.com',
+      subject: 'Test Subject',
+      message: 'Test message',
     });
 
     const response = await POST(request);
@@ -163,14 +168,10 @@ describe('POST /api/contact', () => {
     mockCreate.mockResolvedValue({ id: '123' });
     mockSend.mockResolvedValue({ id: 'email-id' });
 
-    const request = new Request('http://localhost:3000/api/contact', {
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-      body: JSON.stringify({
-        name: '  Test User  ',
-        email: '  TEST@EXAMPLE.COM  ',
-        message: '  Test message  ',
-      }),
+    const request = createRequest({
+      name: '  Test User  ',
+      email: '  TEST@EXAMPLE.COM  ',
+      message: '  Test message  ',
     });
 
     await POST(request);
@@ -187,14 +188,10 @@ describe('POST /api/contact', () => {
   it('should handle database errors gracefully', async () => {
     mockCreate.mockRejectedValue(new Error('Database error'));
 
-    const request = new Request('http://localhost:3000/api/contact', {
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-      body: JSON.stringify({
-        name: 'Test User',
-        email: 'test@example.com',
-        message: 'Test message',
-      }),
+    const request = createRequest({
+      name: 'Test User',
+      email: 'test@example.com',
+      message: 'Test message',
     });
 
     const response = await POST(request);
@@ -211,14 +208,10 @@ describe('POST /api/contact', () => {
       .mockResolvedValueOnce({ id: 'email-1' })
       .mockRejectedValueOnce(new Error('Email error'));
 
-    const request = new Request('http://localhost:3000/api/contact', {
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-      body: JSON.stringify({
-        name: 'Test User',
-        email: 'test@example.com',
-        message: 'Test message',
-      }),
+    const request = createRequest({
+      name: 'Test User',
+      email: 'test@example.com',
+      message: 'Test message',
     });
 
     const response = await POST(request);
@@ -235,14 +228,10 @@ describe('POST /api/contact', () => {
     mockCreate.mockResolvedValue({ id: '123' });
     mockSend.mockRejectedValue(new Error('CONTACT_EMAIL not set'));
 
-    const request = new Request('http://localhost:3000/api/contact', {
-      headers: { 'Content-Type': 'application/json' },
-      method: 'POST',
-      body: JSON.stringify({
-        name: 'Test User',
-        email: 'test@example.com',
-        message: 'Test message',
-      }),
+    const request = createRequest({
+      name: 'Test User',
+      email: 'test@example.com',
+      message: 'Test message',
     });
 
     // Should still succeed - email errors are logged but don't fail the request

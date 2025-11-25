@@ -1,42 +1,80 @@
 // Import after mocks are set up in jest.setup.js
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { RateLimiter, withRateLimit } from '@/lib/rate-limit';
-import { NextRequest } from 'next/server';
-import { Redis } from '@upstash/redis';
+import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
+import { NextRequest, NextResponse } from 'next/server';
 
-// Get the mocked Redis instance methods
-const getRedisMocks = () => {
-  const redisInstance = new Redis({
-    url: 'https://test-redis.upstash.io',
-    token: 'test-token',
-  });
-  return {
-    mockLrange: redisInstance.lrange as jest.Mock,
-    mockLtrim: redisInstance.ltrim as jest.Mock,
-    mockRpush: redisInstance.rpush as jest.Mock,
-    mockExpire: redisInstance.expire as jest.Mock,
-    mockKeys: redisInstance.keys as jest.Mock,
-    mockDel: redisInstance.del as jest.Mock,
-  };
+type AsyncMock<Args extends any[] = any[], Return = unknown> = jest.MockedFunction<
+  (...args: Args) => Promise<Return>
+>;
+
+type RedisMockInstance = {
+  lrange: AsyncMock;
+  ltrim: AsyncMock;
+  rpush: AsyncMock;
+  expire: AsyncMock;
+  keys: AsyncMock;
+  del: AsyncMock;
+};
+
+type RateLimitCheckResult = {
+  success: boolean;
+  remaining: number;
+  resetTime: number;
+};
+
+const redisInstances: RedisMockInstance[] = [];
+
+const createRedisMock = (): RedisMockInstance => ({
+  lrange: jest.fn(),
+  ltrim: jest.fn(),
+  rpush: jest.fn(),
+  expire: jest.fn(),
+  keys: jest.fn(),
+  del: jest.fn(),
+});
+
+jest.mock('@upstash/redis', () => ({
+  Redis: jest.fn(() => {
+    const instance = createRedisMock();
+    redisInstances.push(instance);
+    return instance;
+  }),
+}));
+
+type RateLimitModule = typeof import('@/lib/rate-limit');
+let RateLimiter: RateLimitModule['RateLimiter'];
+let withRateLimit: RateLimitModule['withRateLimit'];
+let RedisConstructor: jest.Mock;
+
+beforeAll(async () => {
+  ({ RateLimiter, withRateLimit } = await import('@/lib/rate-limit'));
+  const redisModule = jest.requireMock('@upstash/redis') as { Redis: jest.Mock };
+  RedisConstructor = redisModule.Redis;
+});
+
+const getLatestRedisMock = (): RedisMockInstance => {
+  const instance = redisInstances.at(-1);
+  if (!instance) {
+    throw new Error('Redis mock not initialized');
+  }
+  return instance;
 };
 
 describe('RateLimiter', () => {
-  let limiter: RateLimiter;
-  let mocks: ReturnType<typeof getRedisMocks>;
+  let limiter: InstanceType<typeof RateLimiter>;
+  let redisMock: RedisMockInstance;
 
   beforeEach(() => {
     jest.clearAllMocks();
+    redisInstances.length = 0;
     process.env.UPSTASH_REDIS_REST_URL = 'https://test-redis.upstash.io';
     process.env.UPSTASH_REDIS_REST_TOKEN = 'test-token';
-
-    // Get fresh mocks
-    mocks = getRedisMocks();
 
     limiter = new RateLimiter({
       maxRequests: 5,
       windowMs: 60000, // 1 minute
       prefix: 'test:',
     });
+    redisMock = getLatestRedisMock();
   });
 
   describe('check', () => {
@@ -44,14 +82,14 @@ describe('RateLimiter', () => {
       const now = Date.now();
       const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
 
-      mocks.mockLrange.mockResolvedValue([]);
+      redisMock.lrange.mockResolvedValue([]);
 
       const result = await limiter.check('test-identifier');
 
       expect(result.success).toBe(true);
       expect(result.remaining).toBe(4); // 5 - 1
-      expect(mocks.mockRpush).toHaveBeenCalledWith('test:test-identifier', now.toString());
-      expect(mocks.mockExpire).toHaveBeenCalled();
+      expect(redisMock.rpush).toHaveBeenCalledWith('test:test-identifier', now.toString());
+      expect(redisMock.expire).toHaveBeenCalled();
 
       dateSpy.mockRestore();
     });
@@ -68,13 +106,13 @@ describe('RateLimiter', () => {
       ];
 
       const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
-      mocks.mockLrange.mockResolvedValue(timestamps.map(String));
+      redisMock.lrange.mockResolvedValue(timestamps.map(String));
 
       const result = await limiter.check('test-identifier');
 
       expect(result.success).toBe(false);
       expect(result.remaining).toBe(0);
-      expect(mocks.mockRpush).not.toHaveBeenCalled();
+      expect(redisMock.rpush).not.toHaveBeenCalled();
 
       dateSpy.mockRestore();
     });
@@ -85,21 +123,21 @@ describe('RateLimiter', () => {
       const recentTimestamp = now - 30000; // 30 seconds ago (inside window)
 
       const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
-      mocks.mockLrange.mockResolvedValue([String(oldTimestamp), String(recentTimestamp)]);
+      redisMock.lrange.mockResolvedValue([String(oldTimestamp), String(recentTimestamp)]);
 
       await limiter.check('test-identifier');
 
-      expect(mocks.mockLtrim).toHaveBeenCalledWith('test:test-identifier', 1, -1);
+      expect(redisMock.ltrim).toHaveBeenCalledWith('test:test-identifier', 1, -1);
 
       dateSpy.mockRestore();
     });
 
     it('should bypass rate limit when Redis is not initialized', async () => {
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       // Mock Redis constructor to throw
-      (Redis as jest.Mock).mockImplementationOnce(() => {
+      RedisConstructor.mockImplementationOnce(() => {
         throw new Error('Redis connection failed');
       });
 
@@ -112,19 +150,17 @@ describe('RateLimiter', () => {
 
       expect(result.success).toBe(true);
       expect(result.remaining).toBe(5);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Redis client not initialized')
-      );
+      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Redis client not initialized'));
 
       consoleErrorSpy.mockRestore();
       consoleWarnSpy.mockRestore();
     });
 
     it('should handle Redis errors gracefully', async () => {
-      mocks.mockLrange.mockRejectedValue(new Error('Redis error'));
+      redisMock.lrange.mockRejectedValue(new Error('Redis error'));
 
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation();
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       const result = await limiter.check('test-identifier');
 
@@ -142,27 +178,27 @@ describe('RateLimiter', () => {
 
   describe('cleanup', () => {
     it('should delete all keys with prefix', async () => {
-      mocks.mockKeys.mockResolvedValue(['test:key1', 'test:key2', 'test:key3']);
+      redisMock.keys.mockResolvedValue(['test:key1', 'test:key2', 'test:key3']);
 
       await limiter.cleanup();
 
-      expect(mocks.mockKeys).toHaveBeenCalledWith('test:*');
-      expect(mocks.mockDel).toHaveBeenCalledWith('test:key1', 'test:key2', 'test:key3');
+      expect(redisMock.keys).toHaveBeenCalledWith('test:*');
+      expect(redisMock.del).toHaveBeenCalledWith('test:key1', 'test:key2', 'test:key3');
     });
 
     it('should handle empty keys array', async () => {
-      mocks.mockKeys.mockResolvedValue([]);
+      redisMock.keys.mockResolvedValue([]);
 
       await limiter.cleanup();
 
-      expect(mocks.mockKeys).toHaveBeenCalledWith('test:*');
-      expect(mocks.mockDel).not.toHaveBeenCalled();
+      expect(redisMock.keys).toHaveBeenCalledWith('test:*');
+      expect(redisMock.del).not.toHaveBeenCalled();
     });
 
     it('should handle Redis errors during cleanup', async () => {
-      mocks.mockKeys.mockRejectedValue(new Error('Redis error'));
+      redisMock.keys.mockRejectedValue(new Error('Redis error'));
 
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
 
       await limiter.cleanup();
 
@@ -182,16 +218,16 @@ describe('RateLimiter', () => {
 
 describe('withRateLimit', () => {
   let mockLimiter: {
-    check: jest.Mock;
+    check: AsyncMock<[string], RateLimitCheckResult>;
     config: { maxRequests: number; windowMs: number; prefix: string };
   };
-  let mockHandler: jest.Mock;
+  let mockHandler: AsyncMock<[NextRequest], NextResponse>;
 
   beforeEach(() => {
     jest.clearAllMocks();
 
     mockLimiter = {
-      check: jest.fn(),
+      check: jest.fn() as AsyncMock<[string], RateLimitCheckResult>,
       config: {
         maxRequests: 5,
         windowMs: 60000,
@@ -199,11 +235,9 @@ describe('withRateLimit', () => {
       },
     };
 
-    mockHandler = jest.fn().mockResolvedValue(
-      new Response(JSON.stringify({ success: true }), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' },
-      })
+    mockHandler = jest.fn() as AsyncMock<[NextRequest], NextResponse>;
+    mockHandler.mockResolvedValue(
+      NextResponse.json({ success: true }, { status: 200 })
     );
   });
 
@@ -214,10 +248,10 @@ describe('withRateLimit', () => {
       resetTime: Date.now() + 60000,
     });
 
-    const request = new Request('http://localhost:3000/api/test', {
+    const request = new NextRequest('http://localhost:3000/api/test', {
       method: 'GET',
-    }) as unknown as NextRequest;
-    const wrappedHandler = withRateLimit(mockLimiter as any, 'test-id', mockHandler);
+    });
+    const wrappedHandler = withRateLimit(mockLimiter as unknown as InstanceType<typeof RateLimiter>, 'test-id', mockHandler);
 
     const response = await wrappedHandler(request);
 
@@ -233,10 +267,10 @@ describe('withRateLimit', () => {
       resetTime: Date.now() + 30000,
     });
 
-    const request = new Request('http://localhost:3000/api/test', {
+    const request = new NextRequest('http://localhost:3000/api/test', {
       method: 'GET',
-    }) as unknown as NextRequest;
-    const wrappedHandler = withRateLimit(mockLimiter as any, 'test-id', mockHandler);
+    });
+    const wrappedHandler = withRateLimit(mockLimiter as unknown as InstanceType<typeof RateLimiter>, 'test-id', mockHandler);
 
     const response = await wrappedHandler(request);
 
@@ -257,10 +291,10 @@ describe('withRateLimit', () => {
       resetTime,
     });
 
-    const request = new Request('http://localhost:3000/api/test', {
+    const request = new NextRequest('http://localhost:3000/api/test', {
       method: 'GET',
-    }) as unknown as NextRequest;
-    const wrappedHandler = withRateLimit(mockLimiter as any, 'test-id', mockHandler);
+    });
+    const wrappedHandler = withRateLimit(mockLimiter as unknown as InstanceType<typeof RateLimiter>, 'test-id', mockHandler);
 
     const response = await wrappedHandler(request);
 

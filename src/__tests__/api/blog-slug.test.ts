@@ -1,15 +1,26 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-import { GET } from '@/app/api/blog/[slug]/route';
-import { db } from '@/lib/db';
+type AsyncMock<Args extends any[] = any[], Return = unknown> = jest.MockedFunction<
+  (...args: Args) => Promise<Return>
+>;
 
-// Mock dependencies
-jest.mock('@/lib/db');
+const mockFindUnique: AsyncMock = jest.fn();
 
-const mockFindUnique = jest.fn();
+jest.mock('@/lib/db', () => ({
+  db: {
+    blogPost: {
+      findUnique: mockFindUnique,
+    },
+  },
+}));
 
+type BlogSlugModule = typeof import('@/app/api/blog/[slug]/route');
+let GET: BlogSlugModule['GET'];
+
+beforeAll(async () => {
+  ({ GET } = await import('@/app/api/blog/[slug]/route'));
+});
 beforeEach(() => {
   jest.clearAllMocks();
-  (db.blogPost.findUnique as jest.Mock) = mockFindUnique;
 });
 
 describe('GET /api/blog/[slug]', () => {

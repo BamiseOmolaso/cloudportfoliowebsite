@@ -30,13 +30,11 @@
     "types": [
       "react",
       "react-dom",
-      "node"
+      "node",
+      "jest",
+      "@testing-library/jest-dom"
     ],
-    "forceConsistentCasingInFileNames": true,
-    "typeRoots": [
-      "./node_modules/@types",
-      "./src/types"
-    ]
+    "forceConsistentCasingInFileNames": true
   },
   "include": [
     "next-env.d.ts",
