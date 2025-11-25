@@ -17,21 +17,24 @@ services:
       timeout: 5s
       retries: 5
 
-  redis:
-    image: redis:7-alpine
-    container_name: portfolio_redis
-    restart: always
-    ports:
-      - "6379:6379"
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
+  # Redis is optional - not needed for local development
+  # The app uses in-memory rate limiting when NODE_ENV != production
+  # Uncomment below if you want to test Redis locally (not recommended - use production Redis Cloud instead)
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: portfolio_redis
+  #   restart: always
+  #   ports:
+  #     - "6379:6379"
+  #   volumes:
+  #     - redis_data:/data
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 5
 
 volumes:
   postgres_data:
-  redis_data:
+  # redis_data:  # Uncomment if using Redis locally
 

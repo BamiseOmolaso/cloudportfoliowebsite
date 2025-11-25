@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Required for Docker deployment
+  output: 'standalone',
   reactStrictMode: true,
   images: {
     remotePatterns: [

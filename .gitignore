@@ -49,8 +49,10 @@ next-env.d.ts
 .terraform/
 .terraform.lock.hcl
 terraform.tfvars
+terraform/envs/*/terraform.tfvars
 *.tfplan
 crash.log
+terraform.tfstate.backup
 
 # Sensitive files
 db-credentials.json
