@@ -58,12 +58,19 @@ jobs:
         continue-on-error: false
       
       - name: Run tests
-        run: npm test -- --coverage --passWithNoTests --runInBand
+        run: npm test -- --passWithNoTests --runInBand
         continue-on-error: false
       
+      - name: Run tests with coverage
+        run: npm run test:coverage -- --passWithNoTests --runInBand
+        continue-on-error: true
+      
+      # Note: The warning about CODECOV_TOKEN is a known false positive from the VS Code
+      # GitHub Actions extension. The workflow will work correctly even if the secret is not set.
       - name: Upload coverage to Codecov
         uses: codecov/codecov-action@v4
         with:
+          # Token is optional - if not set, Codecov will attempt tokenless upload for public repos
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/lcov.info
           fail_ci_if_error: false
