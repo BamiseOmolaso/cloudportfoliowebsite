@@ -1,4 +1,8 @@
-name: CI/CD Tests
+# ⚠️ NOTE: This workflow has been replaced by the new CI/CD pipeline
+# See: ci.yml (CI), deploy-dev.yml (Dev CD), deploy-prod.yml (Prod CD)
+# This file is kept for reference but can be removed
+
+name: CI/CD Tests (Legacy)
 
 on:
   push:

@@ -1,0 +1,399 @@
+name: Deploy Application
+
+on:
+  push:
+    branches:
+      - develop
+      - staging
+      - main
+    paths-ignore:
+      - 'terraform/**'
+      - '**.md'
+      - '.github/workflows/terraform.yml'
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy (dev/staging/prod)'
+        required: true
+        type: choice
+        options:
+          - dev
+          - staging
+          - prod
+      image_tag:
+        description: 'Docker image tag (leave empty for commit SHA)'
+        required: false
+        type: string
+
+env:
+  AWS_REGION: us-east-1
+
+jobs:
+  # ============================================
+  # Build & Push Docker Image
+  # ============================================
+  
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    
+    outputs:
+      image-tag: ${{ steps.image-tag.outputs.IMAGE_TAG }}
+      image-digest: ${{ steps.build.outputs.digest }}
+      ecr-repository: ${{ steps.ecr.outputs.ECR_URL }}
+      environment: ${{ steps.env.outputs.ENV_NAME }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials (OIDC)
+        if: secrets.AWS_DEPLOY_ROLE_ARN != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: docker-build-${{ github.run_id }}
+      
+      - name: Configure AWS credentials (Access Keys)
+        if: secrets.AWS_DEPLOY_ROLE_ARN == ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Select environment
+        id: env
+        run: |
+          if [[ "${{ github.event.inputs.environment }}" != "" ]]; then
+            ENV_NAME="${{ github.event.inputs.environment }}"
+          elif [[ "${{ github.ref_name }}" == "develop" ]]; then
+            ENV_NAME="dev"
+          elif [[ "${{ github.ref_name }}" == "staging" ]]; then
+            ENV_NAME="staging"
+          elif [[ "${{ github.ref_name }}" == "main" ]]; then
+            ENV_NAME="prod"
+          else
+            ENV_NAME="dev"
+          fi
+          echo "ENV_NAME=$ENV_NAME" >> $GITHUB_OUTPUT
+          echo "Selected environment: $ENV_NAME"
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.6.0
+      
+      - name: Get ECR Repository URL
+        id: ecr
+        run: |
+          cd terraform/envs/${{ steps.env.outputs.ENV_NAME }}
+          
+          # Initialize Terraform (backend only)
+          terraform init -backend-config="bucket=omolaso-terraform-state" \
+                         -backend-config="key=envs/${{ steps.env.outputs.ENV_NAME }}/terraform.tfstate" \
+                         -backend-config="region=${{ env.AWS_REGION }}" \
+                         -backend-config="dynamodb_table=portfolio-tf-locks" \
+                         -backend-config="encrypt=true" \
+                         -input=false
+          
+          # Get ECR URL from outputs
+          ECR_URL=$(terraform output -raw ecr_repository_url 2>/dev/null || echo "")
+          if [ -z "$ECR_URL" ]; then
+            echo "⚠️  ECR repository not found. Infrastructure may not be deployed yet."
+            echo "ECR_URL=" >> $GITHUB_OUTPUT
+            exit 1
+          else
+            echo "ECR_URL=$ECR_URL" >> $GITHUB_OUTPUT
+            echo "✅ Found ECR repository: $ECR_URL"
+          fi
+      
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      
+      - name: Set image tag
+        id: image-tag
+        run: |
+          if [[ "${{ github.event.inputs.image_tag }}" != "" ]]; then
+            TAG="${{ github.event.inputs.image_tag }}"
+          else
+            TAG="${GITHUB_SHA::7}"
+          fi
+          echo "IMAGE_TAG=$TAG" >> $GITHUB_OUTPUT
+          echo "Using image tag: $TAG"
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+      
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ steps.ecr.outputs.ECR_URL }}
+          tags: |
+            type=raw,value=${{ steps.image-tag.outputs.IMAGE_TAG }}
+            type=raw,value=${{ steps.env.outputs.ENV_NAME }}-latest
+            type=sha,prefix=${{ steps.env.outputs.ENV_NAME }}-
+          flavor: |
+            suffix=-${{ steps.env.outputs.ENV_NAME }}
+        if: steps.ecr.outputs.ECR_URL != ''
+      
+      - name: Build and push Docker image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          platforms: linux/amd64
+        if: steps.ecr.outputs.ECR_URL != ''
+      
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.meta.outputs.tags }}
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+          severity: 'CRITICAL,HIGH'
+          exit-code: '1'
+        continue-on-error: true
+        if: steps.ecr.outputs.ECR_URL != ''
+      
+      - name: Upload Trivy results
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  # ============================================
+  # Deploy to ECS
+  # ============================================
+  
+  deploy-ecs-dev:
+    name: Deploy to ECS - Dev
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: |
+      github.ref_name == 'develop' &&
+      github.event_name == 'push' &&
+      needs.build-and-push.outputs.ecr-repository != '' &&
+      needs.build-and-push.result == 'success'
+    environment:
+      name: development
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials (OIDC)
+        if: secrets.AWS_DEPLOY_ROLE_ARN != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: ecs-deploy-dev-${{ github.run_id }}
+      
+      - name: Configure AWS credentials (Access Keys)
+        if: secrets.AWS_DEPLOY_ROLE_ARN == ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Get ECS Service Info
+        id: ecs
+        run: |
+          cd terraform/envs/dev
+          terraform init -input=false -backend-config="bucket=omolaso-terraform-state" \
+                         -backend-config="key=envs/dev/terraform.tfstate" \
+                         -backend-config="region=${{ env.AWS_REGION }}" \
+                         -backend-config="dynamodb_table=portfolio-tf-locks" \
+                         -backend-config="encrypt=true"
+          
+          CLUSTER=$(terraform output -raw ecs_cluster_name)
+          SERVICE=$(terraform output -raw ecs_service_name)
+          
+          echo "cluster_name=$CLUSTER" >> $GITHUB_OUTPUT
+          echo "service_name=$SERVICE" >> $GITHUB_OUTPUT
+      
+      - name: Update ECS Service with new image
+        run: |
+          # Update Terraform variable for image tag
+          cd terraform/envs/dev
+          terraform apply -var="image_tag=${{ needs.build-and-push.outputs.image-tag }}" \
+                          -auto-approve \
+                          -input=false
+      
+      - name: Wait for ECS Service to Stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster ${{ steps.ecs.outputs.cluster_name }} \
+            --services ${{ steps.ecs.outputs.service_name }} \
+            --region ${{ env.AWS_REGION }} \
+            --max-attempts 60
+
+  deploy-ecs-staging:
+    name: Deploy to ECS - Staging
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: |
+      (github.ref_name == 'staging' || github.event.inputs.environment == 'staging') &&
+      needs.build-and-push.outputs.ecr-repository != '' &&
+      needs.build-and-push.result == 'success'
+    environment:
+      name: staging
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials (OIDC)
+        if: secrets.AWS_DEPLOY_ROLE_ARN != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: ecs-deploy-staging-${{ github.run_id }}
+      
+      - name: Configure AWS credentials (Access Keys)
+        if: secrets.AWS_DEPLOY_ROLE_ARN == ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Get ECS Service Info
+        id: ecs
+        run: |
+          cd terraform/envs/staging
+          terraform init -input=false -backend-config="bucket=omolaso-terraform-state" \
+                         -backend-config="key=envs/staging/terraform.tfstate" \
+                         -backend-config="region=${{ env.AWS_REGION }}" \
+                         -backend-config="dynamodb_table=portfolio-tf-locks" \
+                         -backend-config="encrypt=true"
+          
+          CLUSTER=$(terraform output -raw ecs_cluster_name)
+          SERVICE=$(terraform output -raw ecs_service_name)
+          
+          echo "cluster_name=$CLUSTER" >> $GITHUB_OUTPUT
+          echo "service_name=$SERVICE" >> $GITHUB_OUTPUT
+      
+      - name: Update ECS Service with new image
+        run: |
+          cd terraform/envs/staging
+          terraform apply -var="image_tag=${{ needs.build-and-push.outputs.image-tag }}" \
+                          -auto-approve \
+                          -input=false
+      
+      - name: Wait for ECS Service to Stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster ${{ steps.ecs.outputs.cluster_name }} \
+            --services ${{ steps.ecs.outputs.service_name }} \
+            --region ${{ env.AWS_REGION }} \
+            --max-attempts 60
+
+  deploy-ecs-prod:
+    name: Deploy to ECS - Production
+    runs-on: ubuntu-latest
+    needs: [build-and-push]
+    if: |
+      (github.ref_name == 'main' || github.event.inputs.environment == 'prod') &&
+      needs.build-and-push.outputs.ecr-repository != '' &&
+      needs.build-and-push.result == 'success'
+    environment:
+      name: production
+    permissions:
+      contents: read
+      id-token: write
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Configure AWS credentials (OIDC)
+        if: secrets.AWS_DEPLOY_ROLE_ARN != ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: ecs-deploy-prod-${{ github.run_id }}
+      
+      - name: Configure AWS credentials (Access Keys)
+        if: secrets.AWS_DEPLOY_ROLE_ARN == ''
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Get ECS Service Info
+        id: ecs
+        run: |
+          cd terraform/envs/prod
+          terraform init -input=false -backend-config="bucket=omolaso-terraform-state" \
+                         -backend-config="key=envs/prod/terraform.tfstate" \
+                         -backend-config="region=${{ env.AWS_REGION }}" \
+                         -backend-config="dynamodb_table=portfolio-tf-locks" \
+                         -backend-config="encrypt=true"
+          
+          CLUSTER=$(terraform output -raw ecs_cluster_name)
+          SERVICE=$(terraform output -raw ecs_service_name)
+          
+          echo "cluster_name=$CLUSTER" >> $GITHUB_OUTPUT
+          echo "service_name=$SERVICE" >> $GITHUB_OUTPUT
+      
+      - name: Update ECS Service with new image
+        run: |
+          cd terraform/envs/prod
+          terraform apply -var="image_tag=${{ needs.build-and-push.outputs.image-tag }}" \
+                          -auto-approve \
+                          -input=false
+      
+      - name: Wait for ECS Service to Stabilize
+        run: |
+          aws ecs wait services-stable \
+            --cluster ${{ steps.ecs.outputs.cluster_name }} \
+            --services ${{ steps.ecs.outputs.service_name }} \
+            --region ${{ env.AWS_REGION }} \
+            --max-attempts 60
+      
+      - name: Verify Deployment
+        run: |
+          cd terraform/envs/prod
+          ALB_DNS=$(terraform output -raw alb_dns_name)
+          
+          # Health check
+          MAX_RETRIES=30
+          RETRY_COUNT=0
+          
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
+            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://$ALB_DNS/api/health" || echo "000")
+            if [ "$HTTP_CODE" = "200" ]; then
+              echo "✅ Health check passed"
+              exit 0
+            fi
+            RETRY_COUNT=$((RETRY_COUNT + 1))
+            echo "⏳ Waiting for health check... ($RETRY_COUNT/$MAX_RETRIES) - HTTP $HTTP_CODE"
+            sleep 10
+          done
+          
+          echo "❌ Health check failed after $MAX_RETRIES attempts"
+          exit 1
+

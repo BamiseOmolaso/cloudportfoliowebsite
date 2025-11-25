@@ -175,7 +175,8 @@ echo ""
 # 9. Check for required environment variables in .env.example
 print_info "Checking .env.example for required variables..."
 if [ -f .env.example ]; then
-    REQUIRED_VARS=("DATABASE_URL" "JWT_SECRET" "ADMIN_EMAIL" "ADMIN_PASSWORD" "RESEND_API_KEY" "UPSTASH_REDIS_REST_URL" "UPSTASH_REDIS_REST_TOKEN")
+    REQUIRED_VARS=("DATABASE_URL" "JWT_SECRET" "ADMIN_EMAIL" "ADMIN_PASSWORD" "RESEND_API_KEY")
+    # Note: Redis is optional - only used in production (NODE_ENV=production)
     MISSING_VARS=()
     
     for var in "${REQUIRED_VARS[@]}"; do

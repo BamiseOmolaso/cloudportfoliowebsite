@@ -8,8 +8,8 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
-# Start Docker services
-echo "📦 Starting PostgreSQL and Redis with Docker..."
+# Start Docker services (PostgreSQL only - Redis not needed for local dev)
+echo "📦 Starting PostgreSQL with Docker..."
 docker-compose up -d
 
 # Wait for PostgreSQL to be ready
@@ -40,9 +40,9 @@ RESEND_FROM_EMAIL="noreply@local.dev"
 CONTACT_EMAIL="contact@local.dev"
 RESEND_DOMAIN="local.dev"
 
-# Redis
-UPSTASH_REDIS_REST_URL="http://localhost:6379"
-UPSTASH_REDIS_REST_TOKEN=""
+# Redis - Not needed for local development (uses in-memory rate limiting)
+# Redis Cloud is only used in production (NODE_ENV=production)
+# REDIS_URL=""
 
 # reCAPTCHA Test Keys
 NEXT_PUBLIC_RECAPTCHA_SITE_KEY="6LeIxAcTAAAAAJcZVRqyHh71UMIEGNQ_MXjiZKhI"
