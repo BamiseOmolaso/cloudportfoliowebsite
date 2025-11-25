@@ -2,35 +2,52 @@ import { db } from '@/lib/db';
 import Link from 'next/link';
 import { AnimatedCard } from '@/components/admin/AnimatedCard';
 
-async function getStats() {
-  const [
-    totalSubscribers,
-    activeSubscribers,
-    totalNewsletters,
-    sentNewsletters,
-    totalProjects,
-    activeProjects,
-  ] = await Promise.all([
-    db.newsletterSubscriber.count(),
-    db.newsletterSubscriber.count({ where: { isSubscribed: true } }),
-    db.newsletter.count(),
-    db.newsletter.count({ where: { status: 'sent' } }),
-    db.project.count(),
-    db.project.count({ where: { status: 'published' } }),
-  ]);
+export const dynamic = 'force-dynamic'
 
-  // Note: openRate and clickRate are not stored in the Newsletter model
-  // These would need to be calculated from tracking data or stored separately
-  return {
-    totalSubscribers,
-    activeSubscribers,
-    totalNewsletters,
-    sentNewsletters,
-    totalProjects,
-    activeProjects,
-    averageOpenRate: 0,
-    averageClickRate: 0,
-  };
+async function getStats() {
+  try {
+    const [
+      totalSubscribers,
+      activeSubscribers,
+      totalNewsletters,
+      sentNewsletters,
+      totalProjects,
+      activeProjects,
+    ] = await Promise.all([
+      db.newsletterSubscriber.count(),
+      db.newsletterSubscriber.count({ where: { isSubscribed: true } }),
+      db.newsletter.count(),
+      db.newsletter.count({ where: { status: 'sent' } }),
+      db.project.count(),
+      db.project.count({ where: { status: 'published' } }),
+    ]);
+
+    // Note: openRate and clickRate are not stored in the Newsletter model
+    // These would need to be calculated from tracking data or stored separately
+    return {
+      totalSubscribers,
+      activeSubscribers,
+      totalNewsletters,
+      sentNewsletters,
+      totalProjects,
+      activeProjects,
+      averageOpenRate: 0,
+      averageClickRate: 0,
+    };
+  } catch (error) {
+    console.error('Error fetching admin stats:', error);
+    // Return default values if database is unavailable
+    return {
+      totalSubscribers: 0,
+      activeSubscribers: 0,
+      totalNewsletters: 0,
+      sentNewsletters: 0,
+      totalProjects: 0,
+      activeProjects: 0,
+      averageOpenRate: 0,
+      averageClickRate: 0,
+    };
+  }
 }
 
 export default async function AdminDashboard() {
