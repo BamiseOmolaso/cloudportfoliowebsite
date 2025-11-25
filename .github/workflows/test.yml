@@ -32,6 +32,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
+      - name: Generate Prisma Client
+        run: npx prisma generate
+      
       - name: Set up test environment variables
         run: |
           echo "DATABASE_URL=postgresql://test:test@localhost:5432/test?schema=public" >> $GITHUB_ENV
@@ -111,6 +114,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
+      - name: Generate Prisma Client
+        run: npx prisma generate
+      
       - name: Set up test environment variables
         run: |
           echo "DATABASE_URL=postgresql://test:test@localhost:5432/test?schema=public" >> $GITHUB_ENV
@@ -170,6 +176,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
+      - name: Generate Prisma Client
+        run: npx prisma generate
+      
       - name: Run build
         run: npm run build
       
@@ -201,6 +210,9 @@ jobs:
       
       - name: Install dependencies
         run: npm ci
+      
+      - name: Generate Prisma Client
+        run: npx prisma generate
       
       - name: Run tests with coverage
         id: test-results
