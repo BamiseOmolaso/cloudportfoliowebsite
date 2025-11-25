@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "vpc_cidr" {
   description = "VPC CIDR block"
   type        = string
-  default     = "10.0.0.0/16"  # Full /16 for prod
+  default     = "10.0.0.0/16" # Full /16 for prod
 }
 
 variable "availability_zones" {
