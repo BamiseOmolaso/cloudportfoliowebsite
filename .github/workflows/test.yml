@@ -15,6 +15,21 @@ jobs:
     name: Test on Node.js ${{ matrix.node-version }}
     runs-on: ubuntu-latest
     
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd="pg_isready -U test"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
     strategy:
       matrix:
         node-version: [20.x]
@@ -45,9 +60,19 @@ jobs:
           echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000" >> $GITHUB_ENV
           echo "NEXT_PUBLIC_RECAPTCHA_SITE_KEY=test-site-key" >> $GITHUB_ENV
           echo "NODE_ENV=test" >> $GITHUB_ENV
+
+      - name: Wait for Postgres
+        run: |
+          until pg_isready -h localhost -p 5432 -U test; do
+            echo "Waiting for Postgres..."
+            sleep 2
+          done
       
       - name: Install dependencies
         run: npm ci
+
+      - name: Run Prisma migrations
+        run: npx prisma migrate deploy
       
       - name: Run ESLint
         run: npm run lint

@@ -14,7 +14,18 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "type-check": "tsc --noEmit",
-    "predeploy": "bash scripts/predeploy.sh"
+    "predeploy": "bash scripts/predeploy.sh",
+    "setup:docker": "bash scripts/setup-docker.sh",
+    "setup:native": "bash scripts/setup-native.sh",
+    "db:reset": "bash scripts/reset-db.sh",
+    "db:studio": "npx prisma studio",
+    "db:migrate": "npx prisma migrate dev",
+    "db:seed": "npx prisma db seed",
+    "test:db": "node scripts/test-db-connection.js",
+    "docker:up": "docker-compose up -d",
+    "docker:down": "docker-compose down",
+    "docker:logs": "docker-compose logs -f",
+    "docker:clean": "docker-compose down -v"
   },
   "dependencies": {
     "@heroicons/react": "^2.0.18",
