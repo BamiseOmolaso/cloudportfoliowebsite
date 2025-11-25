@@ -9,9 +9,6 @@ This directory contains CI/CD workflows for the portfolio website.
 | `ci.yml` | Continuous Integration | Every push/PR |
 | `terraform.yml` | Infrastructure deployment | Terraform changes, manual |
 | `deploy-app.yml` | Application deployment | Code changes (non-Terraform) |
-| `deploy-dev.yml` | Legacy - Dev deployment | (Can be removed) |
-| `deploy-prod.yml` | Legacy - Prod deployment | (Can be removed) |
-| `test.yml` | Legacy - Tests only | (Can be removed) |
 
 ## 🔄 Workflow Flow
 
