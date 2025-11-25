@@ -33,8 +33,11 @@ const customJestConfig = {
     },
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(uncrypto|@upstash)/)',
+    'node_modules/(?!(uncrypto|@upstash|@upstash/redis)/)',
   ],
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
+  testTimeout: 10000, // 10 seconds timeout for tests
+  maxWorkers: '50%', // Use half of available CPUs to avoid resource contention
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

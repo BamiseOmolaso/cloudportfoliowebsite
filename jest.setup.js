@@ -2,12 +2,39 @@
 import '@testing-library/jest-dom'
 
 // Mock Next.js Request/Response for server-side tests
-if (typeof global.Request === 'undefined') {
-  global.Request = class Request {
+// Note: We use the actual Request class if available (Node 18+), otherwise create a mock
+if (typeof global.Request === 'undefined' || !global.Request.prototype.json) {
+  const OriginalRequest = global.Request || class {};
+  global.Request = class Request extends OriginalRequest {
     constructor(url, init) {
-      this.url = url;
+      if (typeof url === 'string') {
+        super(url, init);
+      } else {
+        super(init);
+      }
+      this.url = typeof url === 'string' ? url : url?.url || '';
       this.method = init?.method || 'GET';
       this.headers = new Headers(init?.headers);
+      this._body = init?.body;
+    }
+    async json() {
+      if (!this._body) {
+        return {};
+      }
+      if (typeof this._body === 'string') {
+        try {
+          return JSON.parse(this._body);
+        } catch (e) {
+          throw new Error('Invalid JSON');
+        }
+      }
+      return this._body;
+    }
+    async text() {
+      if (!this._body) {
+        return '';
+      }
+      return typeof this._body === 'string' ? this._body : JSON.stringify(this._body);
     }
   };
 }
@@ -39,17 +66,24 @@ jest.mock('next/server', () => {
   const actual = jest.requireActual('next/server');
   return {
     ...actual,
-    NextResponse: {
-      json: (data, init) => {
-        const response = new Response(JSON.stringify(data), {
+    NextResponse: class NextResponse extends Response {
+      constructor(body, init) {
+        super(body, init);
+      }
+      static json(data, init) {
+        return new NextResponse(JSON.stringify(data), {
           ...init,
           headers: {
             'Content-Type': 'application/json',
             ...init?.headers,
           },
         });
-        return response;
-      },
+      }
+    },
+    NextRequest: class NextRequest extends Request {
+      constructor(input, init) {
+        super(input, init);
+      }
     },
   };
 });
@@ -75,6 +109,27 @@ jest.mock('next/navigation', () => ({
   },
 }))
 
+// Mock @upstash/redis to prevent ESM import issues
+jest.mock('@upstash/redis', () => {
+  const mockLrange = jest.fn();
+  const mockLtrim = jest.fn();
+  const mockRpush = jest.fn();
+  const mockExpire = jest.fn();
+  const mockKeys = jest.fn();
+  const mockDel = jest.fn();
+
+  return {
+    Redis: jest.fn().mockImplementation(() => ({
+      lrange: mockLrange,
+      ltrim: mockLtrim,
+      rpush: mockRpush,
+      expire: mockExpire,
+      keys: mockKeys,
+      del: mockDel,
+    })),
+  };
+});
+
 // Mock environment variables
 process.env.NEXT_PUBLIC_SITE_URL = 'http://localhost:3000'
 process.env.NEXT_PUBLIC_BASE_URL = 'http://localhost:3000'
@@ -83,6 +138,15 @@ process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY = 'test-site-key'
 process.env.UPSTASH_REDIS_REST_URL = 'https://test-redis.upstash.io'
 process.env.UPSTASH_REDIS_REST_TOKEN = 'test-token'
 process.env.RECAPTCHA_SECRET_KEY = 'test-secret-key'
+process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test?schema=public'
+process.env.JWT_SECRET = 'test-jwt-secret-key-min-32-characters-long-for-testing'
+process.env.ADMIN_EMAIL = 'admin@test.com'
+process.env.ADMIN_PASSWORD = 'test-password'
+process.env.RESEND_API_KEY = 're_test_key'
+process.env.RESEND_FROM_EMAIL = 'noreply@test.com'
+process.env.CONTACT_EMAIL = 'contact@test.com'
+process.env.RESEND_DOMAIN = 'test.com'
+process.env.NODE_ENV = 'test'
 
 // Suppress console errors in tests (optional - remove if you want to see all errors)
 const originalError = console.error

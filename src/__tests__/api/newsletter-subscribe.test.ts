@@ -1,48 +1,72 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { NextRequest } from 'next/server';
-import { db } from '@/lib/db';
-import * as security from '@/lib/security';
-import * as resend from '@/lib/resend';
 
 // Mock dependencies BEFORE importing the route
-jest.mock('@/lib/db');
-jest.mock('@/lib/security');
-jest.mock('@/lib/resend');
-jest.mock('@/lib/rate-limit', () => ({
-  withRateLimit: (limiter: unknown, identifier: string, handler: (req: Request) => Promise<Response>) => handler,
-  apiLimiter: {},
-}));
-
-// Import route after mocks are set up
-import { POST } from '@/app/api/newsletter/subscribe/route';
-
 const mockUpsert = jest.fn();
 const mockCreate = jest.fn();
+const mockFindFirst = jest.fn();
+const mockFailedAttemptCreate = jest.fn();
+const mockFindMany = jest.fn();
+
+jest.mock('@/lib/db', () => ({
+  db: {
+    newsletterSubscriber: {
+      upsert: (...args: unknown[]) => mockUpsert(...args),
+    },
+    newsletterAuditLog: {
+      create: (...args: unknown[]) => mockCreate(...args),
+    },
+    blacklistedIp: {
+      findFirst: (...args: unknown[]) => mockFindFirst(...args),
+    },
+    failedAttempt: {
+      create: (...args: unknown[]) => mockFailedAttemptCreate(...args),
+      findMany: (...args: unknown[]) => mockFindMany(...args),
+    },
+  },
+}));
+
+// Create mock functions that will be used
 const mockIsIPBlacklisted = jest.fn();
 const mockTrackFailedAttempt = jest.fn();
 const mockIsCaptchaRequired = jest.fn();
 const mockVerifyCaptcha = jest.fn();
+
+jest.mock('@/lib/security', () => ({
+  isIPBlacklisted: (...args: unknown[]) => mockIsIPBlacklisted(...args),
+  trackFailedAttempt: (...args: unknown[]) => mockTrackFailedAttempt(...args),
+  isCaptchaRequired: (...args: unknown[]) => mockIsCaptchaRequired(...args),
+  verifyCaptcha: (...args: unknown[]) => mockVerifyCaptcha(...args),
+}));
+
 const mockSendWelcomeEmail = jest.fn();
 const mockSendAdminNotification = jest.fn();
+
+jest.mock('@/lib/resend', () => ({
+  sendWelcomeEmail: (...args: unknown[]) => mockSendWelcomeEmail(...args),
+  sendAdminNotification: (...args: unknown[]) => mockSendAdminNotification(...args),
+}));
+
+const mockWithRateLimit = jest.fn((limiter: unknown, identifier: string, handler: (req: Request) => Promise<Response>) => {
+  return handler;
+});
+
+jest.mock('@/lib/rate-limit', () => ({
+  withRateLimit: mockWithRateLimit,
+  apiLimiter: {},
+}));
+
+// Import after mocks
+import { POST } from '@/app/api/newsletter/subscribe/route';
 
 beforeEach(() => {
   jest.clearAllMocks();
   
-  // Mock Prisma
-  (db.newsletterSubscriber.upsert as jest.Mock) = mockUpsert;
-  (db.newsletterAuditLog.create as jest.Mock) = mockCreate;
+  // Default mocks for Prisma
+  mockFindFirst.mockResolvedValue(null);
+  mockFindMany.mockResolvedValue([]);
   
-  // Mock security functions
-  (security.isIPBlacklisted as jest.Mock) = mockIsIPBlacklisted;
-  (security.trackFailedAttempt as jest.Mock) = mockTrackFailedAttempt;
-  (security.isCaptchaRequired as jest.Mock) = mockIsCaptchaRequired;
-  (security.verifyCaptcha as jest.Mock) = mockVerifyCaptcha;
-  
-  // Mock resend functions
-  (resend.sendWelcomeEmail as jest.Mock) = mockSendWelcomeEmail;
-  (resend.sendAdminNotification as jest.Mock) = mockSendAdminNotification;
-  
-  // Default mocks
+  // Default mocks for security functions (these will use the mocked db)
   mockIsIPBlacklisted.mockResolvedValue(false);
   mockIsCaptchaRequired.mockResolvedValue(false);
   mockSendWelcomeEmail.mockResolvedValue(undefined);
@@ -51,15 +75,16 @@ beforeEach(() => {
 
 describe('POST /api/newsletter/subscribe', () => {
   it('should return 400 if email is missing', async () => {
-    const request = new NextRequest('http://localhost:3000/api/newsletter/subscribe', {
+    const request = new Request('http://localhost:3000/api/newsletter/subscribe', {
       method: 'POST',
-      body: JSON.stringify({
-        name: 'Test User',
-      }),
       headers: {
+        'Content-Type': 'application/json',
         'x-forwarded-for': '192.168.1.1',
         'user-agent': 'Mozilla/5.0',
       },
+      body: JSON.stringify({
+        name: 'Test User',
+      }),
     });
 
     const response = await POST(request);
@@ -71,16 +96,17 @@ describe('POST /api/newsletter/subscribe', () => {
   });
 
   it('should return 400 if email format is invalid', async () => {
-    const request = new NextRequest('http://localhost:3000/api/newsletter/subscribe', {
+    const request = new Request('http://localhost:3000/api/newsletter/subscribe', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': '192.168.1.1',
+        'user-agent': 'Mozilla/5.0',
+      },
       body: JSON.stringify({
         email: 'invalid-email',
         name: 'Test User',
       }),
-      headers: {
-        'x-forwarded-for': '192.168.1.1',
-        'user-agent': 'Mozilla/5.0',
-      },
     });
 
     const response = await POST(request);
@@ -93,15 +119,16 @@ describe('POST /api/newsletter/subscribe', () => {
   it('should return 429 if IP is blacklisted', async () => {
     mockIsIPBlacklisted.mockResolvedValue(true);
 
-    const request = new NextRequest('http://localhost:3000/api/newsletter/subscribe', {
+    const request = new Request('http://localhost:3000/api/newsletter/subscribe', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': '192.168.1.1',
+      },
       body: JSON.stringify({
         email: 'test@example.com',
         name: 'Test User',
       }),
-      headers: {
-        'x-forwarded-for': '192.168.1.1',
-      },
     });
 
     const response = await POST(request);
@@ -121,17 +148,18 @@ describe('POST /api/newsletter/subscribe', () => {
     mockUpsert.mockResolvedValue(mockSubscriber);
     mockCreate.mockResolvedValue({ id: 'log-123' });
 
-    const request = new NextRequest('http://localhost:3000/api/newsletter/subscribe', {
+    const request = new Request('http://localhost:3000/api/newsletter/subscribe', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': '192.168.1.1',
+        'user-agent': 'Mozilla/5.0',
+      },
       body: JSON.stringify({
         email: 'test@example.com',
         name: 'Test User',
         location: 'US',
       }),
-      headers: {
-        'x-forwarded-for': '192.168.1.1',
-        'user-agent': 'Mozilla/5.0',
-      },
     });
 
     const response = await POST(request);
@@ -153,16 +181,17 @@ describe('POST /api/newsletter/subscribe', () => {
   it('should require CAPTCHA if too many attempts', async () => {
     mockIsCaptchaRequired.mockResolvedValue(true);
 
-    const request = new NextRequest('http://localhost:3000/api/newsletter/subscribe', {
+    const request = new Request('http://localhost:3000/api/newsletter/subscribe', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': '192.168.1.1',
+        'user-agent': 'Mozilla/5.0',
+      },
       body: JSON.stringify({
         email: 'test@example.com',
         name: 'Test User',
       }),
-      headers: {
-        'x-forwarded-for': '192.168.1.1',
-        'user-agent': 'Mozilla/5.0',
-      },
     });
 
     const response = await POST(request);
@@ -183,17 +212,18 @@ describe('POST /api/newsletter/subscribe', () => {
     });
     mockCreate.mockResolvedValue({ id: 'log-123' });
 
-    const request = new NextRequest('http://localhost:3000/api/newsletter/subscribe', {
+    const request = new Request('http://localhost:3000/api/newsletter/subscribe', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': '192.168.1.1',
+        'user-agent': 'Mozilla/5.0',
+      },
       body: JSON.stringify({
         email: 'test@example.com',
         name: 'Test User',
         captchaToken: 'valid-token',
       }),
-      headers: {
-        'x-forwarded-for': '192.168.1.1',
-        'user-agent': 'Mozilla/5.0',
-      },
     });
 
     const response = await POST(request);
@@ -208,17 +238,18 @@ describe('POST /api/newsletter/subscribe', () => {
     mockIsCaptchaRequired.mockResolvedValue(true);
     mockVerifyCaptcha.mockResolvedValue(false);
 
-    const request = new NextRequest('http://localhost:3000/api/newsletter/subscribe', {
+    const request = new Request('http://localhost:3000/api/newsletter/subscribe', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': '192.168.1.1',
+        'user-agent': 'Mozilla/5.0',
+      },
       body: JSON.stringify({
         email: 'test@example.com',
         name: 'Test User',
         captchaToken: 'invalid-token',
       }),
-      headers: {
-        'x-forwarded-for': '192.168.1.1',
-        'user-agent': 'Mozilla/5.0',
-      },
     });
 
     const response = await POST(request);
@@ -239,16 +270,17 @@ describe('POST /api/newsletter/subscribe', () => {
     mockUpsert.mockResolvedValue(existingSubscriber);
     mockCreate.mockResolvedValue({ id: 'log-123' });
 
-    const request = new NextRequest('http://localhost:3000/api/newsletter/subscribe', {
+    const request = new Request('http://localhost:3000/api/newsletter/subscribe', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': '192.168.1.1',
+        'user-agent': 'Mozilla/5.0',
+      },
       body: JSON.stringify({
         email: 'test@example.com',
         name: 'Updated Name',
       }),
-      headers: {
-        'x-forwarded-for': '192.168.1.1',
-        'user-agent': 'Mozilla/5.0',
-      },
     });
 
     await POST(request);
@@ -271,16 +303,17 @@ describe('POST /api/newsletter/subscribe', () => {
     mockCreate.mockResolvedValue({ id: 'log-123' });
     mockSendWelcomeEmail.mockRejectedValue(new Error('Email error'));
 
-    const request = new NextRequest('http://localhost:3000/api/newsletter/subscribe', {
+    const request = new Request('http://localhost:3000/api/newsletter/subscribe', {
       method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': '192.168.1.1',
+        'user-agent': 'Mozilla/5.0',
+      },
       body: JSON.stringify({
         email: 'test@example.com',
         name: 'Test User',
       }),
-      headers: {
-        'x-forwarded-for': '192.168.1.1',
-        'user-agent': 'Mozilla/5.0',
-      },
     });
 
     // Should still succeed even if email fails
@@ -291,4 +324,3 @@ describe('POST /api/newsletter/subscribe', () => {
     expect(data.success).toBe(true);
   });
 });
-

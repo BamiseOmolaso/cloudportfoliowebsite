@@ -14,7 +14,7 @@ interface RateLimitResult {
   resetTime: number;
 }
 
-class RateLimiter {
+export class RateLimiter {
   private redis: Redis;
   public config: RateLimiterConfig;
 

@@ -1,11 +1,15 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 import { NextRequest } from 'next/server';
 
+// Create mock functions that can be accessed in tests
+const mockCreate = jest.fn();
+const mockSend = jest.fn();
+
 // Mock dependencies BEFORE importing the route
 jest.mock('@/lib/db', () => ({
   db: {
     contactMessage: {
-      create: jest.fn(),
+      create: (...args: unknown[]) => mockCreate(...args),
     },
   },
 }));
@@ -13,45 +17,28 @@ jest.mock('@/lib/db', () => ({
 jest.mock('resend', () => ({
   Resend: jest.fn().mockImplementation(() => ({
     emails: {
-      send: jest.fn(),
+      send: (...args: unknown[]) => mockSend(...args),
     },
   })),
 }));
 
-// Mock rate-limit to prevent Redis initialization
-jest.mock('@/lib/rate-limit', () => {
-  const originalModule = jest.requireActual('@/lib/rate-limit');
-  return {
-    ...originalModule,
-    withRateLimit: (limiter: unknown, identifier: string, handler: (req: Request) => Promise<Response>) => {
-      return handler;
-    },
-    contactFormLimiter: {
-      check: jest.fn().mockResolvedValue({ success: true, remaining: 5, resetTime: Date.now() + 3600000 }),
-    },
-  };
+// Mock rate-limit to prevent Redis initialization - must be before route import
+const mockWithRateLimit = jest.fn((limiter: unknown, identifier: string, handler: (req: Request) => Promise<Response>) => {
+  return handler;
 });
+
+jest.mock('@/lib/rate-limit', () => ({
+  withRateLimit: mockWithRateLimit,
+  contactFormLimiter: {
+    check: jest.fn().mockResolvedValue({ success: true, remaining: 5, resetTime: Date.now() + 3600000 }),
+  },
+}));
 
 // Import after mocks
 import { POST } from '@/app/api/contact/route';
-import { db } from '@/lib/db';
-import { Resend } from 'resend';
-
-const mockCreate = jest.fn();
-const mockSend = jest.fn();
 
 beforeEach(() => {
   jest.clearAllMocks();
-  
-  // Mock Prisma
-  (db.contactMessage.create as jest.Mock) = mockCreate;
-  
-  // Mock Resend
-  (Resend as jest.Mock).mockImplementation(() => ({
-    emails: {
-      send: mockSend,
-    },
-  }));
   
   // Set environment variables
   process.env.RESEND_API_KEY = 'test-resend-key';
@@ -65,8 +52,9 @@ beforeEach(() => {
 
 describe('POST /api/contact', () => {
   it('should return 400 if name is missing', async () => {
-    const request = new NextRequest('http://localhost:3000/api/contact', {
+    const request = new Request('http://localhost:3000/api/contact', {
       method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         email: 'test@example.com',
         message: 'Test message',
@@ -81,7 +69,8 @@ describe('POST /api/contact', () => {
   });
 
   it('should return 400 if email is missing', async () => {
-    const request = new NextRequest('http://localhost:3000/api/contact', {
+    const request = new Request('http://localhost:3000/api/contact', {
+      headers: { 'Content-Type': 'application/json' },
       method: 'POST',
       body: JSON.stringify({
         name: 'Test User',
@@ -97,7 +86,8 @@ describe('POST /api/contact', () => {
   });
 
   it('should return 400 if message is missing', async () => {
-    const request = new NextRequest('http://localhost:3000/api/contact', {
+    const request = new Request('http://localhost:3000/api/contact', {
+      headers: { 'Content-Type': 'application/json' },
       method: 'POST',
       body: JSON.stringify({
         name: 'Test User',
@@ -113,7 +103,8 @@ describe('POST /api/contact', () => {
   });
 
   it('should return 400 if email format is invalid', async () => {
-    const request = new NextRequest('http://localhost:3000/api/contact', {
+    const request = new Request('http://localhost:3000/api/contact', {
+      headers: { 'Content-Type': 'application/json' },
       method: 'POST',
       body: JSON.stringify({
         name: 'Test User',
@@ -140,7 +131,8 @@ describe('POST /api/contact', () => {
 
     mockSend.mockResolvedValue({ id: 'email-id' });
 
-    const request = new NextRequest('http://localhost:3000/api/contact', {
+    const request = new Request('http://localhost:3000/api/contact', {
+      headers: { 'Content-Type': 'application/json' },
       method: 'POST',
       body: JSON.stringify({
         name: 'Test User',
@@ -171,7 +163,8 @@ describe('POST /api/contact', () => {
     mockCreate.mockResolvedValue({ id: '123' });
     mockSend.mockResolvedValue({ id: 'email-id' });
 
-    const request = new NextRequest('http://localhost:3000/api/contact', {
+    const request = new Request('http://localhost:3000/api/contact', {
+      headers: { 'Content-Type': 'application/json' },
       method: 'POST',
       body: JSON.stringify({
         name: '  Test User  ',
@@ -194,7 +187,8 @@ describe('POST /api/contact', () => {
   it('should handle database errors gracefully', async () => {
     mockCreate.mockRejectedValue(new Error('Database error'));
 
-    const request = new NextRequest('http://localhost:3000/api/contact', {
+    const request = new Request('http://localhost:3000/api/contact', {
+      headers: { 'Content-Type': 'application/json' },
       method: 'POST',
       body: JSON.stringify({
         name: 'Test User',
@@ -217,7 +211,8 @@ describe('POST /api/contact', () => {
       .mockResolvedValueOnce({ id: 'email-1' })
       .mockRejectedValueOnce(new Error('Email error'));
 
-    const request = new NextRequest('http://localhost:3000/api/contact', {
+    const request = new Request('http://localhost:3000/api/contact', {
+      headers: { 'Content-Type': 'application/json' },
       method: 'POST',
       body: JSON.stringify({
         name: 'Test User',
@@ -240,7 +235,8 @@ describe('POST /api/contact', () => {
     mockCreate.mockResolvedValue({ id: '123' });
     mockSend.mockRejectedValue(new Error('CONTACT_EMAIL not set'));
 
-    const request = new NextRequest('http://localhost:3000/api/contact', {
+    const request = new Request('http://localhost:3000/api/contact', {
+      headers: { 'Content-Type': 'application/json' },
       method: 'POST',
       body: JSON.stringify({
         name: 'Test User',
@@ -252,6 +248,8 @@ describe('POST /api/contact', () => {
     // Should still succeed - email errors are logged but don't fail the request
     const response = await POST(request);
     expect(response.status).toBe(200);
+    
+    // Restore env var for other tests
+    process.env.CONTACT_EMAIL = 'admin@example.com';
   });
 });
-
