@@ -93,11 +93,11 @@ export async function sendAdminNotification(email: string, name?: string) {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const newSubscribersToday = subscribers.filter(
-      sub => sub.createdAt >= today
+      (sub: typeof subscribers[0]) => sub.createdAt >= today
     ).length;
 
     // Get location statistics
-    const locationStats = subscribers.reduce((acc: Record<string, number>, sub) => {
+    const locationStats = subscribers.reduce((acc: Record<string, number>, sub: typeof subscribers[0]) => {
       const location = sub.location || 'Unknown';
       acc[location] = (acc[location] || 0) + 1;
       return acc;
