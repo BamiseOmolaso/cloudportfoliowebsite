@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { Redis } from '@upstash/redis';
+import { getRedisClient } from './redis-client';
 
 interface RateLimiterConfig {
   maxRequests: number;
@@ -14,33 +14,121 @@ interface RateLimitResult {
   resetTime: number;
 }
 
+// In-memory fallback rate limiter
+interface RateLimitStore {
+  count: number;
+  resetTime: number;
+}
+
+class InMemoryRateLimiter {
+  private store: Map<string, RateLimitStore> = new Map();
+  private cleanupInterval: NodeJS.Timeout | null = null;
+
+  constructor() {
+    this.cleanupInterval = setInterval(() => {
+      this.cleanup();
+    }, 5 * 60 * 1000); // Cleanup every 5 minutes
+  }
+
+  private cleanup() {
+    const now = Date.now();
+    for (const [key, value] of this.store.entries()) {
+      if (now > value.resetTime) {
+        this.store.delete(key);
+      }
+    }
+  }
+
+  async check(identifier: string, limit: number, windowMs: number): Promise<RateLimitResult> {
+    const now = Date.now();
+    const key = identifier;
+
+    let entry = this.store.get(key);
+
+    if (!entry || now > entry.resetTime) {
+      entry = { count: 0, resetTime: now + windowMs };
+      this.store.set(key, entry);
+    }
+
+    entry.count++;
+    const remaining = Math.max(0, limit - entry.count);
+    const success = entry.count <= limit;
+
+    return { success, remaining, resetTime: entry.resetTime };
+  }
+
+  destroy() {
+    if (this.cleanupInterval) {
+      clearInterval(this.cleanupInterval);
+    }
+    this.store.clear();
+  }
+}
+
+// Singleton instance
+let inMemoryLimiter: InMemoryRateLimiter | null = null;
+
+function getInMemoryLimiter(): InMemoryRateLimiter {
+  if (!inMemoryLimiter) {
+    inMemoryLimiter = new InMemoryRateLimiter();
+  }
+  return inMemoryLimiter;
+}
+
+// Redis-based rate limiting using sorted sets for sliding window
+async function redisRateLimit(
+  redis: any,
+  identifier: string,
+  limit: number,
+  windowMs: number
+): Promise<RateLimitResult> {
+  const key = `ratelimit:${identifier}`;
+  const now = Date.now();
+  const windowStart = now - windowMs;
+
+  try {
+    // Ensure client is connected
+    if (!redis.isOpen) {
+      await redis.connect();
+    }
+
+    // Use Redis pipeline for atomic operations
+    const multi = redis.multi();
+
+    // Remove old entries outside the window
+    multi.zRemRangeByScore(key, 0, windowStart);
+
+    // Count requests in current window
+    multi.zCard(key);
+
+    // Add current request with timestamp as score
+    multi.zAdd(key, { score: now, value: `${now}-${Math.random()}` });
+
+    // Set expiry to clean up old keys
+    multi.expire(key, Math.ceil(windowMs / 1000));
+
+    const results = await multi.exec();
+
+    // results[1] is the count before adding current request
+    const count = (results[1]?.[1] as number) || 0;
+    const currentCount = count + 1;
+
+    const remaining = Math.max(0, limit - currentCount);
+    const success = currentCount <= limit;
+    const resetTime = now + windowMs;
+
+    return { success, remaining, resetTime };
+  } catch (error) {
+    console.error('Redis rate limit error:', error);
+    // Fallback to in-memory on Redis error
+    return getInMemoryLimiter().check(identifier, limit, windowMs);
+  }
+}
+
 export class RateLimiter {
-  private redis: Redis;
   public config: RateLimiterConfig;
 
   constructor(config: RateLimiterConfig) {
-    const redisUrl = process.env.UPSTASH_REDIS_REST_URL;
-    const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN;
-    
-    if (!redisUrl || !redisToken) {
-      throw new Error('UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN must be set');
-    }
-    
-    try {
-      this.redis = new Redis({
-        url: redisUrl,
-        token: redisToken,
-        retry: {
-          retries: 3,
-          backoff: (retryCount) => Math.min(retryCount * 50, 1000),
-        },
-      });
-    } catch (error) {
-      console.error('Failed to initialize Redis client:', error);
-      // Initialize with default config but mark as non-functional
-      // This is a workaround for the Redis type - in practice, check() handles null
-      this.redis = null as unknown as Redis;
-    }
     this.config = {
       prefix: 'rate-limit:',
       ...config,
@@ -53,70 +141,37 @@ export class RateLimiter {
 
   async check(identifier: string): Promise<RateLimitResult> {
     const key = this.getKey(identifier);
-    const now = Date.now();
-    const windowStart = now - this.config.windowMs;
+    const redis = getRedisClient();
 
-    try {
-      // If Redis is not initialized, allow the request
-      if (!this.redis) {
-        console.warn('Redis client not initialized, bypassing rate limit check');
-        return {
-          success: true,
-          remaining: this.config.maxRequests,
-          resetTime: now + this.config.windowMs,
-        };
+    // Use Redis if available, otherwise fall back to in-memory
+    if (redis) {
+      try {
+        return await redisRateLimit(redis, key, this.config.maxRequests, this.config.windowMs);
+      } catch (error) {
+        console.error('Redis rate limit failed, falling back to in-memory:', error);
+        return getInMemoryLimiter().check(key, this.config.maxRequests, this.config.windowMs);
       }
-
-      // Get all timestamps within the window
-      const timestamps = await this.redis.lrange(key, 0, -1);
-      const validTimestamps = timestamps
-        .map(Number)
-        .filter(timestamp => timestamp > windowStart);
-
-      // Remove old timestamps
-      if (validTimestamps.length < timestamps.length) {
-        await this.redis.ltrim(key, validTimestamps.length, -1);
-      }
-
-      // Check if we're over the limit
-      if (validTimestamps.length >= this.config.maxRequests) {
-        return {
-          success: false,
-          remaining: 0,
-          resetTime: validTimestamps[0] + this.config.windowMs,
-        };
-      }
-
-      // Add new timestamp
-      await this.redis.rpush(key, now.toString());
-      await this.redis.expire(key, Math.ceil(this.config.windowMs / 1000));
-
-      return {
-        success: true,
-        remaining: this.config.maxRequests - (validTimestamps.length + 1),
-        resetTime: now + this.config.windowMs,
-      };
-    } catch (error) {
-      console.error('Redis rate limit error:', error);
-      // In case of Redis failure, allow the request but with a warning
-      console.warn('Rate limiting bypassed due to Redis error');
-      return {
-        success: true,
-        remaining: this.config.maxRequests,
-        resetTime: now + this.config.windowMs,
-      };
+    } else {
+      return getInMemoryLimiter().check(key, this.config.maxRequests, this.config.windowMs);
     }
   }
 
   async cleanup(): Promise<void> {
-    try {
-      const keys = await this.redis.keys(`${this.config.prefix}*`);
-      if (keys.length > 0) {
-        await this.redis.del(...keys);
+    const redis = getRedisClient();
+    if (redis) {
+      try {
+        if (!redis.isOpen) {
+          await redis.connect();
+        }
+        const keys = await redis.keys(`${this.config.prefix}*`);
+        if (keys.length > 0) {
+          await redis.del(keys);
+        }
+      } catch (error) {
+        console.error('Redis cleanup error:', error);
       }
-    } catch (error) {
-      console.error('Redis cleanup error:', error);
     }
+    // In-memory cleanup is handled automatically
   }
 }
 

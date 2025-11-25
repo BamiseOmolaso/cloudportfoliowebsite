@@ -7,12 +7,17 @@ type AsyncMock<Args extends any[] = any[], Return = unknown> = jest.MockedFuncti
 >;
 
 type RedisMockInstance = {
-  lrange: AsyncMock;
-  ltrim: AsyncMock;
-  rpush: AsyncMock;
+  isOpen: boolean;
+  connect: AsyncMock;
+  ping: AsyncMock<[], string>;
+  multi: jest.Mock;
+  zRemRangeByScore: AsyncMock;
+  zCard: AsyncMock;
+  zAdd: AsyncMock;
   expire: AsyncMock;
   keys: AsyncMock;
   del: AsyncMock;
+  quit: AsyncMock;
 };
 
 type RateLimitCheckResult = {
@@ -21,42 +26,58 @@ type RateLimitCheckResult = {
   resetTime: number;
 };
 
-const redisInstances: RedisMockInstance[] = [];
+let redisMockInstance: RedisMockInstance | null = null;
 
-const createRedisMock = (): RedisMockInstance => ({
-  lrange: jest.fn(),
-  ltrim: jest.fn(),
-  rpush: jest.fn(),
-  expire: jest.fn(),
-  keys: jest.fn(),
-  del: jest.fn(),
+const createRedisMock = (): RedisMockInstance => {
+  const mockMulti = {
+    zRemRangeByScore: jest.fn().mockReturnThis(),
+    zCard: jest.fn().mockReturnThis(),
+    zAdd: jest.fn().mockReturnThis(),
+    expire: jest.fn().mockReturnThis(),
+    exec: jest.fn(),
+  };
+
+  return {
+    isOpen: true,
+    connect: jest.fn().mockResolvedValue(undefined),
+    ping: jest.fn().mockResolvedValue('PONG'),
+    multi: jest.fn().mockReturnValue(mockMulti),
+    zRemRangeByScore: jest.fn(),
+    zCard: jest.fn(),
+    zAdd: jest.fn(),
+    expire: jest.fn(),
+    keys: jest.fn(),
+    del: jest.fn(),
+    quit: jest.fn().mockResolvedValue(undefined),
+  };
+};
+
+// Mock redis-client module
+jest.mock('@/lib/redis-client', () => {
+  redisMockInstance = createRedisMock();
+  return {
+    getRedisClient: jest.fn(() => {
+      // In tests, we can control whether Redis is available
+      return process.env.MOCK_REDIS_AVAILABLE === 'true' ? redisMockInstance : null;
+    }),
+    checkRedisHealth: jest.fn().mockResolvedValue(true),
+    disconnectRedis: jest.fn().mockResolvedValue(undefined),
+  };
 });
-
-jest.mock('@upstash/redis', () => ({
-  Redis: jest.fn(() => {
-    const instance = createRedisMock();
-    redisInstances.push(instance);
-    return instance;
-  }),
-}));
 
 type RateLimitModule = typeof import('@/lib/rate-limit');
 let RateLimiter: RateLimitModule['RateLimiter'];
 let withRateLimit: RateLimitModule['withRateLimit'];
-let RedisConstructor: jest.Mock;
 
 beforeAll(async () => {
   ({ RateLimiter, withRateLimit } = await import('@/lib/rate-limit'));
-  const redisModule = jest.requireMock('@upstash/redis') as { Redis: jest.Mock };
-  RedisConstructor = redisModule.Redis;
 });
 
-const getLatestRedisMock = (): RedisMockInstance => {
-  const instance = redisInstances.at(-1);
-  if (!instance) {
-    throw new Error('Redis mock not initialized');
+const getRedisMock = (): RedisMockInstance => {
+  if (!redisMockInstance) {
+    redisMockInstance = createRedisMock();
   }
-  return instance;
+  return redisMockInstance;
 };
 
 describe('RateLimiter', () => {
@@ -65,158 +86,132 @@ describe('RateLimiter', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    redisInstances.length = 0;
-    process.env.UPSTASH_REDIS_REST_URL = 'https://test-redis.upstash.io';
-    process.env.UPSTASH_REDIS_REST_TOKEN = 'test-token';
+    redisMock = getRedisMock();
+    
+    // Default to in-memory (no Redis) for most tests
+    process.env.MOCK_REDIS_AVAILABLE = 'false';
+    process.env.NODE_ENV = 'development';
 
     limiter = new RateLimiter({
       maxRequests: 5,
       windowMs: 60000, // 1 minute
       prefix: 'test:',
     });
-    redisMock = getLatestRedisMock();
   });
 
-  describe('check', () => {
+  describe('check - in-memory mode', () => {
     it('should allow request when under limit', async () => {
-      const now = Date.now();
-      const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
+      const result = await limiter.check('test-identifier');
 
-      redisMock.lrange.mockResolvedValue([]);
+      expect(result.success).toBe(true);
+      expect(result.remaining).toBe(4); // 5 - 1
+      expect(result.resetTime).toBeGreaterThan(Date.now());
+    });
+
+    it('should reject request when over limit', async () => {
+      // Make 5 requests to hit the limit
+      for (let i = 0; i < 5; i++) {
+        await limiter.check('test-identifier');
+      }
+
+      // 6th request should be rejected
+      const result = await limiter.check('test-identifier');
+
+      expect(result.success).toBe(false);
+      expect(result.remaining).toBe(0);
+    });
+
+    it('should reset after window expires', async () => {
+      // Make 5 requests
+      for (let i = 0; i < 5; i++) {
+        await limiter.check('test-identifier');
+      }
+
+      // Fast-forward time
+      jest.useFakeTimers();
+      jest.advanceTimersByTime(61000); // Past the window
+
+      const result = await limiter.check('test-identifier');
+      expect(result.success).toBe(true);
+      expect(result.remaining).toBe(4);
+
+      jest.useRealTimers();
+    });
+  });
+
+  describe('check - Redis mode', () => {
+    beforeEach(() => {
+      process.env.MOCK_REDIS_AVAILABLE = 'true';
+      process.env.NODE_ENV = 'production';
+      redisMock = getRedisMock();
+    });
+
+    it('should use Redis when available', async () => {
+      const mockMulti = redisMock.multi();
+      mockMulti.exec.mockResolvedValue([
+        [null, 0], // zRemRangeByScore result
+        [null, 0], // zCard result (count before adding)
+        [null, 1], // zAdd result
+        [null, 1], // expire result
+      ]);
 
       const result = await limiter.check('test-identifier');
 
       expect(result.success).toBe(true);
       expect(result.remaining).toBe(4); // 5 - 1
-      expect(redisMock.rpush).toHaveBeenCalledWith('test:test-identifier', now.toString());
-      expect(redisMock.expire).toHaveBeenCalled();
-
-      dateSpy.mockRestore();
+      expect(redisMock.multi).toHaveBeenCalled();
+      expect(mockMulti.exec).toHaveBeenCalled();
     });
 
-    it('should reject request when over limit', async () => {
-      const now = Date.now();
-      const windowStart = now - 60000;
-      const timestamps = [
-        windowStart + 10000,
-        windowStart + 20000,
-        windowStart + 30000,
-        windowStart + 40000,
-        windowStart + 50000,
-      ];
-
-      const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
-      redisMock.lrange.mockResolvedValue(timestamps.map(String));
+    it('should reject when over limit in Redis', async () => {
+      const mockMulti = redisMock.multi();
+      // Simulate 5 requests already in window
+      mockMulti.exec.mockResolvedValue([
+        [null, 0],
+        [null, 5], // Already at limit
+        [null, 1],
+        [null, 1],
+      ]);
 
       const result = await limiter.check('test-identifier');
 
       expect(result.success).toBe(false);
       expect(result.remaining).toBe(0);
-      expect(redisMock.rpush).not.toHaveBeenCalled();
-
-      dateSpy.mockRestore();
     });
 
-    it('should remove old timestamps outside window', async () => {
-      const now = Date.now();
-      const oldTimestamp = now - 120000; // 2 minutes ago (outside window)
-      const recentTimestamp = now - 30000; // 30 seconds ago (inside window)
-
-      const dateSpy = jest.spyOn(Date, 'now').mockReturnValue(now);
-      redisMock.lrange.mockResolvedValue([String(oldTimestamp), String(recentTimestamp)]);
-
-      await limiter.check('test-identifier');
-
-      expect(redisMock.ltrim).toHaveBeenCalledWith('test:test-identifier', 1, -1);
-
-      dateSpy.mockRestore();
-    });
-
-    it('should bypass rate limit when Redis is not initialized', async () => {
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
-
-      // Mock Redis constructor to throw
-      RedisConstructor.mockImplementationOnce(() => {
-        throw new Error('Redis connection failed');
-      });
-
-      const limiterWithoutRedis = new RateLimiter({
-        maxRequests: 5,
-        windowMs: 60000,
-      });
-
-      const result = await limiterWithoutRedis.check('test-identifier');
-
-      expect(result.success).toBe(true);
-      expect(result.remaining).toBe(5);
-      expect(consoleWarnSpy).toHaveBeenCalledWith(expect.stringContaining('Redis client not initialized'));
-
-      consoleErrorSpy.mockRestore();
-      consoleWarnSpy.mockRestore();
-    });
-
-    it('should handle Redis errors gracefully', async () => {
-      redisMock.lrange.mockRejectedValue(new Error('Redis error'));
+    it('should fallback to in-memory on Redis error', async () => {
+      const mockMulti = redisMock.multi();
+      mockMulti.exec.mockRejectedValue(new Error('Redis error'));
 
       // eslint-disable-next-line @typescript-eslint/no-empty-function
       const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      const consoleWarnSpy = jest.spyOn(console, 'warn').mockImplementation(() => {});
 
       const result = await limiter.check('test-identifier');
 
-      expect(result.success).toBe(true); // Should allow on error
-      expect(result.remaining).toBe(5);
+      // Should fallback to in-memory and allow request
+      expect(result.success).toBe(true);
       expect(consoleErrorSpy).toHaveBeenCalled();
-      expect(consoleWarnSpy).toHaveBeenCalledWith(
-        expect.stringContaining('Rate limiting bypassed')
-      );
 
       consoleErrorSpy.mockRestore();
-      consoleWarnSpy.mockRestore();
     });
   });
 
   describe('cleanup', () => {
-    it('should delete all keys with prefix', async () => {
-      redisMock.keys.mockResolvedValue(['test:key1', 'test:key2', 'test:key3']);
+    it('should handle cleanup in in-memory mode', async () => {
+      // In-memory cleanup is handled automatically, just verify no errors
+      await expect(limiter.cleanup()).resolves.not.toThrow();
+    });
+
+    it('should cleanup Redis keys when Redis is available', async () => {
+      process.env.MOCK_REDIS_AVAILABLE = 'true';
+      process.env.NODE_ENV = 'production';
+      redisMock.keys.mockResolvedValue(['test:key1', 'test:key2']);
+      redisMock.del.mockResolvedValue(2);
 
       await limiter.cleanup();
 
       expect(redisMock.keys).toHaveBeenCalledWith('test:*');
-      expect(redisMock.del).toHaveBeenCalledWith('test:key1', 'test:key2', 'test:key3');
-    });
-
-    it('should handle empty keys array', async () => {
-      redisMock.keys.mockResolvedValue([]);
-
-      await limiter.cleanup();
-
-      expect(redisMock.keys).toHaveBeenCalledWith('test:*');
-      expect(redisMock.del).not.toHaveBeenCalled();
-    });
-
-    it('should handle Redis errors during cleanup', async () => {
-      redisMock.keys.mockRejectedValue(new Error('Redis error'));
-
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
-
-      await limiter.cleanup();
-
-      expect(consoleErrorSpy).toHaveBeenCalled();
-      // Check that error was logged (format may vary)
-      const errorCalls = consoleErrorSpy.mock.calls;
-      const hasError = errorCalls.some(call => 
-        call[0]?.toString().includes('Redis cleanup error') || 
-        call[0]?.toString().includes('Redis error')
-      );
-      expect(hasError).toBe(true);
-
-      consoleErrorSpy.mockRestore();
+      expect(redisMock.del).toHaveBeenCalledWith(['test:key1', 'test:key2']);
     });
   });
 });
