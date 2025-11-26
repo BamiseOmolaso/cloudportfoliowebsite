@@ -147,14 +147,9 @@ resource "aws_ecr_lifecycle_policy" "app" {
   })
 }
 
-# Store application secrets in Secrets Manager
-resource "aws_secretsmanager_secret" "app_secrets" {
-  name        = "portfolio/${local.environment}/app-secrets"
-  description = "Application environment variables for ${local.environment}"
-
-  tags = {
-    Environment = local.environment
-  }
+# Read existing application secrets from Secrets Manager
+data "aws_secretsmanager_secret" "app_secrets" {
+  name = "portfolio/${local.environment}/app-secrets"
 }
 
 # ECS Cluster and Service
@@ -170,7 +165,7 @@ module "ecs" {
   ecr_repository_url = aws_ecr_repository.app.repository_url
   image_tag          = var.image_tag
   db_secret_arn      = module.rds.db_secret_arn
-  app_secrets_arn    = aws_secretsmanager_secret.app_secrets.arn
+  app_secrets_arn    = data.aws_secretsmanager_secret.app_secrets.arn
   desired_count      = var.ecs_desired_count
 }
 

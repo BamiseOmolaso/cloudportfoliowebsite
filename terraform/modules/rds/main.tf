@@ -1,6 +1,7 @@
 # Read existing database credentials from Secrets Manager
+# Using ARN directly for more reliable lookup
 data "aws_secretsmanager_secret" "db_credentials" {
-  name = "omolasowebportfolio/db/credentials"
+  arn = "arn:aws:secretsmanager:us-east-1:827327671360:secret:omolasowebportfolio/db/credentials-IPftJt"
 }
 
 data "aws_secretsmanager_secret_version" "db_credentials" {
