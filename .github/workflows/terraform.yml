@@ -144,6 +144,28 @@ jobs:
         run: |
           # Use tfvars file if it exists, otherwise use defaults
           PLAN_EXIT_CODE=0
+          
+          # First, try to apply IAM policy changes if they exist (to avoid permission errors during plan)
+          echo "🔧 Checking if IAM policy needs updating..."
+          if [ -f terraform.tfvars ]; then
+            terraform plan -target=module.github_oidc.aws_iam_role_policy.terraform_policy -input=false -var-file=terraform.tfvars -out=tfplan-iam 2>&1 | tee plan-iam.log || true
+          else
+            terraform plan -target=module.github_oidc.aws_iam_role_policy.terraform_policy -input=false -out=tfplan-iam 2>&1 | tee plan-iam.log || true
+          fi
+          
+          # If IAM policy has changes, apply it first
+          if grep -q "module.github_oidc.aws_iam_role_policy.terraform_policy" plan-iam.log && grep -q "will be" plan-iam.log; then
+            echo "🔧 Applying IAM policy update first..."
+            if [ -f terraform.tfvars ]; then
+              terraform apply -target=module.github_oidc.aws_iam_role_policy.terraform_policy -input=false -auto-approve -var-file=terraform.tfvars || true
+            else
+              terraform apply -target=module.github_oidc.aws_iam_role_policy.terraform_policy -input=false -auto-approve || true
+            fi
+            echo "⏳ Waiting for IAM propagation..."
+            sleep 15
+          fi
+          
+          # Now create the full plan
           if [ -f terraform.tfvars ]; then
             terraform plan -input=false -var-file=terraform.tfvars -out=tfplan || PLAN_EXIT_CODE=$?
           else
@@ -588,10 +610,16 @@ jobs:
           echo "plan_valid=false" >> $GITHUB_OUTPUT
           echo "⚠️ Plan artifact not found, will create fresh plan"
       
-      - name: Terraform Apply (with saved plan)
+      - name: Terraform Apply (IAM policy first)
         if: steps.verify-plan.outputs.plan_valid == 'true'
         working-directory: terraform/envs/prod
-        run: terraform apply -input=false -auto-approve tfplan
+        run: |
+          # Apply IAM policy changes first to avoid permission errors
+          terraform apply -target=module.github_oidc.aws_iam_role_policy.terraform_policy -input=false -auto-approve || true
+          # Wait a moment for IAM propagation
+          sleep 10
+          # Now apply the full plan
+          terraform apply -input=false -auto-approve tfplan
       
       - name: Terraform Apply (fresh plan)
         if: steps.verify-plan.outputs.plan_valid != 'true' || steps.plan-exists.outputs.exists == 'false'
