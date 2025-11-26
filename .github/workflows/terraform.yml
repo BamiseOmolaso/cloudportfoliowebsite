@@ -145,31 +145,48 @@ jobs:
           # Use tfvars file if it exists, otherwise use defaults
           PLAN_EXIT_CODE=0
           
-          # First, try to apply IAM policy changes if they exist (to avoid permission errors during plan)
-          echo "🔧 Checking if IAM policy needs updating..."
+          # Try to create the full plan first
           if [ -f terraform.tfvars ]; then
-            terraform plan -target=module.github_oidc.aws_iam_role_policy.terraform_policy -input=false -var-file=terraform.tfvars -out=tfplan-iam 2>&1 | tee plan-iam.log || true
+            terraform plan -input=false -var-file=terraform.tfvars -out=tfplan 2>&1 | tee plan.log || PLAN_EXIT_CODE=$?
           else
-            terraform plan -target=module.github_oidc.aws_iam_role_policy.terraform_policy -input=false -out=tfplan-iam 2>&1 | tee plan-iam.log || true
+            terraform plan -input=false -out=tfplan 2>&1 | tee plan.log || PLAN_EXIT_CODE=$?
           fi
           
-          # If IAM policy has changes, apply it first
-          if grep -q "module.github_oidc.aws_iam_role_policy.terraform_policy" plan-iam.log && grep -q "will be" plan-iam.log; then
-            echo "🔧 Applying IAM policy update first..."
+          # If plan failed due to Auto Scaling permission error, apply IAM policy and retry
+          if [ $PLAN_EXIT_CODE -ne 0 ] && grep -q "application-autoscaling.*AccessDenied\|application-autoscaling.*not authorized" plan.log; then
+            echo "⚠️ Plan failed due to Auto Scaling permission error"
+            echo "🔧 Applying IAM policy update to fix permissions..."
+            
+            # Check if IAM policy needs updating
             if [ -f terraform.tfvars ]; then
-              terraform apply -target=module.github_oidc.aws_iam_role_policy.terraform_policy -input=false -auto-approve -var-file=terraform.tfvars || true
+              terraform plan -target=module.github_oidc.aws_iam_role_policy.terraform_policy -input=false -var-file=terraform.tfvars -out=tfplan-iam 2>&1 | tee plan-iam.log || true
             else
-              terraform apply -target=module.github_oidc.aws_iam_role_policy.terraform_policy -input=false -auto-approve || true
+              terraform plan -target=module.github_oidc.aws_iam_role_policy.terraform_policy -input=false -out=tfplan-iam 2>&1 | tee plan-iam.log || true
             fi
-            echo "⏳ Waiting for IAM propagation..."
-            sleep 15
-          fi
-          
-          # Now create the full plan
-          if [ -f terraform.tfvars ]; then
-            terraform plan -input=false -var-file=terraform.tfvars -out=tfplan || PLAN_EXIT_CODE=$?
-          else
-            terraform plan -input=false -out=tfplan || PLAN_EXIT_CODE=$?
+            
+            # If IAM policy has changes, apply it
+            if grep -q "will be created\|will be updated\|will be replaced" plan-iam.log; then
+              echo "🔧 Applying IAM policy update..."
+              if [ -f terraform.tfvars ]; then
+                terraform apply -target=module.github_oidc.aws_iam_role_policy.terraform_policy -input=false -auto-approve -var-file=terraform.tfvars
+              else
+                terraform apply -target=module.github_oidc.aws_iam_role_policy.terraform_policy -input=false -auto-approve
+              fi
+              echo "⏳ Waiting for IAM propagation..."
+              sleep 15
+            else
+              echo "ℹ️ IAM policy already up to date, waiting for propagation..."
+              sleep 10
+            fi
+            
+            # Retry the plan
+            echo "🔄 Retrying plan after IAM policy update..."
+            PLAN_EXIT_CODE=0
+            if [ -f terraform.tfvars ]; then
+              terraform plan -input=false -var-file=terraform.tfvars -out=tfplan 2>&1 | tee plan-retry.log || PLAN_EXIT_CODE=$?
+            else
+              terraform plan -input=false -out=tfplan 2>&1 | tee plan-retry.log || PLAN_EXIT_CODE=$?
+            fi
           fi
           
           # Only create plan.txt if plan succeeded
