@@ -113,15 +113,29 @@ jobs:
         working-directory: terraform/envs/${{ steps.env.outputs.ENV_NAME }}
         run: |
           # Use tfvars file if it exists, otherwise use defaults
+          PLAN_EXIT_CODE=0
           if [ -f terraform.tfvars ]; then
-            terraform plan -input=false -var-file=terraform.tfvars -out=tfplan
+            terraform plan -input=false -var-file=terraform.tfvars -out=tfplan || PLAN_EXIT_CODE=$?
           else
-            terraform plan -input=false -out=tfplan
+            terraform plan -input=false -out=tfplan || PLAN_EXIT_CODE=$?
           fi
-          terraform show -no-color tfplan > plan.txt
+          
+          # Only create plan.txt if plan succeeded
+          if [ $PLAN_EXIT_CODE -eq 0 ]; then
+            terraform show -no-color tfplan > plan.txt
+            echo "plan_success=true" >> $GITHUB_OUTPUT
+            echo "✅ Plan created successfully"
+          else
+            echo "plan_success=false" >> $GITHUB_OUTPUT
+            echo "❌ Plan failed with exit code $PLAN_EXIT_CODE"
+            # Remove incomplete plan file
+            rm -f tfplan
+          fi
+          echo "plan_exit_code=$PLAN_EXIT_CODE" >> $GITHUB_OUTPUT
         continue-on-error: true
       
       - name: Upload Plan and Lock File
+        if: steps.plan.outputs.plan_success == 'true'
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ steps.env.outputs.ENV_NAME }}-${{ github.run_id }}
@@ -219,11 +233,28 @@ jobs:
         id: verify-plan
         working-directory: terraform/envs/dev
         run: |
-          if terraform show tfplan > /dev/null 2>&1; then
+          # Check if plan file exists and is complete
+          if [ ! -f tfplan ]; then
+            echo "plan_valid=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Plan file not found, will create new plan"
+            exit 0
+          fi
+          
+          # Check if plan can be shown (basic validation)
+          if ! terraform show tfplan > /dev/null 2>&1; then
+            echo "plan_valid=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Plan file is invalid, will create new plan"
+            exit 0
+          fi
+          
+          # Check if plan is complete (not incomplete)
+          PLAN_OUTPUT=$(terraform show -json tfplan 2>/dev/null)
+          if echo "$PLAN_OUTPUT" | grep -q '"format_version":"1.0"' && ! echo "$PLAN_OUTPUT" | grep -q '"incomplete":true'; then
             echo "plan_valid=true" >> $GITHUB_OUTPUT
+            echo "✅ Plan file is valid and complete"
           else
             echo "plan_valid=false" >> $GITHUB_OUTPUT
-            echo "⚠️ Plan file is invalid or stale, will create new plan"
+            echo "⚠️ Plan file is incomplete, will create new plan"
           fi
         continue-on-error: true
       
@@ -319,11 +350,28 @@ jobs:
         id: verify-plan
         working-directory: terraform/envs/staging
         run: |
-          if terraform show tfplan > /dev/null 2>&1; then
+          # Check if plan file exists and is complete
+          if [ ! -f tfplan ]; then
+            echo "plan_valid=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Plan file not found, will create new plan"
+            exit 0
+          fi
+          
+          # Check if plan can be shown (basic validation)
+          if ! terraform show tfplan > /dev/null 2>&1; then
+            echo "plan_valid=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Plan file is invalid, will create new plan"
+            exit 0
+          fi
+          
+          # Check if plan is complete (not incomplete)
+          PLAN_OUTPUT=$(terraform show -json tfplan 2>/dev/null)
+          if echo "$PLAN_OUTPUT" | grep -q '"format_version":"1.0"' && ! echo "$PLAN_OUTPUT" | grep -q '"incomplete":true'; then
             echo "plan_valid=true" >> $GITHUB_OUTPUT
+            echo "✅ Plan file is valid and complete"
           else
             echo "plan_valid=false" >> $GITHUB_OUTPUT
-            echo "⚠️ Plan file is invalid or stale, will create new plan"
+            echo "⚠️ Plan file is incomplete, will create new plan"
           fi
         continue-on-error: true
       
@@ -415,11 +463,28 @@ jobs:
         id: verify-plan
         working-directory: terraform/envs/prod
         run: |
-          if terraform show tfplan > /dev/null 2>&1; then
+          # Check if plan file exists and is complete
+          if [ ! -f tfplan ]; then
+            echo "plan_valid=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Plan file not found, will create new plan"
+            exit 0
+          fi
+          
+          # Check if plan can be shown (basic validation)
+          if ! terraform show tfplan > /dev/null 2>&1; then
+            echo "plan_valid=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Plan file is invalid, will create new plan"
+            exit 0
+          fi
+          
+          # Check if plan is complete (not incomplete)
+          PLAN_OUTPUT=$(terraform show -json tfplan 2>/dev/null)
+          if echo "$PLAN_OUTPUT" | grep -q '"format_version":"1.0"' && ! echo "$PLAN_OUTPUT" | grep -q '"incomplete":true'; then
             echo "plan_valid=true" >> $GITHUB_OUTPUT
+            echo "✅ Plan file is valid and complete"
           else
             echo "plan_valid=false" >> $GITHUB_OUTPUT
-            echo "⚠️ Plan file is invalid or stale, will create new plan"
+            echo "⚠️ Plan file is incomplete, will create new plan"
           fi
         continue-on-error: true
       

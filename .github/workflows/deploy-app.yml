@@ -106,7 +106,7 @@ jobs:
           terraform init -backend-config="bucket=omolaso-terraform-state" \
                          -backend-config="key=envs/${{ steps.env.outputs.ENV_NAME }}/terraform.tfstate" \
                          -backend-config="region=${{ env.AWS_REGION }}" \
-                         -backend-config="dynamodb_table=portfolio-tf-locks" \
+                         -backend-config="use_lockfile=true" \
                          -backend-config="encrypt=true" \
                          -input=false
           
