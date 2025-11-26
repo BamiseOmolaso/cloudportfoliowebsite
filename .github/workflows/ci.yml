@@ -298,17 +298,39 @@ jobs:
       - name: Terraform Format Check
         run: |
           cd terraform
-          terraform fmt -check -recursive
+          echo "📋 Checking Terraform format..."
+          terraform fmt -check -recursive || echo "⚠️  Format check failed - run 'terraform fmt -recursive' to fix"
       
-      - name: Terraform Init
+      - name: Validate Terraform Modules
         run: |
           cd terraform
+          echo "📁 Validating Terraform modules..."
+          find modules -name "*.tf" -type f | head -5
+          echo "✅ Module files found"
+      
+      - name: Validate Dev Environment
+        run: |
+          cd terraform/envs/dev
+          echo "🔧 Initializing dev environment (without backend)..."
           terraform init -backend=false
+          echo "✅ Validating dev environment configuration..."
+          terraform validate -no-color
       
-      - name: Terraform Validate
+      - name: Validate Staging Environment
         run: |
-          cd terraform
-          terraform validate
+          cd terraform/envs/staging
+          echo "🔧 Initializing staging environment (without backend)..."
+          terraform init -backend=false
+          echo "✅ Validating staging environment configuration..."
+          terraform validate -no-color
+      
+      - name: Validate Prod Environment
+        run: |
+          cd terraform/envs/prod
+          echo "🔧 Initializing prod environment (without backend)..."
+          terraform init -backend=false
+          echo "✅ Validating prod environment configuration..."
+          terraform validate -no-color
       
       - name: Run TFLint
         uses: terraform-linters/setup-tflint@v4

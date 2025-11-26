@@ -52,6 +52,9 @@ module "rds" {
   environment        = var.environment
   db_name           = var.db_name
   db_username       = var.db_username
+  db_password       = var.db_password
+  instance_class    = var.rds_instance_class
+  allocated_storage = var.rds_allocated_storage
 }
 
 # Application Load Balancer
@@ -169,6 +172,7 @@ module "ecs" {
   target_group_arn  = aws_lb_target_group.app.arn
   alb_listener_arn  = aws_lb_listener.http.arn
   ecr_repository_url = aws_ecr_repository.app.repository_url
+  image_tag         = var.image_tag
   db_secret_arn     = module.rds.db_secret_arn
   app_secrets_arn   = aws_secretsmanager_secret.app_secrets.arn
   desired_count     = var.ecs_desired_count
