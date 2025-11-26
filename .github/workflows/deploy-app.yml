@@ -73,16 +73,26 @@ jobs:
           terraform_version: 1.13.3
           terraform_wrapper: false
       
+      - name: Set AWS role ARN
+        id: aws-role
+        run: |
+          if [ -n "${{ secrets.AWS_DEPLOY_ROLE_ARN }}" ]; then
+            echo "role_arn=${{ secrets.AWS_DEPLOY_ROLE_ARN }}" >> $GITHUB_OUTPUT
+            echo "use_oidc=true" >> $GITHUB_OUTPUT
+          else
+            echo "use_oidc=false" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Configure AWS credentials (OIDC)
-        if: ${{ secrets.AWS_DEPLOY_ROLE_ARN != '' }}
+        if: steps.aws-role.outputs.use_oidc == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          role-to-assume: ${{ steps.aws-role.outputs.role_arn }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: docker-build-${{ github.run_id }}
       
-      - name: Configure AWS credentials (Access Keys fallback)
-        if: ${{ secrets.AWS_DEPLOY_ROLE_ARN == '' && secrets.AWS_ACCESS_KEY_ID != '' }}
+      - name: Configure AWS credentials (Access Keys)
+        if: steps.aws-role.outputs.use_oidc == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -197,16 +207,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Set AWS role ARN
+        id: aws-role
+        run: |
+          if [ -n "${{ secrets.AWS_DEPLOY_ROLE_ARN }}" ]; then
+            echo "role_arn=${{ secrets.AWS_DEPLOY_ROLE_ARN }}" >> $GITHUB_OUTPUT
+            echo "use_oidc=true" >> $GITHUB_OUTPUT
+          else
+            echo "use_oidc=false" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Configure AWS credentials (OIDC)
-        if: ${{ secrets.AWS_DEPLOY_ROLE_ARN != '' }}
+        if: steps.aws-role.outputs.use_oidc == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          role-to-assume: ${{ steps.aws-role.outputs.role_arn }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: ecs-deploy-dev-${{ github.run_id }}
       
-      - name: Configure AWS credentials (Access Keys fallback)
-        if: ${{ secrets.AWS_DEPLOY_ROLE_ARN == '' && secrets.AWS_ACCESS_KEY_ID != '' }}
+      - name: Configure AWS credentials (Access Keys)
+        if: steps.aws-role.outputs.use_oidc == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -263,16 +283,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Set AWS role ARN
+        id: aws-role
+        run: |
+          if [ -n "${{ secrets.AWS_DEPLOY_ROLE_ARN }}" ]; then
+            echo "role_arn=${{ secrets.AWS_DEPLOY_ROLE_ARN }}" >> $GITHUB_OUTPUT
+            echo "use_oidc=true" >> $GITHUB_OUTPUT
+          else
+            echo "use_oidc=false" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Configure AWS credentials (OIDC)
-        if: ${{ secrets.AWS_DEPLOY_ROLE_ARN != '' }}
+        if: steps.aws-role.outputs.use_oidc == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          role-to-assume: ${{ steps.aws-role.outputs.role_arn }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: ecs-deploy-staging-${{ github.run_id }}
       
-      - name: Configure AWS credentials (Access Keys fallback)
-        if: ${{ secrets.AWS_DEPLOY_ROLE_ARN == '' && secrets.AWS_ACCESS_KEY_ID != '' }}
+      - name: Configure AWS credentials (Access Keys)
+        if: steps.aws-role.outputs.use_oidc == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -328,16 +358,26 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Set AWS role ARN
+        id: aws-role
+        run: |
+          if [ -n "${{ secrets.AWS_DEPLOY_ROLE_ARN }}" ]; then
+            echo "role_arn=${{ secrets.AWS_DEPLOY_ROLE_ARN }}" >> $GITHUB_OUTPUT
+            echo "use_oidc=true" >> $GITHUB_OUTPUT
+          else
+            echo "use_oidc=false" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Configure AWS credentials (OIDC)
-        if: ${{ secrets.AWS_DEPLOY_ROLE_ARN != '' }}
+        if: steps.aws-role.outputs.use_oidc == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
+          role-to-assume: ${{ steps.aws-role.outputs.role_arn }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: ecs-deploy-prod-${{ github.run_id }}
       
-      - name: Configure AWS credentials (Access Keys fallback)
-        if: ${{ secrets.AWS_DEPLOY_ROLE_ARN == '' && secrets.AWS_ACCESS_KEY_ID != '' }}
+      - name: Configure AWS credentials (Access Keys)
+        if: steps.aws-role.outputs.use_oidc == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
