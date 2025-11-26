@@ -311,52 +311,73 @@ jobs:
         run: |
           cd terraform/envs/dev
           
-          # Download state from S3 and use locally to bypass checksum validation
-          echo "📥 Downloading Terraform state from S3..."
-          aws s3 cp s3://omolaso-terraform-state/envs/dev/terraform.tfstate ./terraform.tfstate \
-            --region ${{ env.AWS_REGION }} || {
-            echo "❌ Failed to download state file"
-            exit 1
-          }
+          # Initialize Terraform backend with automatic checksum correction
+          echo "🔧 Initializing Terraform backend..."
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          INIT_SUCCESS=false
           
-          # Initialize with local backend (bypasses S3 checksum validation)
-          echo "🔧 Initializing Terraform with local state..."
-          terraform init -backend=false -input=false || {
-            echo "⚠️ Backend=false failed, trying with reconfigure..."
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$INIT_SUCCESS" = false ]; do
+            echo "🔄 Terraform init attempt $((RETRY_COUNT + 1))/$MAX_RETRIES..."
+            
             terraform init -reconfigure -input=false \
                           -backend-config="bucket=omolaso-terraform-state" \
                           -backend-config="key=envs/dev/terraform.tfstate" \
                           -backend-config="region=${{ env.AWS_REGION }}" \
                           -backend-config="dynamodb_table=portfolio-tf-locks" \
-                          -backend-config="encrypt=true"
-          }
+                          -backend-config="encrypt=true" > init.log 2>&1
+            INIT_EXIT_CODE=$?
+            
+            if [ $INIT_EXIT_CODE -eq 0 ]; then
+              INIT_SUCCESS=true
+              echo "✅ Terraform init successful"
+            else
+              # Check for checksum mismatch error
+              if grep -qi "checksum.*does not match\|checksum.*mismatch\|Error refreshing state.*checksum\|state data in S3 does not have the expected content" init.log; then
+                echo "⚠️ State checksum mismatch detected - fixing..."
+                CALCULATED_CHECKSUM=$(grep -i "Calculated checksum:" init.log | grep -oE "[a-f0-9]{32}" | head -1 || echo "")
+                
+                if [ -n "$CALCULATED_CHECKSUM" ]; then
+                  echo "🔧 Updating DynamoDB checksum to: $CALCULATED_CHECKSUM"
+                  LOCK_ID="omolaso-terraform-state/envs/dev/terraform.tfstate-md5"
+                  aws dynamodb update-item \
+                    --table-name portfolio-tf-locks \
+                    --key "{\"LockID\": {\"S\": \"$LOCK_ID\"}}" \
+                    --update-expression "SET Digest = :d" \
+                    --expression-attribute-values "{\":d\": {\"S\": \"$CALCULATED_CHECKSUM\"}}" \
+                    --region ${{ env.AWS_REGION }} > /dev/null 2>&1 || echo "⚠️ Could not update DynamoDB checksum"
+                  
+                  echo "⏳ Waiting 3 seconds for DynamoDB update to propagate..."
+                  sleep 3
+                else
+                  echo "⚠️ Could not extract checksum from error message"
+                  cat init.log
+                fi
+                
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+                  echo "❌ Max retries reached. Checksum issue persists."
+                  cat init.log
+                  exit 1
+                fi
+              else
+                echo "❌ Terraform init failed with a different error:"
+                cat init.log
+                exit 1
+              fi
+            fi
+          done
           
-          # Apply changes using local state
+          if [ "$INIT_SUCCESS" = false ]; then
+            echo "❌ Failed to initialize Terraform after $MAX_RETRIES attempts"
+            exit 1
+          fi
+          
+          # Apply changes using proper backend
           echo "🚀 Applying Terraform changes..."
           terraform apply -var="image_tag=${{ needs.build-and-push.outputs.image-tag }}" \
                           -auto-approve \
-                          -input=false \
-                          -state=terraform.tfstate \
-                          -state-out=terraform.tfstate
-          
-          # Upload updated state back to S3
-          echo "📤 Uploading updated state to S3..."
-          aws s3 cp terraform.tfstate s3://omolaso-terraform-state/envs/dev/terraform.tfstate \
-            --region ${{ env.AWS_REGION }} || {
-            echo "❌ Failed to upload state file"
-            exit 1
-          }
-          
-          # Calculate new checksum and update DynamoDB
-          echo "🔧 Updating DynamoDB checksum..."
-          NEW_CHECKSUM=$(md5sum terraform.tfstate | cut -d' ' -f1)
-          LOCK_ID="omolaso-terraform-state/envs/dev/terraform.tfstate-md5"
-          aws dynamodb update-item \
-            --table-name portfolio-tf-locks \
-            --key "{\"LockID\": {\"S\": \"$LOCK_ID\"}}" \
-            --update-expression "SET Digest = :d" \
-            --expression-attribute-values "{\":d\": {\"S\": \"$NEW_CHECKSUM\"}}" \
-            --region ${{ env.AWS_REGION }} > /dev/null 2>&1 || echo "⚠️ Could not update DynamoDB checksum (non-fatal)"
+                          -input=false
           
           echo "✅ ECS service updated successfully"
       
@@ -459,52 +480,73 @@ jobs:
         run: |
           cd terraform/envs/staging
           
-          # Download state from S3 and use locally to bypass checksum validation
-          echo "📥 Downloading Terraform state from S3..."
-          aws s3 cp s3://omolaso-terraform-state/envs/staging/terraform.tfstate ./terraform.tfstate \
-            --region ${{ env.AWS_REGION }} || {
-            echo "❌ Failed to download state file"
-            exit 1
-          }
+          # Initialize Terraform backend with automatic checksum correction
+          echo "🔧 Initializing Terraform backend..."
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          INIT_SUCCESS=false
           
-          # Initialize with local backend (bypasses S3 checksum validation)
-          echo "🔧 Initializing Terraform with local state..."
-          terraform init -backend=false -input=false || {
-            echo "⚠️ Backend=false failed, trying with reconfigure..."
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$INIT_SUCCESS" = false ]; do
+            echo "🔄 Terraform init attempt $((RETRY_COUNT + 1))/$MAX_RETRIES..."
+            
             terraform init -reconfigure -input=false \
                           -backend-config="bucket=omolaso-terraform-state" \
                           -backend-config="key=envs/staging/terraform.tfstate" \
                           -backend-config="region=${{ env.AWS_REGION }}" \
                           -backend-config="dynamodb_table=portfolio-tf-locks" \
-                          -backend-config="encrypt=true"
-          }
+                          -backend-config="encrypt=true" > init.log 2>&1
+            INIT_EXIT_CODE=$?
+            
+            if [ $INIT_EXIT_CODE -eq 0 ]; then
+              INIT_SUCCESS=true
+              echo "✅ Terraform init successful"
+            else
+              # Check for checksum mismatch error
+              if grep -qi "checksum.*does not match\|checksum.*mismatch\|Error refreshing state.*checksum\|state data in S3 does not have the expected content" init.log; then
+                echo "⚠️ State checksum mismatch detected - fixing..."
+                CALCULATED_CHECKSUM=$(grep -i "Calculated checksum:" init.log | grep -oE "[a-f0-9]{32}" | head -1 || echo "")
+                
+                if [ -n "$CALCULATED_CHECKSUM" ]; then
+                  echo "🔧 Updating DynamoDB checksum to: $CALCULATED_CHECKSUM"
+                  LOCK_ID="omolaso-terraform-state/envs/staging/terraform.tfstate-md5"
+                  aws dynamodb update-item \
+                    --table-name portfolio-tf-locks \
+                    --key "{\"LockID\": {\"S\": \"$LOCK_ID\"}}" \
+                    --update-expression "SET Digest = :d" \
+                    --expression-attribute-values "{\":d\": {\"S\": \"$CALCULATED_CHECKSUM\"}}" \
+                    --region ${{ env.AWS_REGION }} > /dev/null 2>&1 || echo "⚠️ Could not update DynamoDB checksum"
+                  
+                  echo "⏳ Waiting 3 seconds for DynamoDB update to propagate..."
+                  sleep 3
+                else
+                  echo "⚠️ Could not extract checksum from error message"
+                  cat init.log
+                fi
+                
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+                  echo "❌ Max retries reached. Checksum issue persists."
+                  cat init.log
+                  exit 1
+                fi
+              else
+                echo "❌ Terraform init failed with a different error:"
+                cat init.log
+                exit 1
+              fi
+            fi
+          done
           
-          # Apply changes using local state
+          if [ "$INIT_SUCCESS" = false ]; then
+            echo "❌ Failed to initialize Terraform after $MAX_RETRIES attempts"
+            exit 1
+          fi
+          
+          # Apply changes using proper backend
           echo "🚀 Applying Terraform changes..."
           terraform apply -var="image_tag=${{ needs.build-and-push.outputs.image-tag }}" \
                           -auto-approve \
-                          -input=false \
-                          -state=terraform.tfstate \
-                          -state-out=terraform.tfstate
-          
-          # Upload updated state back to S3
-          echo "📤 Uploading updated state to S3..."
-          aws s3 cp terraform.tfstate s3://omolaso-terraform-state/envs/staging/terraform.tfstate \
-            --region ${{ env.AWS_REGION }} || {
-            echo "❌ Failed to upload state file"
-            exit 1
-          }
-          
-          # Calculate new checksum and update DynamoDB
-          echo "🔧 Updating DynamoDB checksum..."
-          NEW_CHECKSUM=$(md5sum terraform.tfstate | cut -d' ' -f1)
-          LOCK_ID="omolaso-terraform-state/envs/staging/terraform.tfstate-md5"
-          aws dynamodb update-item \
-            --table-name portfolio-tf-locks \
-            --key "{\"LockID\": {\"S\": \"$LOCK_ID\"}}" \
-            --update-expression "SET Digest = :d" \
-            --expression-attribute-values "{\":d\": {\"S\": \"$NEW_CHECKSUM\"}}" \
-            --region ${{ env.AWS_REGION }} > /dev/null 2>&1 || echo "⚠️ Could not update DynamoDB checksum (non-fatal)"
+                          -input=false
           
           echo "✅ ECS service updated successfully"
       
@@ -607,52 +649,73 @@ jobs:
         run: |
           cd terraform/envs/prod
           
-          # Download state from S3 and use locally to bypass checksum validation
-          echo "📥 Downloading Terraform state from S3..."
-          aws s3 cp s3://omolaso-terraform-state/envs/prod/terraform.tfstate ./terraform.tfstate \
-            --region ${{ env.AWS_REGION }} || {
-            echo "❌ Failed to download state file"
-            exit 1
-          }
+          # Initialize Terraform backend with automatic checksum correction
+          echo "🔧 Initializing Terraform backend..."
+          MAX_RETRIES=3
+          RETRY_COUNT=0
+          INIT_SUCCESS=false
           
-          # Initialize with local backend (bypasses S3 checksum validation)
-          echo "🔧 Initializing Terraform with local state..."
-          terraform init -backend=false -input=false || {
-            echo "⚠️ Backend=false failed, trying with reconfigure..."
+          while [ $RETRY_COUNT -lt $MAX_RETRIES ] && [ "$INIT_SUCCESS" = false ]; do
+            echo "🔄 Terraform init attempt $((RETRY_COUNT + 1))/$MAX_RETRIES..."
+            
             terraform init -reconfigure -input=false \
                           -backend-config="bucket=omolaso-terraform-state" \
                           -backend-config="key=envs/prod/terraform.tfstate" \
                           -backend-config="region=${{ env.AWS_REGION }}" \
                           -backend-config="dynamodb_table=portfolio-tf-locks" \
-                          -backend-config="encrypt=true"
-          }
+                          -backend-config="encrypt=true" > init.log 2>&1
+            INIT_EXIT_CODE=$?
+            
+            if [ $INIT_EXIT_CODE -eq 0 ]; then
+              INIT_SUCCESS=true
+              echo "✅ Terraform init successful"
+            else
+              # Check for checksum mismatch error
+              if grep -qi "checksum.*does not match\|checksum.*mismatch\|Error refreshing state.*checksum\|state data in S3 does not have the expected content" init.log; then
+                echo "⚠️ State checksum mismatch detected - fixing..."
+                CALCULATED_CHECKSUM=$(grep -i "Calculated checksum:" init.log | grep -oE "[a-f0-9]{32}" | head -1 || echo "")
+                
+                if [ -n "$CALCULATED_CHECKSUM" ]; then
+                  echo "🔧 Updating DynamoDB checksum to: $CALCULATED_CHECKSUM"
+                  LOCK_ID="omolaso-terraform-state/envs/prod/terraform.tfstate-md5"
+                  aws dynamodb update-item \
+                    --table-name portfolio-tf-locks \
+                    --key "{\"LockID\": {\"S\": \"$LOCK_ID\"}}" \
+                    --update-expression "SET Digest = :d" \
+                    --expression-attribute-values "{\":d\": {\"S\": \"$CALCULATED_CHECKSUM\"}}" \
+                    --region ${{ env.AWS_REGION }} > /dev/null 2>&1 || echo "⚠️ Could not update DynamoDB checksum"
+                  
+                  echo "⏳ Waiting 3 seconds for DynamoDB update to propagate..."
+                  sleep 3
+                else
+                  echo "⚠️ Could not extract checksum from error message"
+                  cat init.log
+                fi
+                
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                if [ $RETRY_COUNT -ge $MAX_RETRIES ]; then
+                  echo "❌ Max retries reached. Checksum issue persists."
+                  cat init.log
+                  exit 1
+                fi
+              else
+                echo "❌ Terraform init failed with a different error:"
+                cat init.log
+                exit 1
+              fi
+            fi
+          done
           
-          # Apply changes using local state
+          if [ "$INIT_SUCCESS" = false ]; then
+            echo "❌ Failed to initialize Terraform after $MAX_RETRIES attempts"
+            exit 1
+          fi
+          
+          # Apply changes using proper backend
           echo "🚀 Applying Terraform changes..."
           terraform apply -var="image_tag=${{ needs.build-and-push.outputs.image-tag }}" \
                           -auto-approve \
-                          -input=false \
-                          -state=terraform.tfstate \
-                          -state-out=terraform.tfstate
-          
-          # Upload updated state back to S3
-          echo "📤 Uploading updated state to S3..."
-          aws s3 cp terraform.tfstate s3://omolaso-terraform-state/envs/prod/terraform.tfstate \
-            --region ${{ env.AWS_REGION }} || {
-            echo "❌ Failed to upload state file"
-            exit 1
-          }
-          
-          # Calculate new checksum and update DynamoDB
-          echo "🔧 Updating DynamoDB checksum..."
-          NEW_CHECKSUM=$(md5sum terraform.tfstate | cut -d' ' -f1)
-          LOCK_ID="omolaso-terraform-state/envs/prod/terraform.tfstate-md5"
-          aws dynamodb update-item \
-            --table-name portfolio-tf-locks \
-            --key "{\"LockID\": {\"S\": \"$LOCK_ID\"}}" \
-            --update-expression "SET Digest = :d" \
-            --expression-attribute-values "{\":d\": {\"S\": \"$NEW_CHECKSUM\"}}" \
-            --region ${{ env.AWS_REGION }} > /dev/null 2>&1 || echo "⚠️ Could not update DynamoDB checksum (non-fatal)"
+                          -input=false
           
           echo "✅ ECS service updated successfully"
       
