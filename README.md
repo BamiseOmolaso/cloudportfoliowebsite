@@ -60,7 +60,7 @@ See `.github/workflows/test.yml` for the complete CI/CD configuration.
 - PostgreSQL database (AWS RDS or local)
 - Resend account for email
 - Google reCAPTCHA keys
-- Upstash Redis account (for rate limiting)
+- Redis Cloud account (for rate limiting in production, optional)
 
 ### Installation
 

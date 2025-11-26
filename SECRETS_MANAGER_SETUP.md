@@ -23,8 +23,10 @@ Based on your application code, you need these secrets:
 - `RESEND_FROM_EMAIL` - Email address to send from
 - `CONTACT_EMAIL` - Contact email address
 - `RESEND_DOMAIN` - Your Resend domain
-- `UPSTASH_REDIS_REST_URL` - Upstash Redis REST URL
-- `UPSTASH_REDIS_REST_TOKEN` - Upstash Redis REST token
+- `REDIS_URL` - Redis Cloud connection URL (optional, production only)
+- `REDIS_HOST` - Redis Cloud host (optional, if not using URL)
+- `REDIS_PORT` - Redis Cloud port (optional, if not using URL)
+- `REDIS_PASSWORD` - Redis Cloud password (optional, if not using URL)
 
 ## 🚀 Setup Steps
 
@@ -55,8 +57,7 @@ cat > /tmp/app-secrets.json << 'EOF'
   "RESEND_FROM_EMAIL": "noreply@yourdomain.com",
   "CONTACT_EMAIL": "contact@yourdomain.com",
   "RESEND_DOMAIN": "yourdomain.com",
-  "UPSTASH_REDIS_REST_URL": "https://your-redis-instance.upstash.io",
-  "UPSTASH_REDIS_REST_TOKEN": "your_upstash_redis_token"
+  "REDIS_URL": "redis://default:password@your-redis-host:port"
 }
 EOF
 ```
@@ -199,8 +200,7 @@ ADMIN_PASSWORD="your-password"
 RESEND_FROM_EMAIL="noreply@yourdomain.com"
 CONTACT_EMAIL="contact@yourdomain.com"
 RESEND_DOMAIN="yourdomain.com"
-UPSTASH_REDIS_REST_URL="https://your-redis.upstash.io"
-UPSTASH_REDIS_REST_TOKEN="your_token"
+REDIS_URL="redis://default:password@your-redis-host:port"
 
 # Create JSON
 SECRET_JSON=$(cat <<EOF
@@ -213,8 +213,7 @@ SECRET_JSON=$(cat <<EOF
   "RESEND_FROM_EMAIL": "$RESEND_FROM_EMAIL",
   "CONTACT_EMAIL": "$CONTACT_EMAIL",
   "RESEND_DOMAIN": "$RESEND_DOMAIN",
-  "UPSTASH_REDIS_REST_URL": "$UPSTASH_REDIS_REST_URL",
-  "UPSTASH_REDIS_REST_TOKEN": "$UPSTASH_REDIS_REST_TOKEN"
+  "REDIS_URL": "${REDIS_URL:-}"
 }
 EOF
 )

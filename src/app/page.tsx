@@ -1,3 +1,7 @@
+// TODO: Add tests - currently 0% coverage
+// Priority: High - Main landing page
+// Test cases needed: Hero section rendering, blog posts display, project filtering, animations
+
 'use client';
 
 import { motion } from 'framer-motion';

@@ -1,3 +1,7 @@
+// TODO: Add tests - currently 0% coverage
+// Priority: High - Database client needs integration tests
+// Test cases needed: Connection handling, singleton pattern, test environment setup, error handling
+
 // lib/db.ts
 import { PrismaClient } from '@prisma/client'
 

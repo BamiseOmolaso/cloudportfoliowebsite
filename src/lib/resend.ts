@@ -1,3 +1,7 @@
+// TODO: Add tests - currently 0% coverage
+// Priority: High - Email service needs mocking and testing
+// Test cases needed: Email sending, error handling, template rendering, Resend API integration
+
 import { Resend } from 'resend';
 import { db } from './db';
 

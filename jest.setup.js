@@ -109,34 +109,12 @@ jest.mock('next/navigation', () => ({
   },
 }))
 
-// Mock @upstash/redis to prevent ESM import issues
-jest.mock('@upstash/redis', () => {
-  const mockLrange = jest.fn();
-  const mockLtrim = jest.fn();
-  const mockRpush = jest.fn();
-  const mockExpire = jest.fn();
-  const mockKeys = jest.fn();
-  const mockDel = jest.fn();
-
-  return {
-    Redis: jest.fn().mockImplementation(() => ({
-      lrange: mockLrange,
-      ltrim: mockLtrim,
-      rpush: mockRpush,
-      expire: mockExpire,
-      keys: mockKeys,
-      del: mockDel,
-    })),
-  };
-});
-
 // Mock environment variables
 process.env.NEXT_PUBLIC_SITE_URL = 'http://localhost:3000'
 process.env.NEXT_PUBLIC_BASE_URL = 'http://localhost:3000'
 process.env.NEXT_PUBLIC_GA_ID = 'G-TEST123'
 process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY = 'test-site-key'
-process.env.UPSTASH_REDIS_REST_URL = 'https://test-redis.upstash.io'
-process.env.UPSTASH_REDIS_REST_TOKEN = 'test-token'
+// Redis is mocked in rate-limit.test.ts via redis-client mock
 process.env.RECAPTCHA_SECRET_KEY = 'test-secret-key'
 process.env.DATABASE_URL = 'postgresql://test:test@localhost:5432/test?schema=public'
 process.env.JWT_SECRET = 'test-jwt-secret-key-min-32-characters-long-for-testing'

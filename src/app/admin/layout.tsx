@@ -1,3 +1,7 @@
+// TODO: Add tests - currently 0% coverage
+// Priority: High - Admin authentication and layout
+// Test cases needed: Authentication check, navigation, layout rendering, logout functionality
+
 'use client';
 
 import { useState } from 'react';

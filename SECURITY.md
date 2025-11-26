@@ -102,7 +102,7 @@ We actively support and provide security updates for the following versions:
 
 #### 2. Rate Limiting
 
-- **Public Endpoints**: Rate limiting via Upstash Redis
+- **Public Endpoints**: Rate limiting via Redis Cloud (production) or in-memory (development)
 - **Admin Endpoints**: Stricter rate limits
 - **IP-based Tracking**: Failed attempts tracked per IP
 
@@ -229,7 +229,7 @@ Security updates are released as needed. We recommend:
 
 - Resend (email): [Privacy Policy](https://resend.com/legal/privacy-policy)
 - Google reCAPTCHA: [Privacy Policy](https://policies.google.com/privacy)
-- Upstash Redis: [Privacy Policy](https://upstash.com/privacy)
+- Redis Cloud: [Privacy Policy](https://redis.com/legal/privacy-policy/)
 
 ---
 
