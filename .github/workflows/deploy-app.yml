@@ -75,8 +75,9 @@ jobs:
       
       - name: Set AWS role ARN
         id: aws-role
+        env:
+          ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
         run: |
-          ROLE_ARN="${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
           if [ -n "$ROLE_ARN" ]; then
             echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
             echo "use_oidc=true" >> $GITHUB_OUTPUT
@@ -210,8 +211,9 @@ jobs:
       
       - name: Set AWS role ARN
         id: aws-role
+        env:
+          ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
         run: |
-          ROLE_ARN="${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
           if [ -n "$ROLE_ARN" ]; then
             echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
             echo "use_oidc=true" >> $GITHUB_OUTPUT
@@ -287,8 +289,9 @@ jobs:
       
       - name: Set AWS role ARN
         id: aws-role
+        env:
+          ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
         run: |
-          ROLE_ARN="${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
           if [ -n "$ROLE_ARN" ]; then
             echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
             echo "use_oidc=true" >> $GITHUB_OUTPUT
@@ -363,8 +366,9 @@ jobs:
       
       - name: Set AWS role ARN
         id: aws-role
+        env:
+          ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
         run: |
-          ROLE_ARN="${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
           if [ -n "$ROLE_ARN" ]; then
             echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
             echo "use_oidc=true" >> $GITHUB_OUTPUT
