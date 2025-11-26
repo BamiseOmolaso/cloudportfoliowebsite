@@ -78,11 +78,14 @@ jobs:
         env:
           ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
         run: |
-          if [ -n "$ROLE_ARN" ]; then
+          if [ -n "$ROLE_ARN" ] && [[ "$ROLE_ARN" =~ ^arn:aws:iam::[0-9]+:role/ ]]; then
             echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
             echo "use_oidc=true" >> $GITHUB_OUTPUT
           else
             echo "use_oidc=false" >> $GITHUB_OUTPUT
+            if [ -n "$ROLE_ARN" ]; then
+              echo "⚠️ Warning: ROLE_ARN is set but not in valid ARN format"
+            fi
           fi
       
       - name: Configure AWS credentials (OIDC)
@@ -92,6 +95,7 @@ jobs:
           role-to-assume: ${{ steps.aws-role.outputs.role_arn }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: docker-build-${{ github.run_id }}
+          role-skip-session-tagging: false
       
       - name: Configure AWS credentials (Access Keys)
         if: steps.aws-role.outputs.use_oidc == 'false'
@@ -214,11 +218,14 @@ jobs:
         env:
           ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
         run: |
-          if [ -n "$ROLE_ARN" ]; then
+          if [ -n "$ROLE_ARN" ] && [[ "$ROLE_ARN" =~ ^arn:aws:iam::[0-9]+:role/ ]]; then
             echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
             echo "use_oidc=true" >> $GITHUB_OUTPUT
           else
             echo "use_oidc=false" >> $GITHUB_OUTPUT
+            if [ -n "$ROLE_ARN" ]; then
+              echo "⚠️ Warning: ROLE_ARN is set but not in valid ARN format"
+            fi
           fi
       
       - name: Configure AWS credentials (OIDC)
@@ -228,6 +235,7 @@ jobs:
           role-to-assume: ${{ steps.aws-role.outputs.role_arn }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: ecs-deploy-dev-${{ github.run_id }}
+          role-skip-session-tagging: false
       
       - name: Configure AWS credentials (Access Keys)
         if: steps.aws-role.outputs.use_oidc == 'false'
@@ -292,11 +300,14 @@ jobs:
         env:
           ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
         run: |
-          if [ -n "$ROLE_ARN" ]; then
+          if [ -n "$ROLE_ARN" ] && [[ "$ROLE_ARN" =~ ^arn:aws:iam::[0-9]+:role/ ]]; then
             echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
             echo "use_oidc=true" >> $GITHUB_OUTPUT
           else
             echo "use_oidc=false" >> $GITHUB_OUTPUT
+            if [ -n "$ROLE_ARN" ]; then
+              echo "⚠️ Warning: ROLE_ARN is set but not in valid ARN format"
+            fi
           fi
       
       - name: Configure AWS credentials (OIDC)
@@ -306,6 +317,7 @@ jobs:
           role-to-assume: ${{ steps.aws-role.outputs.role_arn }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: ecs-deploy-staging-${{ github.run_id }}
+          role-skip-session-tagging: false
       
       - name: Configure AWS credentials (Access Keys)
         if: steps.aws-role.outputs.use_oidc == 'false'
@@ -369,11 +381,14 @@ jobs:
         env:
           ROLE_ARN: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
         run: |
-          if [ -n "$ROLE_ARN" ]; then
+          if [ -n "$ROLE_ARN" ] && [[ "$ROLE_ARN" =~ ^arn:aws:iam::[0-9]+:role/ ]]; then
             echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
             echo "use_oidc=true" >> $GITHUB_OUTPUT
           else
             echo "use_oidc=false" >> $GITHUB_OUTPUT
+            if [ -n "$ROLE_ARN" ]; then
+              echo "⚠️ Warning: ROLE_ARN is set but not in valid ARN format"
+            fi
           fi
       
       - name: Configure AWS credentials (OIDC)
@@ -383,6 +398,7 @@ jobs:
           role-to-assume: ${{ steps.aws-role.outputs.role_arn }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: ecs-deploy-prod-${{ github.run_id }}
+          role-skip-session-tagging: false
       
       - name: Configure AWS credentials (Access Keys)
         if: steps.aws-role.outputs.use_oidc == 'false'
