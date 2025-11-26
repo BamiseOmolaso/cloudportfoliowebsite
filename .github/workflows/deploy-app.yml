@@ -1,6 +1,16 @@
 name: Deploy Application
 
 on:
+  # Run after CI passes (recommended - prevents deploying broken code)
+  workflow_run:
+    workflows: ["CI Pipeline"]
+    types:
+      - completed
+    branches:
+      - develop
+      - staging
+      - main
+  # Also allow direct push (for flexibility)
   push:
     branches:
       - develop
@@ -36,6 +46,11 @@ jobs:
   build-and-push:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
+    # Only run if CI passed (when triggered by workflow_run)
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event_name == 'push' ||
+      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
     permissions:
       contents: read
       id-token: write
@@ -47,6 +62,16 @@ jobs:
       environment: ${{ steps.env.outputs.ENV_NAME }}
     
     steps:
+      - name: Check CI Status (if triggered by workflow_run)
+        if: github.event_name == 'workflow_run'
+        run: |
+          if [ "${{ github.event.workflow_run.conclusion }}" != "success" ]; then
+            echo "❌ CI Pipeline failed. Skipping deployment."
+            echo "CI Conclusion: ${{ github.event.workflow_run.conclusion }}"
+            exit 1
+          fi
+          echo "✅ CI Pipeline passed. Proceeding with deployment."
+      
       - name: Checkout code
         uses: actions/checkout@v4
       

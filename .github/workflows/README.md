@@ -1,140 +1,365 @@
 # GitHub Actions Workflows
 
-This directory contains CI/CD workflows for the portfolio website.
+This repository uses three GitHub Actions workflows to automate CI/CD, infrastructure management, and application deployment.
 
-## 📁 Workflow Files
+## 📋 Table of Contents
 
-| File | Purpose | Triggers |
-|------|---------|----------|
-| `ci.yml` | Continuous Integration | Every push/PR |
-| `terraform.yml` | Infrastructure deployment | Terraform changes, manual |
-| `deploy-app.yml` | Application deployment | Code changes (non-Terraform) |
+- [Overview](#overview)
+- [Workflow Files](#workflow-files)
+- [How They Work Together](#how-they-work-together)
+- [Workflow Details](#workflow-details)
+- [Deployment Environments](#deployment-environments)
+- [Manual Triggers](#manual-triggers)
+- [Troubleshooting](#troubleshooting)
 
-## 🔄 Workflow Flow
+---
+
+## Overview
+
+Our CI/CD pipeline is split into three separate workflows for better separation of concerns:
+
+1. **`ci.yml`** - Continuous Integration (code validation)
+2. **`terraform.yml`** - Infrastructure deployment (AWS resources)
+3. **`deploy-app.yml`** - Application deployment (Docker containers)
+
+This separation allows:
+- Independent deployment of infrastructure and application
+- Different approval processes for different types of changes
+- Clear visibility into what's being deployed and when
+
+---
+
+## Workflow Files
+
+### 1. `ci.yml` - Continuous Integration
+
+**Purpose:** Validates code quality, security, and buildability on every push/PR.
+
+**When it runs:**
+- ✅ Push to `main`, `develop`, or `feature/**` branches
+- ✅ Pull requests to `main` or `develop`
+
+**What it does:**
+- Runs ESLint and TypeScript type checking
+- Scans for security vulnerabilities (npm audit, Trivy, TruffleHog, Snyk)
+- Runs Jest tests with coverage reporting
+- Builds the Next.js application
+- Builds Docker image (validation only, doesn't push)
+- Validates Terraform syntax
+
+**Key point:** This workflow **does NOT deploy anything**. It only validates code quality.
+
+**Jobs:**
+- `lint-and-typecheck` - Code quality checks
+- `security-scan` - Security vulnerability scanning
+- `test` - Unit and integration tests
+- `build` - Next.js production build
+- `docker-build` - Docker image build validation
+- `terraform-validate` - Terraform syntax validation
+- `ci-summary` - Summary report of all checks
+
+---
+
+### 2. `terraform.yml` - Infrastructure Deployment
+
+**Purpose:** Manages AWS infrastructure (VPC, RDS, ECS, ALB, Security Groups, etc.) using Terraform.
+
+**When it runs:**
+- ✅ Push to `develop`, `staging`, or `main` with changes in `terraform/**`
+- ✅ Manual trigger via `workflow_dispatch`
+
+**What it does:**
+1. **Plan Phase** (`terraform-plan`):
+   - Runs `terraform plan` for the selected environment
+   - Creates a plan file showing what infrastructure will change
+   - Uploads the plan as an artifact for review
+
+2. **Apply Phase** (environment-specific):
+   - **Dev** (`terraform-apply-dev`): Auto-approves and applies changes
+   - **Staging** (`terraform-apply-staging`): Requires manual approval
+   - **Prod** (`terraform-apply-prod`): Requires manual approval
+
+**Key point:** This workflow manages **infrastructure**, not application code.
+
+**Approval Process:**
+- **Dev:** Automatic (no approval needed)
+- **Staging:** Manual approval required in GitHub UI
+- **Prod:** Manual approval required in GitHub UI
+
+**Infrastructure Managed:**
+- VPC, Subnets, Internet Gateway
+- RDS PostgreSQL database
+- ECS Fargate cluster and services
+- Application Load Balancer (ALB)
+- Security Groups
+- Secrets Manager
+- CloudWatch Logs
+- IAM roles and policies
+
+---
+
+### 3. `deploy-app.yml` - Application Deployment
+
+**Purpose:** Builds and deploys the Docker container image to ECS.
+
+**When it runs:**
+- ✅ Push to `develop`, `staging`, or `main` (ignores Terraform changes)
+- ✅ Manual trigger via `workflow_dispatch`
+
+**What it does:**
+1. **Build Phase** (`build-and-push`):
+   - Determines target environment based on branch
+   - Authenticates with AWS (OIDC or access keys)
+   - Logs into Amazon ECR
+   - Builds Docker image from `Dockerfile`
+   - Pushes image to ECR with multiple tags:
+     - `{commit-sha}-{env}` (e.g., `52c6906-prod`)
+     - `{env}-latest` (e.g., `prod-latest`)
+     - `{env}-{commit-sha}` (e.g., `prod-52c6906`)
+   - Scans image for vulnerabilities with Trivy
+
+2. **Deploy Phase** (environment-specific):
+   - **Dev** (`deploy-ecs-dev`): Auto-deploys to ECS
+   - **Staging** (`deploy-ecs-staging`): Requires manual approval
+   - **Prod** (`deploy-ecs-prod`): Requires manual approval
+
+**Key point:** This workflow deploys **application code**, not infrastructure.
+
+**Deployment Process:**
+1. Uses Terraform to read ECS cluster and service names
+2. Updates ECS service with new Docker image tag
+3. Waits for ECS service to stabilize (new tasks healthy)
+4. Verifies deployment (prod only - checks ALB health)
+
+**Approval Process:**
+- **Dev:** Automatic (no approval needed)
+- **Staging:** Manual approval required in GitHub UI
+- **Prod:** Manual approval required in GitHub UI
+
+---
+
+## How They Work Together
 
 ```
-┌─────────────────────────────────────────┐
-│  Developer pushes code                   │
-└──────────────┬──────────────────────────┘
-               │
-               ▼
-┌─────────────────────────────────────────┐
-│  CI Pipeline (ci.yml)                    │
-│  ✅ Lint, Test, Build, Security Scan      │
-└──────────────┬──────────────────────────┘
-               │
-        ┌──────┴──────┐
-        │             │
-        ▼             ▼
-┌─────────────┐  ┌─────────────┐
-│ Terraform   │  │ App Code    │
-│ Changes?    │  │ Changes?    │
-└──────┬──────┘  └──────┬──────┘
-       │                │
-       ▼                ▼
-┌─────────────┐  ┌─────────────┐
-│terraform.yml│  │deploy-app.yml│
-│ Deploy Infra│  │ Deploy App  │
-└─────────────┘  └─────────────┘
+┌─────────────────────────────────────────────────────────┐
+│  Developer pushes code to branch                        │
+└─────────────────────────────────────────────────────────┘
+                        │
+                        ▼
+        ┌───────────────────────────────┐
+        │   ci.yml (ALWAYS RUNS)        │
+        │   - Lint, test, build, scan   │
+        │   - Validates code quality    │
+        │   - Does NOT deploy           │
+        └───────────────────────────────┘
+                        │
+        ┌───────────────┴───────────────┐
+        │                               │
+        ▼                               ▼
+┌──────────────────┐          ┌──────────────────┐
+│ terraform.yml    │          │ deploy-app.yml   │
+│                  │          │                  │
+│ Triggers:        │          │ Triggers:        │
+│ - terraform/     │          │ - App code       │
+│   changes        │          │ - Non-terraform  │
+│                  │          │   changes        │
+│                  │          │                  │
+│ Process:         │          │ Process:         │
+│ 1. Plan changes  │          │ 1. Build Docker  │
+│ 2. Apply infra   │          │ 2. Push to ECR   │
+│    (with approval│          │ 3. Update ECS    │
+│     for staging/ │          │    (with approval│
+│     prod)        │          │     for staging/ │
+└──────────────────┘          │     prod)        │
+                              └──────────────────┘
 ```
 
-## 🔐 Authentication
+### Example Scenarios
 
-### Option 1: OIDC (Recommended)
+#### Scenario 1: Push Application Code
+```bash
+git push origin develop
+```
+**Result:**
+- ✅ `ci.yml` runs → validates code
+- ✅ `deploy-app.yml` runs → builds Docker image → auto-deploys to dev
 
-Uses temporary credentials via OIDC. See `OIDC_SETUP.md` for setup.
+#### Scenario 2: Change Infrastructure
+```bash
+# Edit terraform/envs/prod/main.tf
+git push origin main
+```
+**Result:**
+- ✅ `ci.yml` runs → validates Terraform syntax
+- ✅ `terraform.yml` runs → creates plan → waits for approval → applies changes
 
-**Secrets needed:**
-- `AWS_TERRAFORM_ROLE_ARN`
-- `AWS_DEPLOY_ROLE_ARN`
+#### Scenario 3: Change Both
+```bash
+# Edit both app code and Terraform
+git push origin main
+```
+**Result:**
+- ✅ `ci.yml` runs → validates everything
+- ✅ `terraform.yml` runs → updates infrastructure (with approval)
+- ✅ `deploy-app.yml` runs → deploys new app version (with approval)
 
-### Option 2: Access Keys (Simpler)
+---
 
-Uses long-lived access keys (less secure but simpler).
+## Deployment Environments
 
-**Secrets needed:**
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
+### Development (`develop` branch → `dev` environment)
+- **Infrastructure:** Auto-applied (no approval)
+- **Application:** Auto-deployed (no approval)
+- **Purpose:** Fast iteration and testing
 
-## 🌍 Environments
+### Staging (`staging` branch → `staging` environment)
+- **Infrastructure:** Manual approval required
+- **Application:** Manual approval required
+- **Purpose:** Pre-production testing
 
-| Branch | Environment | Auto Deploy | Approval Required |
-|--------|------------|-------------|-------------------|
-| `develop` | dev | ✅ Yes | ❌ No |
-| `staging` | staging | ✅ Yes | ⚠️ Manual (GitHub Environment) |
-| `main` | prod | ✅ Yes | ⚠️ Manual (GitHub Environment) |
+### Production (`main` branch → `prod` environment)
+- **Infrastructure:** Manual approval required
+- **Application:** Manual approval required
+- **Purpose:** Live production environment
 
-## 📝 Setup Instructions
+---
 
-1. **Set up AWS Authentication:**
-   - Follow `OIDC_SETUP.md` for OIDC (recommended)
-   - OR add access keys to GitHub Secrets
+## Manual Triggers
 
-2. **Create GitHub Environments:**
-   - Go to Settings → Environments
-   - Create: `development`, `staging`, `production`
-   - Add required reviewers for staging/prod (optional)
+All workflows support manual triggering via GitHub Actions UI:
 
-3. **Test the Pipeline:**
-   - Push to `develop` to test dev deployment
-   - Create PR to test CI pipeline
-   - Merge to `main` to test prod (with approval)
+### `terraform.yml`
+1. Go to **Actions** → **Terraform Infrastructure**
+2. Click **Run workflow**
+3. Select environment: `dev`, `staging`, or `prod`
+4. Click **Run workflow**
 
-## 🔧 Customization
+### `deploy-app.yml`
+1. Go to **Actions** → **Deploy Application**
+2. Click **Run workflow**
+3. Select environment: `dev`, `staging`, or `prod`
+4. (Optional) Specify image tag
+5. Click **Run workflow**
 
-### Change AWS Region
+---
 
-Update `AWS_REGION` in workflow files:
+## Workflow Details
+
+### Branch Mapping
+
+| Branch | Environment | Auto-Approval |
+|--------|-------------|--------------|
+| `develop` | `dev` | ✅ Yes |
+| `staging` | `staging` | ❌ No (requires approval) |
+| `main` | `prod` | ❌ No (requires approval) |
+
+### Path Filters
+
+**`terraform.yml`** only runs when:
+- Files in `terraform/**` change
+- `.github/workflows/terraform.yml` changes
+
+**`deploy-app.yml`** runs when:
+- Any code changes (except Terraform files)
+- Ignores: `terraform/**`, `**.md`, `.github/workflows/terraform.yml`
+
+**`ci.yml`** runs on:
+- All pushes and pull requests (no path filters)
+
+### Required Secrets
+
+#### For OIDC (Recommended)
+- `AWS_TERRAFORM_ROLE_ARN` - IAM role for Terraform operations
+- `AWS_DEPLOY_ROLE_ARN` - IAM role for application deployment
+
+#### For Access Keys (Fallback)
+- `AWS_ACCESS_KEY_ID` - AWS access key
+- `AWS_SECRET_ACCESS_KEY` - AWS secret key
+
+**Note:** OIDC is preferred for security. Access keys are only used if OIDC roles are not configured.
+
+---
+
+## Troubleshooting
+
+### Workflow Not Triggering
+
+**Problem:** Workflow doesn't run after push
+
+**Solutions:**
+- Check branch name matches trigger conditions
+- For `terraform.yml`: Ensure files in `terraform/**` changed
+- For `deploy-app.yml`: Ensure non-Terraform files changed
+- Check GitHub Actions permissions in repository settings
+
+### Terraform Command Not Found
+
+**Problem:** `terraform: command not found` error
+
+**Solution:** Ensure `Setup Terraform` step is present in the job. This was fixed in the deployment jobs - all jobs now include:
 ```yaml
-env:
-  AWS_REGION: us-east-1  # Change this
+- name: Setup Terraform
+  uses: hashicorp/setup-terraform@v3
+  with:
+    terraform_version: 1.13.3
 ```
 
-### Change S3 Bucket
+### Build Failures
 
-Update backend configuration in `terraform/envs/*/backend.tf`:
-```hcl
-bucket = "your-bucket-name"
-```
+**Problem:** Docker build fails during `deploy-app.yml`
 
-### Add New Environment
+**Common causes:**
+- Missing environment variables (should be provided at runtime via ECS)
+- TypeScript errors (should be caught by `ci.yml`)
+- Missing dependencies (check `package.json`)
 
-1. Create `terraform/envs/new-env/` directory
-2. Copy from existing env (dev/staging/prod)
-3. Update backend.tf and variables
-4. Add to workflow triggers
+**Solution:** Check `ci.yml` output first - it should catch most build issues before deployment.
 
-## 🐛 Troubleshooting
+### Approval Not Showing
 
-### Workflow doesn't trigger
+**Problem:** Can't find approval button for staging/prod
 
-- Check branch names match
-- Verify file paths in `paths` filters
-- Check workflow file syntax
+**Solutions:**
+- Check GitHub Actions → Workflow run → Review deployments
+- Ensure you have write access to the repository
+- Check environment protection rules in repository settings
 
-### "Access Denied" errors
+### ECS Deployment Fails
 
-- Verify IAM role/access key has correct permissions
-- Check OIDC trust policy (if using OIDC)
-- Verify GitHub Secrets are set correctly
+**Problem:** `deploy-app.yml` fails at ECS update step
 
-### Terraform state locked
+**Common causes:**
+- ECS service doesn't exist (run `terraform.yml` first)
+- Insufficient IAM permissions
+- Docker image not found in ECR
+- Health check failures
 
-- Check if another workflow is running
-- Manually unlock: `terraform force-unlock <LOCK_ID>`
-- Check DynamoDB table for locks
+**Solution:** Check AWS CloudWatch logs and ECS service events for detailed error messages.
 
-### ECS deployment fails
+---
 
-- Check ECR repository exists
-- Verify image was pushed successfully
-- Check ECS service logs in CloudWatch
-- Verify security groups allow traffic
+## Best Practices
 
-## 📚 Related Documentation
+1. **Always run `ci.yml` first** - It validates code before deployment
+2. **Deploy infrastructure before application** - Run `terraform.yml` before `deploy-app.yml` if infrastructure changed
+3. **Use feature branches** - Test changes in `develop` before merging to `staging` or `main`
+4. **Review Terraform plans** - Always review the plan before approving infrastructure changes
+5. **Monitor deployments** - Check ECS service logs and CloudWatch after deployment
 
-- `../DEVOPS_BEST_PRACTICES.md` - DevOps concepts
-- `../CI_CD_QUICK_START.md` - Quick reference
-- `../terraform/MIGRATION_GUIDE.md` - Terraform migration
-- `../OIDC_SETUP.md` - OIDC authentication setup
+---
 
+## Related Documentation
+
+- [Terraform Documentation](../terraform/README.md)
+- [Deployment Guide](../../DEPLOYMENT_GUIDE.md)
+- [CI/CD Guide](../../CI_CD_GUIDE.md)
+
+---
+
+## Questions?
+
+If you have questions about the workflows:
+1. Check the workflow logs in GitHub Actions
+2. Review the workflow YAML files for detailed configuration
+3. Check AWS CloudWatch logs for runtime errors
+4. Review the troubleshooting section above
