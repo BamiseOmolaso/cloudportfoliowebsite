@@ -279,25 +279,39 @@ jobs:
       - name: Get ECS Service Info
         id: ecs
         run: |
+          # Download state file directly from S3 to avoid checksum validation
+          # This bypasses terraform init and reads outputs directly from state
+          echo "📥 Downloading Terraform state from S3..."
+          aws s3 cp s3://omolaso-terraform-state/envs/dev/terraform.tfstate ./terraform.tfstate \
+            --region ${{ env.AWS_REGION }} || {
+            echo "❌ Failed to download state file"
+            exit 1
+          }
+          
+          echo "📋 Reading ECS service information from state file..."
+          # Use terraform output with local state file
           cd terraform/envs/dev
+          CLUSTER=$(terraform output -state=../../terraform.tfstate -raw ecs_cluster_name 2>/dev/null || echo "")
+          SERVICE=$(terraform output -state=../../terraform.tfstate -raw ecs_service_name 2>/dev/null || echo "")
           
-          # Use -refresh=false to skip state refresh and avoid checksum validation
-          # This is safe for reading outputs only (we don't need fresh state)
-          echo "🔧 Initializing Terraform (skip refresh for output reading)..."
-          terraform init -refresh=false -input=false \
-                        -backend-config="bucket=omolaso-terraform-state" \
-                        -backend-config="key=envs/dev/terraform.tfstate" \
-                        -backend-config="region=${{ env.AWS_REGION }}" \
-                        -backend-config="dynamodb_table=portfolio-tf-locks" \
-                        -backend-config="encrypt=true"
+          if [ -z "$CLUSTER" ] || [ -z "$SERVICE" ]; then
+            echo "⚠️ Could not read outputs from state file, trying alternative method..."
+            # Alternative: Parse state file directly with jq
+            CLUSTER=$(jq -r '.outputs.ecs_cluster_name.value // empty' ../../terraform.tfstate)
+            SERVICE=$(jq -r '.outputs.ecs_service_name.value // empty' ../../terraform.tfstate)
+          fi
           
-          echo "📋 Reading ECS service information..."
-          CLUSTER=$(terraform output -raw ecs_cluster_name)
-          SERVICE=$(terraform output -raw ecs_service_name)
+          if [ -z "$CLUSTER" ] || [ -z "$SERVICE" ]; then
+            echo "❌ Failed to retrieve ECS service information"
+            exit 1
+          fi
           
           echo "cluster_name=$CLUSTER" >> $GITHUB_OUTPUT
           echo "service_name=$SERVICE" >> $GITHUB_OUTPUT
           echo "✅ ECS service info retrieved: cluster=$CLUSTER, service=$SERVICE"
+          
+          # Cleanup
+          rm -f ../../terraform.tfstate
       
       - name: Update ECS Service with new image
         run: |
@@ -381,25 +395,39 @@ jobs:
       - name: Get ECS Service Info
         id: ecs
         run: |
+          # Download state file directly from S3 to avoid checksum validation
+          # This bypasses terraform init and reads outputs directly from state
+          echo "📥 Downloading Terraform state from S3..."
+          aws s3 cp s3://omolaso-terraform-state/envs/staging/terraform.tfstate ./terraform.tfstate \
+            --region ${{ env.AWS_REGION }} || {
+            echo "❌ Failed to download state file"
+            exit 1
+          }
+          
+          echo "📋 Reading ECS service information from state file..."
+          # Use terraform output with local state file
           cd terraform/envs/staging
+          CLUSTER=$(terraform output -state=../../terraform.tfstate -raw ecs_cluster_name 2>/dev/null || echo "")
+          SERVICE=$(terraform output -state=../../terraform.tfstate -raw ecs_service_name 2>/dev/null || echo "")
           
-          # Use -refresh=false to skip state refresh and avoid checksum validation
-          # This is safe for reading outputs only (we don't need fresh state)
-          echo "🔧 Initializing Terraform (skip refresh for output reading)..."
-          terraform init -refresh=false -input=false \
-                        -backend-config="bucket=omolaso-terraform-state" \
-                        -backend-config="key=envs/staging/terraform.tfstate" \
-                        -backend-config="region=${{ env.AWS_REGION }}" \
-                        -backend-config="dynamodb_table=portfolio-tf-locks" \
-                        -backend-config="encrypt=true"
+          if [ -z "$CLUSTER" ] || [ -z "$SERVICE" ]; then
+            echo "⚠️ Could not read outputs from state file, trying alternative method..."
+            # Alternative: Parse state file directly with jq
+            CLUSTER=$(jq -r '.outputs.ecs_cluster_name.value // empty' ../../terraform.tfstate)
+            SERVICE=$(jq -r '.outputs.ecs_service_name.value // empty' ../../terraform.tfstate)
+          fi
           
-          echo "📋 Reading ECS service information..."
-          CLUSTER=$(terraform output -raw ecs_cluster_name)
-          SERVICE=$(terraform output -raw ecs_service_name)
+          if [ -z "$CLUSTER" ] || [ -z "$SERVICE" ]; then
+            echo "❌ Failed to retrieve ECS service information"
+            exit 1
+          fi
           
           echo "cluster_name=$CLUSTER" >> $GITHUB_OUTPUT
           echo "service_name=$SERVICE" >> $GITHUB_OUTPUT
           echo "✅ ECS service info retrieved: cluster=$CLUSTER, service=$SERVICE"
+          
+          # Cleanup
+          rm -f ../../terraform.tfstate
       
       - name: Update ECS Service with new image
         run: |
@@ -482,25 +510,39 @@ jobs:
       - name: Get ECS Service Info
         id: ecs
         run: |
+          # Download state file directly from S3 to avoid checksum validation
+          # This bypasses terraform init and reads outputs directly from state
+          echo "📥 Downloading Terraform state from S3..."
+          aws s3 cp s3://omolaso-terraform-state/envs/prod/terraform.tfstate ./terraform.tfstate \
+            --region ${{ env.AWS_REGION }} || {
+            echo "❌ Failed to download state file"
+            exit 1
+          }
+          
+          echo "📋 Reading ECS service information from state file..."
+          # Use terraform output with local state file
           cd terraform/envs/prod
+          CLUSTER=$(terraform output -state=../../terraform.tfstate -raw ecs_cluster_name 2>/dev/null || echo "")
+          SERVICE=$(terraform output -state=../../terraform.tfstate -raw ecs_service_name 2>/dev/null || echo "")
           
-          # Use -refresh=false to skip state refresh and avoid checksum validation
-          # This is safe for reading outputs only (we don't need fresh state)
-          echo "🔧 Initializing Terraform (skip refresh for output reading)..."
-          terraform init -refresh=false -input=false \
-                        -backend-config="bucket=omolaso-terraform-state" \
-                        -backend-config="key=envs/prod/terraform.tfstate" \
-                        -backend-config="region=${{ env.AWS_REGION }}" \
-                        -backend-config="dynamodb_table=portfolio-tf-locks" \
-                        -backend-config="encrypt=true"
+          if [ -z "$CLUSTER" ] || [ -z "$SERVICE" ]; then
+            echo "⚠️ Could not read outputs from state file, trying alternative method..."
+            # Alternative: Parse state file directly with jq
+            CLUSTER=$(jq -r '.outputs.ecs_cluster_name.value // empty' ../../terraform.tfstate)
+            SERVICE=$(jq -r '.outputs.ecs_service_name.value // empty' ../../terraform.tfstate)
+          fi
           
-          echo "📋 Reading ECS service information..."
-          CLUSTER=$(terraform output -raw ecs_cluster_name)
-          SERVICE=$(terraform output -raw ecs_service_name)
+          if [ -z "$CLUSTER" ] || [ -z "$SERVICE" ]; then
+            echo "❌ Failed to retrieve ECS service information"
+            exit 1
+          fi
           
           echo "cluster_name=$CLUSTER" >> $GITHUB_OUTPUT
           echo "service_name=$SERVICE" >> $GITHUB_OUTPUT
           echo "✅ ECS service info retrieved: cluster=$CLUSTER, service=$SERVICE"
+          
+          # Cleanup
+          rm -f ../../terraform.tfstate
       
       - name: Update ECS Service with new image
         run: |
