@@ -207,9 +207,6 @@ jobs:
           echo "NEXT_PUBLIC_RECAPTCHA_SITE_KEY=test-site-key" >> $GITHUB_ENV
           echo "RECAPTCHA_SECRET_KEY=test-secret-key" >> $GITHUB_ENV
           
-          # Environment
-          echo "NODE_ENV=production" >> $GITHUB_ENV
-          
           # Redis not needed for build (optional)
           # echo "REDIS_URL=" >> $GITHUB_ENV
       
@@ -221,6 +218,8 @@ jobs:
       
       - name: Build application
         run: npm run build
+        env:
+          NODE_ENV: production
       
       - name: Check build artifacts
         run: |
