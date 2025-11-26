@@ -112,7 +112,12 @@ jobs:
         id: plan
         working-directory: terraform/envs/${{ steps.env.outputs.ENV_NAME }}
         run: |
-          terraform plan -input=false -out=tfplan
+          # Use tfvars file if it exists, otherwise use defaults
+          if [ -f terraform.tfvars ]; then
+            terraform plan -input=false -var-file=terraform.tfvars -out=tfplan
+          else
+            terraform plan -input=false -out=tfplan
+          fi
           terraform show -no-color tfplan > plan.txt
         continue-on-error: true
       
@@ -231,7 +236,11 @@ jobs:
         if: steps.verify-plan.outputs.plan_valid != 'true'
         working-directory: terraform/envs/dev
         run: |
-          terraform plan -input=false -out=tfplan-fresh
+          if [ -f terraform.tfvars ]; then
+            terraform plan -input=false -var-file=terraform.tfvars -out=tfplan-fresh
+          else
+            terraform plan -input=false -out=tfplan-fresh
+          fi
           terraform apply -input=false -auto-approve tfplan-fresh
       
       - name: Get Terraform Outputs
@@ -327,7 +336,11 @@ jobs:
         if: steps.verify-plan.outputs.plan_valid != 'true'
         working-directory: terraform/envs/staging
         run: |
-          terraform plan -input=false -out=tfplan-fresh
+          if [ -f terraform.tfvars ]; then
+            terraform plan -input=false -var-file=terraform.tfvars -out=tfplan-fresh
+          else
+            terraform plan -input=false -out=tfplan-fresh
+          fi
           terraform apply -input=false -auto-approve tfplan-fresh
       
       - name: Get Terraform Outputs
@@ -419,7 +432,11 @@ jobs:
         if: steps.verify-plan.outputs.plan_valid != 'true'
         working-directory: terraform/envs/prod
         run: |
-          terraform plan -input=false -out=tfplan-fresh
+          if [ -f terraform.tfvars ]; then
+            terraform plan -input=false -var-file=terraform.tfvars -out=tfplan-fresh
+          else
+            terraform plan -input=false -out=tfplan-fresh
+          fi
           terraform apply -input=false -auto-approve tfplan-fresh
       
       - name: Get Terraform Outputs

@@ -23,14 +23,16 @@ variable "db_name" {
 }
 
 variable "db_username" {
-  description = "Database master username"
+  description = "Database master username (read from Secrets Manager if not provided)"
   type        = string
+  default     = "app_admin"
   sensitive   = true
 }
 
 variable "db_password" {
-  description = "Database master password"
+  description = "Database master password (deprecated - password is read from Secrets Manager: omolasowebportfolio/db/credentials)"
   type        = string
+  default     = ""
   sensitive   = true
 }
 

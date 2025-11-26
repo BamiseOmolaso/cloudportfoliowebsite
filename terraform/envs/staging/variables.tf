@@ -25,12 +25,14 @@ variable "db_name" {
 variable "db_username" {
   description = "Database master username"
   type        = string
+  default     = "portfolio_user"
   sensitive   = true
 }
 
 variable "db_password" {
-  description = "Database master password"
+  description = "Database master password (deprecated - password is read from Secrets Manager if available)"
   type        = string
+  default     = ""
   sensitive   = true
 }
 
