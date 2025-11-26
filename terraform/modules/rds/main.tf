@@ -1,12 +1,16 @@
-# Random password for RDS (only if not provided)
-resource "random_password" "db_password" {
-  count   = var.db_password == "" ? 1 : 0
-  length  = 32
-  special = false
+# Read existing database credentials from Secrets Manager
+data "aws_secretsmanager_secret" "db_credentials" {
+  name = "omolasowebportfolio/db/credentials"
+}
+
+data "aws_secretsmanager_secret_version" "db_credentials" {
+  secret_id = data.aws_secretsmanager_secret.db_credentials.id
 }
 
 locals {
-  db_password = var.db_password != "" ? var.db_password : random_password.db_password[0].result
+  # Parse the existing secret to get the password
+  db_credentials = jsondecode(data.aws_secretsmanager_secret_version.db_credentials.secret_string)
+  db_password    = local.db_credentials.password
 }
 
 # DB Subnet Group
@@ -53,18 +57,10 @@ resource "aws_db_instance" "main" {
   }
 }
 
-# Store credentials in Secrets Manager
-resource "aws_secretsmanager_secret" "db_credentials" {
-  name        = "omolasowebportfolio/db/credentials"
-  description = "RDS database credentials"
-
-  tags = {
-    Environment = var.environment
-  }
-}
-
+# Update existing secret in Secrets Manager with RDS endpoint info
+# The password is already in Secrets Manager, we just update the connection details
 resource "aws_secretsmanager_secret_version" "db_credentials" {
-  secret_id = aws_secretsmanager_secret.db_credentials.id
+  secret_id = data.aws_secretsmanager_secret.db_credentials.id
   secret_string = jsonencode({
     username = aws_db_instance.main.username
     password = local.db_password

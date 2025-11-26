@@ -29,7 +29,7 @@ variable "db_username" {
 }
 
 variable "db_password" {
-  description = "Database password (if not provided, random password will be generated)"
+  description = "Database password (deprecated - password is read from Secrets Manager)"
   type        = string
   default     = ""
   sensitive   = true
