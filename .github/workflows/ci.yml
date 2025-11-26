@@ -215,38 +215,51 @@ jobs:
       
       - name: Install dependencies
         run: |
+          echo "📦 Running npm ci..."
           npm ci
           echo "✅ Dependencies installed"
       
-      - name: Verify autoprefixer installation
+      - name: Ensure autoprefixer is installed
         run: |
-          echo "🔍 Checking autoprefixer..."
-          if npm list autoprefixer > /dev/null 2>&1; then
-            echo "✅ autoprefixer is installed"
-            npm list autoprefixer
+          echo "🔍 Checking autoprefixer installation..."
+          # Check if autoprefixer directory exists (most reliable check)
+          if [ -d "node_modules/autoprefixer" ]; then
+            echo "✅ autoprefixer directory found in node_modules"
+            ls -la node_modules/autoprefixer/package.json 2>/dev/null || echo "⚠️ package.json not found in autoprefixer directory"
           else
-            echo "❌ autoprefixer NOT found after npm ci"
-            echo "📦 Installing autoprefixer..."
-            npm install --save-dev autoprefixer@^10.4.22 --legacy-peer-deps
-            echo "✅ Verifying installation..."
-            npm list autoprefixer
+            echo "❌ autoprefixer NOT found in node_modules"
+            echo "📦 Installing autoprefixer explicitly..."
+            npm install --save-dev autoprefixer@^10.4.22 --no-save
+            echo "✅ Installation complete"
           fi
+          
+          # Verify it's actually there
+          echo ""
+          echo "🔍 Final verification..."
+          if [ -d "node_modules/autoprefixer" ]; then
+            echo "✅ autoprefixer is installed at: node_modules/autoprefixer"
+            cat node_modules/autoprefixer/package.json | grep '"version"' | head -1 || echo "⚠️ Could not read version"
+          else
+            echo "❌ CRITICAL: autoprefixer still not found after installation attempt"
+            echo "📦 Trying alternative installation method..."
+            npm install autoprefixer@10.4.22 --save-dev --force
+          fi
+          
           echo ""
           echo "🔍 Checking PostCSS config..."
           if [ -f postcss.config.js ]; then
             echo "✅ postcss.config.js found:"
             cat postcss.config.js
           else
-            echo "❌ postcss.config.js NOT found!"
-            echo "Creating postcss.config.js..."
+            echo "❌ postcss.config.js NOT found! Creating it..."
             cat > postcss.config.js << 'EOF'
-          module.exports = {
-            plugins: {
-              tailwindcss: {},
-              autoprefixer: {},
-            },
-          };
-          EOF
+module.exports = {
+  plugins: {
+    tailwindcss: {},
+    autoprefixer: {},
+  },
+};
+EOF
             cat postcss.config.js
           fi
       
