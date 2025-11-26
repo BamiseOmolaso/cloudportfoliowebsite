@@ -136,12 +136,6 @@ resource "aws_iam_role_policy" "deploy_policy" {
           "ecs:DescribeTasks",
           "ecs:RunTask",
           "ecs:StopTask",
-          # Terraform read permissions (for getting outputs)
-          "s3:GetObject",
-          "s3:ListBucket",
-          "dynamodb:GetItem",
-          "dynamodb:Query",
-          "dynamodb:DescribeTable",
           # Secrets Manager (for reading secrets)
           "secretsmanager:GetSecretValue",
           "secretsmanager:DescribeSecret",
@@ -152,6 +146,43 @@ resource "aws_iam_role_policy" "deploy_policy" {
           "logs:DescribeLogStreams"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          # Terraform state bucket - read state and outputs
+          "s3:GetObject",
+          "s3:ListBucket"
+        ]
+        Resource = [
+          "arn:aws:s3:::omolaso-terraform-state",
+          "arn:aws:s3:::omolaso-terraform-state/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          # Terraform state locking - need to create/delete lock files
+          "s3:PutObject",
+          "s3:DeleteObject"
+        ]
+        Resource = [
+          "arn:aws:s3:::omolaso-terraform-state/*.tflock"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          # DynamoDB state locking
+          "dynamodb:GetItem",
+          "dynamodb:PutItem",
+          "dynamodb:DeleteItem",
+          "dynamodb:Query",
+          "dynamodb:DescribeTable"
+        ]
+        Resource = [
+          "arn:aws:dynamodb:us-east-1:*:table/portfolio-tf-locks"
+        ]
       },
       {
         Effect = "Allow"
