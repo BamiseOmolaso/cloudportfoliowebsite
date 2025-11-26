@@ -67,7 +67,8 @@ resource "aws_iam_role_policy" "terraform_policy" {
           "lambda:*",
           "events:*",
           "ssm:*",
-          "kms:*"
+          "kms:*",
+          "application-autoscaling:*"
         ]
         Resource = "*"
       }
