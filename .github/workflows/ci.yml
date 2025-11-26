@@ -216,6 +216,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
+      - name: Verify autoprefixer is installed
+        run: |
+          echo "Checking autoprefixer installation..."
+          if npm list autoprefixer > /dev/null 2>&1; then
+            echo "✅ autoprefixer is installed"
+            npm list autoprefixer
+          else
+            echo "❌ autoprefixer NOT found after npm ci"
+            echo "Installing autoprefixer..."
+            npm install --save-dev autoprefixer
+            npm list autoprefixer
+          fi
+      
       - name: Generate Prisma Client
         run: npx prisma generate
       
