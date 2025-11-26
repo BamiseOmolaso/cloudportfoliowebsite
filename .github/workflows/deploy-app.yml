@@ -60,22 +60,6 @@ jobs:
             echo "use_oidc=false" >> $GITHUB_OUTPUT
           fi
       
-      - name: Configure AWS credentials (OIDC)
-        if: steps.aws-role.outputs.use_oidc == 'true'
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ steps.aws-role.outputs.role_arn }}
-          aws-region: ${{ env.AWS_REGION }}
-          role-session-name: docker-build-${{ github.run_id }}
-      
-      - name: Configure AWS credentials (Access Keys)
-        if: steps.aws-role.outputs.use_oidc == 'false'
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ env.AWS_REGION }}
-      
       - name: Select environment
         id: env
         run: |
@@ -97,6 +81,23 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: 1.13.3
+          terraform_wrapper: false
+      
+      - name: Configure AWS credentials (OIDC)
+        if: steps.aws-role.outputs.use_oidc == 'true'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ steps.aws-role.outputs.role_arn }}
+          aws-region: ${{ env.AWS_REGION }}
+          role-session-name: docker-build-${{ github.run_id }}
+      
+      - name: Configure AWS credentials (Access Keys)
+        if: steps.aws-role.outputs.use_oidc == 'false'
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
       
       - name: Get ECR Repository URL
         id: ecr
@@ -179,7 +180,7 @@ jobs:
       
       - name: Upload Trivy results
         uses: github/codeql-action/upload-sarif@v4
-        if: always() && hashFiles('trivy-results.sarif') != ''
+        if: hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
 
