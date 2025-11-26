@@ -47,6 +47,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Set AWS role ARN
+        id: aws-role
+        run: |
+          if [ -n "${{ secrets.AWS_TERRAFORM_ROLE_ARN }}" ]; then
+            echo "role_arn=${{ secrets.AWS_TERRAFORM_ROLE_ARN }}" >> $GITHUB_OUTPUT
+            echo "use_oidc=true" >> $GITHUB_OUTPUT
+          else
+            echo "use_oidc=false" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
@@ -54,15 +64,15 @@ jobs:
           terraform_wrapper: false
       
       - name: Configure AWS credentials (OIDC)
-        if: secrets.AWS_TERRAFORM_ROLE_ARN != ''
+        if: steps.aws-role.outputs.use_oidc == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          role-to-assume: ${{ steps.aws-role.outputs.role_arn }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: terraform-plan-${{ github.run_id }}
       
       - name: Configure AWS credentials (Access Keys)
-        if: secrets.AWS_TERRAFORM_ROLE_ARN == ''
+        if: steps.aws-role.outputs.use_oidc == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -179,21 +189,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Set AWS role ARN
+        id: aws-role
+        run: |
+          if [ -n "${{ secrets.AWS_TERRAFORM_ROLE_ARN }}" ]; then
+            echo "role_arn=${{ secrets.AWS_TERRAFORM_ROLE_ARN }}" >> $GITHUB_OUTPUT
+            echo "use_oidc=true" >> $GITHUB_OUTPUT
+          else
+            echo "use_oidc=false" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
       
       - name: Configure AWS credentials (OIDC)
-        if: secrets.AWS_TERRAFORM_ROLE_ARN != ''
+        if: steps.aws-role.outputs.use_oidc == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          role-to-assume: ${{ steps.aws-role.outputs.role_arn }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: terraform-apply-dev-${{ github.run_id }}
       
       - name: Configure AWS credentials (Access Keys)
-        if: secrets.AWS_TERRAFORM_ROLE_ARN == ''
+        if: steps.aws-role.outputs.use_oidc == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -286,21 +306,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Set AWS role ARN
+        id: aws-role
+        run: |
+          if [ -n "${{ secrets.AWS_TERRAFORM_ROLE_ARN }}" ]; then
+            echo "role_arn=${{ secrets.AWS_TERRAFORM_ROLE_ARN }}" >> $GITHUB_OUTPUT
+            echo "use_oidc=true" >> $GITHUB_OUTPUT
+          else
+            echo "use_oidc=false" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
       
       - name: Configure AWS credentials (OIDC)
-        if: secrets.AWS_TERRAFORM_ROLE_ARN != ''
+        if: steps.aws-role.outputs.use_oidc == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          role-to-assume: ${{ steps.aws-role.outputs.role_arn }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: terraform-apply-staging-${{ github.run_id }}
       
       - name: Configure AWS credentials (Access Keys)
-        if: secrets.AWS_TERRAFORM_ROLE_ARN == ''
+        if: steps.aws-role.outputs.use_oidc == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
@@ -389,21 +419,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Set AWS role ARN
+        id: aws-role
+        run: |
+          if [ -n "${{ secrets.AWS_TERRAFORM_ROLE_ARN }}" ]; then
+            echo "role_arn=${{ secrets.AWS_TERRAFORM_ROLE_ARN }}" >> $GITHUB_OUTPUT
+            echo "use_oidc=true" >> $GITHUB_OUTPUT
+          else
+            echo "use_oidc=false" >> $GITHUB_OUTPUT
+          fi
+      
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         with:
           terraform_version: ${{ env.TF_VERSION }}
       
       - name: Configure AWS credentials (OIDC)
-        if: secrets.AWS_TERRAFORM_ROLE_ARN != ''
+        if: steps.aws-role.outputs.use_oidc == 'true'
         uses: aws-actions/configure-aws-credentials@v4
         with:
-          role-to-assume: ${{ secrets.AWS_TERRAFORM_ROLE_ARN }}
+          role-to-assume: ${{ steps.aws-role.outputs.role_arn }}
           aws-region: ${{ env.AWS_REGION }}
           role-session-name: terraform-apply-prod-${{ github.run_id }}
       
       - name: Configure AWS credentials (Access Keys)
-        if: secrets.AWS_TERRAFORM_ROLE_ARN == ''
+        if: steps.aws-role.outputs.use_oidc == 'false'
         uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
