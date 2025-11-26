@@ -76,8 +76,9 @@ jobs:
       - name: Set AWS role ARN
         id: aws-role
         run: |
-          if [ -n "${{ secrets.AWS_DEPLOY_ROLE_ARN }}" ]; then
-            echo "role_arn=${{ secrets.AWS_DEPLOY_ROLE_ARN }}" >> $GITHUB_OUTPUT
+          ROLE_ARN="${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
+          if [ -n "$ROLE_ARN" ]; then
+            echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
             echo "use_oidc=true" >> $GITHUB_OUTPUT
           else
             echo "use_oidc=false" >> $GITHUB_OUTPUT
@@ -210,8 +211,9 @@ jobs:
       - name: Set AWS role ARN
         id: aws-role
         run: |
-          if [ -n "${{ secrets.AWS_DEPLOY_ROLE_ARN }}" ]; then
-            echo "role_arn=${{ secrets.AWS_DEPLOY_ROLE_ARN }}" >> $GITHUB_OUTPUT
+          ROLE_ARN="${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
+          if [ -n "$ROLE_ARN" ]; then
+            echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
             echo "use_oidc=true" >> $GITHUB_OUTPUT
           else
             echo "use_oidc=false" >> $GITHUB_OUTPUT
@@ -286,8 +288,9 @@ jobs:
       - name: Set AWS role ARN
         id: aws-role
         run: |
-          if [ -n "${{ secrets.AWS_DEPLOY_ROLE_ARN }}" ]; then
-            echo "role_arn=${{ secrets.AWS_DEPLOY_ROLE_ARN }}" >> $GITHUB_OUTPUT
+          ROLE_ARN="${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
+          if [ -n "$ROLE_ARN" ]; then
+            echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
             echo "use_oidc=true" >> $GITHUB_OUTPUT
           else
             echo "use_oidc=false" >> $GITHUB_OUTPUT
@@ -361,8 +364,9 @@ jobs:
       - name: Set AWS role ARN
         id: aws-role
         run: |
-          if [ -n "${{ secrets.AWS_DEPLOY_ROLE_ARN }}" ]; then
-            echo "role_arn=${{ secrets.AWS_DEPLOY_ROLE_ARN }}" >> $GITHUB_OUTPUT
+          ROLE_ARN="${{ secrets.AWS_DEPLOY_ROLE_ARN }}"
+          if [ -n "$ROLE_ARN" ]; then
+            echo "role_arn=$ROLE_ARN" >> $GITHUB_OUTPUT
             echo "use_oidc=true" >> $GITHUB_OUTPUT
           else
             echo "use_oidc=false" >> $GITHUB_OUTPUT
