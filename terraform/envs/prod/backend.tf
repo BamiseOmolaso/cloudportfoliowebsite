@@ -7,10 +7,10 @@ terraform {
     # Option 2: Use new bucket (uncomment and run bootstrap.sh first)
     # bucket         = "portfolio-tfstate-main"
 
-    key            = "envs/prod/terraform.tfstate"
-    region         = "us-east-1"
-    dynamodb_table = "portfolio-tf-locks"
-    encrypt        = true
+    key          = "envs/prod/terraform.tfstate"
+    region       = "us-east-1"
+    use_lockfile = true
+    encrypt      = true
   }
 }
 

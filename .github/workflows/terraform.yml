@@ -102,7 +102,7 @@ jobs:
       
       - name: Terraform Init
         working-directory: terraform/envs/${{ steps.env.outputs.ENV_NAME }}
-        run: terraform init -input=false
+        run: terraform init -input=false -upgrade
       
       - name: Terraform Validate
         working-directory: terraform/envs/${{ steps.env.outputs.ENV_NAME }}
@@ -116,11 +116,13 @@ jobs:
           terraform show -no-color tfplan > plan.txt
         continue-on-error: true
       
-      - name: Upload Plan
+      - name: Upload Plan and Lock File
         uses: actions/upload-artifact@v4
         with:
           name: tfplan-${{ steps.env.outputs.ENV_NAME }}-${{ github.run_id }}
-          path: terraform/envs/${{ steps.env.outputs.ENV_NAME }}/tfplan
+          path: |
+            terraform/envs/${{ steps.env.outputs.ENV_NAME }}/tfplan
+            terraform/envs/${{ steps.env.outputs.ENV_NAME }}/.terraform.lock.hcl
           retention-days: 7
       
       - name: Comment PR with Plan
@@ -198,7 +200,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
       
-      - name: Download Plan
+      - name: Download Plan and Lock File
         uses: actions/download-artifact@v4
         with:
           name: tfplan-dev-${{ github.run_id }}
@@ -206,7 +208,7 @@ jobs:
       
       - name: Terraform Init
         working-directory: terraform/envs/dev
-        run: terraform init -input=false
+        run: terraform init -input=false -upgrade
       
       - name: Terraform Apply
         working-directory: terraform/envs/dev
@@ -274,7 +276,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
       
-      - name: Download Plan
+      - name: Download Plan and Lock File
         uses: actions/download-artifact@v4
         with:
           name: tfplan-staging-${{ github.run_id }}
@@ -282,7 +284,7 @@ jobs:
       
       - name: Terraform Init
         working-directory: terraform/envs/staging
-        run: terraform init -input=false
+        run: terraform init -input=false -upgrade
       
       - name: Terraform Apply
         working-directory: terraform/envs/staging
@@ -346,7 +348,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
       
-      - name: Download Plan
+      - name: Download Plan and Lock File
         uses: actions/download-artifact@v4
         with:
           name: tfplan-prod-${{ github.run_id }}
@@ -354,7 +356,7 @@ jobs:
       
       - name: Terraform Init
         working-directory: terraform/envs/prod
-        run: terraform init -input=false
+        run: terraform init -input=false -upgrade
       
       - name: Terraform Apply
         working-directory: terraform/envs/prod
