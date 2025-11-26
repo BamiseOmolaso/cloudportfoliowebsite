@@ -280,9 +280,21 @@ jobs:
         run: |
           cd terraform/envs/dev
           terraform init -input=false
-          terraform apply -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" \
-                          -auto-approve \
-                          -input=false
+          
+          # Run plan first to see full error messages
+          echo "📋 Running Terraform plan..."
+          terraform plan \
+            -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" \
+            -out=tfplan \
+            -input=false || {
+              echo "❌ Terraform plan failed. Full error:"
+              terraform plan -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" -input=false 2>&1 | tee plan-error.log
+              exit 1
+            }
+          
+          # Apply the plan
+          echo "🚀 Applying Terraform plan..."
+          terraform apply -input=false -auto-approve tfplan
       
       - name: Wait for ECS Service to Stabilize
         run: |
@@ -362,9 +374,21 @@ jobs:
         run: |
           cd terraform/envs/staging
           terraform init -input=false
-          terraform apply -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" \
-                          -auto-approve \
-                          -input=false
+          
+          # Run plan first to see full error messages
+          echo "📋 Running Terraform plan..."
+          terraform plan \
+            -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" \
+            -out=tfplan \
+            -input=false || {
+              echo "❌ Terraform plan failed. Full error:"
+              terraform plan -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" -input=false 2>&1 | tee plan-error.log
+              exit 1
+            }
+          
+          # Apply the plan
+          echo "🚀 Applying Terraform plan..."
+          terraform apply -input=false -auto-approve tfplan
       
       - name: Wait for ECS Service to Stabilize
         run: |
@@ -444,9 +468,21 @@ jobs:
         run: |
           cd terraform/envs/prod
           terraform init -input=false
-          terraform apply -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" \
-                          -auto-approve \
-                          -input=false
+          
+          # Run plan first to see full error messages
+          echo "📋 Running Terraform plan..."
+          terraform plan \
+            -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" \
+            -out=tfplan \
+            -input=false || {
+              echo "❌ Terraform plan failed. Full error:"
+              terraform plan -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" -input=false 2>&1 | tee plan-error.log
+              exit 1
+            }
+          
+          # Apply the plan
+          echo "🚀 Applying Terraform plan..."
+          terraform apply -input=false -auto-approve tfplan
       
       - name: Wait for ECS Service to Stabilize
         run: |
