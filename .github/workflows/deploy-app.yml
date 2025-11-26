@@ -280,7 +280,7 @@ jobs:
         id: ecs
         run: |
           # Download state file directly from S3 to avoid checksum validation
-          # This bypasses terraform init and reads outputs directly from state
+          # Parse outputs directly with jq (no terraform init needed)
           echo "📥 Downloading Terraform state from S3..."
           aws s3 cp s3://omolaso-terraform-state/envs/dev/terraform.tfstate ./terraform.tfstate \
             --region ${{ env.AWS_REGION }} || {
@@ -289,20 +289,14 @@ jobs:
           }
           
           echo "📋 Reading ECS service information from state file..."
-          # Use terraform output with local state file
-          cd terraform/envs/dev
-          CLUSTER=$(terraform output -state=../../terraform.tfstate -raw ecs_cluster_name 2>/dev/null || echo "")
-          SERVICE=$(terraform output -state=../../terraform.tfstate -raw ecs_service_name 2>/dev/null || echo "")
+          # Parse state file directly with jq (no terraform init required)
+          CLUSTER=$(jq -r '.outputs.ecs_cluster_name.value // empty' ./terraform.tfstate)
+          SERVICE=$(jq -r '.outputs.ecs_service_name.value // empty' ./terraform.tfstate)
           
-          if [ -z "$CLUSTER" ] || [ -z "$SERVICE" ]; then
-            echo "⚠️ Could not read outputs from state file, trying alternative method..."
-            # Alternative: Parse state file directly with jq
-            CLUSTER=$(jq -r '.outputs.ecs_cluster_name.value // empty' ../../terraform.tfstate)
-            SERVICE=$(jq -r '.outputs.ecs_service_name.value // empty' ../../terraform.tfstate)
-          fi
-          
-          if [ -z "$CLUSTER" ] || [ -z "$SERVICE" ]; then
-            echo "❌ Failed to retrieve ECS service information"
+          if [ -z "$CLUSTER" ] || [ -z "$SERVICE" ] || [ "$CLUSTER" = "null" ] || [ "$SERVICE" = "null" ]; then
+            echo "❌ Failed to retrieve ECS service information from state file"
+            echo "📋 State file contents (first 500 chars):"
+            head -c 500 ./terraform.tfstate || true
             exit 1
           fi
           
@@ -311,7 +305,7 @@ jobs:
           echo "✅ ECS service info retrieved: cluster=$CLUSTER, service=$SERVICE"
           
           # Cleanup
-          rm -f ../../terraform.tfstate
+          rm -f ./terraform.tfstate
       
       - name: Update ECS Service with new image
         run: |
@@ -396,7 +390,7 @@ jobs:
         id: ecs
         run: |
           # Download state file directly from S3 to avoid checksum validation
-          # This bypasses terraform init and reads outputs directly from state
+          # Parse outputs directly with jq (no terraform init needed)
           echo "📥 Downloading Terraform state from S3..."
           aws s3 cp s3://omolaso-terraform-state/envs/staging/terraform.tfstate ./terraform.tfstate \
             --region ${{ env.AWS_REGION }} || {
@@ -405,20 +399,14 @@ jobs:
           }
           
           echo "📋 Reading ECS service information from state file..."
-          # Use terraform output with local state file
-          cd terraform/envs/staging
-          CLUSTER=$(terraform output -state=../../terraform.tfstate -raw ecs_cluster_name 2>/dev/null || echo "")
-          SERVICE=$(terraform output -state=../../terraform.tfstate -raw ecs_service_name 2>/dev/null || echo "")
+          # Parse state file directly with jq (no terraform init required)
+          CLUSTER=$(jq -r '.outputs.ecs_cluster_name.value // empty' ./terraform.tfstate)
+          SERVICE=$(jq -r '.outputs.ecs_service_name.value // empty' ./terraform.tfstate)
           
-          if [ -z "$CLUSTER" ] || [ -z "$SERVICE" ]; then
-            echo "⚠️ Could not read outputs from state file, trying alternative method..."
-            # Alternative: Parse state file directly with jq
-            CLUSTER=$(jq -r '.outputs.ecs_cluster_name.value // empty' ../../terraform.tfstate)
-            SERVICE=$(jq -r '.outputs.ecs_service_name.value // empty' ../../terraform.tfstate)
-          fi
-          
-          if [ -z "$CLUSTER" ] || [ -z "$SERVICE" ]; then
-            echo "❌ Failed to retrieve ECS service information"
+          if [ -z "$CLUSTER" ] || [ -z "$SERVICE" ] || [ "$CLUSTER" = "null" ] || [ "$SERVICE" = "null" ]; then
+            echo "❌ Failed to retrieve ECS service information from state file"
+            echo "📋 State file contents (first 500 chars):"
+            head -c 500 ./terraform.tfstate || true
             exit 1
           fi
           
@@ -427,7 +415,7 @@ jobs:
           echo "✅ ECS service info retrieved: cluster=$CLUSTER, service=$SERVICE"
           
           # Cleanup
-          rm -f ../../terraform.tfstate
+          rm -f ./terraform.tfstate
       
       - name: Update ECS Service with new image
         run: |
@@ -511,7 +499,7 @@ jobs:
         id: ecs
         run: |
           # Download state file directly from S3 to avoid checksum validation
-          # This bypasses terraform init and reads outputs directly from state
+          # Parse outputs directly with jq (no terraform init needed)
           echo "📥 Downloading Terraform state from S3..."
           aws s3 cp s3://omolaso-terraform-state/envs/prod/terraform.tfstate ./terraform.tfstate \
             --region ${{ env.AWS_REGION }} || {
@@ -520,20 +508,14 @@ jobs:
           }
           
           echo "📋 Reading ECS service information from state file..."
-          # Use terraform output with local state file
-          cd terraform/envs/prod
-          CLUSTER=$(terraform output -state=../../terraform.tfstate -raw ecs_cluster_name 2>/dev/null || echo "")
-          SERVICE=$(terraform output -state=../../terraform.tfstate -raw ecs_service_name 2>/dev/null || echo "")
+          # Parse state file directly with jq (no terraform init required)
+          CLUSTER=$(jq -r '.outputs.ecs_cluster_name.value // empty' ./terraform.tfstate)
+          SERVICE=$(jq -r '.outputs.ecs_service_name.value // empty' ./terraform.tfstate)
           
-          if [ -z "$CLUSTER" ] || [ -z "$SERVICE" ]; then
-            echo "⚠️ Could not read outputs from state file, trying alternative method..."
-            # Alternative: Parse state file directly with jq
-            CLUSTER=$(jq -r '.outputs.ecs_cluster_name.value // empty' ../../terraform.tfstate)
-            SERVICE=$(jq -r '.outputs.ecs_service_name.value // empty' ../../terraform.tfstate)
-          fi
-          
-          if [ -z "$CLUSTER" ] || [ -z "$SERVICE" ]; then
-            echo "❌ Failed to retrieve ECS service information"
+          if [ -z "$CLUSTER" ] || [ -z "$SERVICE" ] || [ "$CLUSTER" = "null" ] || [ "$SERVICE" = "null" ]; then
+            echo "❌ Failed to retrieve ECS service information from state file"
+            echo "📋 State file contents (first 500 chars):"
+            head -c 500 ./terraform.tfstate || true
             exit 1
           fi
           
@@ -542,7 +524,7 @@ jobs:
           echo "✅ ECS service info retrieved: cluster=$CLUSTER, service=$SERVICE"
           
           # Cleanup
-          rm -f ../../terraform.tfstate
+          rm -f ./terraform.tfstate
       
       - name: Update ECS Service with new image
         run: |
