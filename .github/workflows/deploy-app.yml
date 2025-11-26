@@ -309,6 +309,8 @@ jobs:
       
       - name: Update ECS Service with new image
         run: |
+          cd terraform/envs/dev
+          
           # Download state from S3 and use locally to bypass checksum validation
           echo "📥 Downloading Terraform state from S3..."
           aws s3 cp s3://omolaso-terraform-state/envs/dev/terraform.tfstate ./terraform.tfstate \
@@ -316,8 +318,6 @@ jobs:
             echo "❌ Failed to download state file"
             exit 1
           }
-          
-          cd terraform/envs/dev
           
           # Initialize with local backend (bypasses S3 checksum validation)
           echo "🔧 Initializing Terraform with local state..."
@@ -330,9 +330,6 @@ jobs:
                           -backend-config="dynamodb_table=portfolio-tf-locks" \
                           -backend-config="encrypt=true"
           }
-          
-          # Copy downloaded state to terraform working directory
-          cp ../../terraform.tfstate terraform.tfstate
           
           # Apply changes using local state
           echo "🚀 Applying Terraform changes..."
@@ -460,6 +457,8 @@ jobs:
       
       - name: Update ECS Service with new image
         run: |
+          cd terraform/envs/staging
+          
           # Download state from S3 and use locally to bypass checksum validation
           echo "📥 Downloading Terraform state from S3..."
           aws s3 cp s3://omolaso-terraform-state/envs/staging/terraform.tfstate ./terraform.tfstate \
@@ -467,8 +466,6 @@ jobs:
             echo "❌ Failed to download state file"
             exit 1
           }
-          
-          cd terraform/envs/staging
           
           # Initialize with local backend (bypasses S3 checksum validation)
           echo "🔧 Initializing Terraform with local state..."
@@ -481,9 +478,6 @@ jobs:
                           -backend-config="dynamodb_table=portfolio-tf-locks" \
                           -backend-config="encrypt=true"
           }
-          
-          # Copy downloaded state to terraform working directory
-          cp ../../terraform.tfstate terraform.tfstate
           
           # Apply changes using local state
           echo "🚀 Applying Terraform changes..."
@@ -611,6 +605,8 @@ jobs:
       
       - name: Update ECS Service with new image
         run: |
+          cd terraform/envs/prod
+          
           # Download state from S3 and use locally to bypass checksum validation
           echo "📥 Downloading Terraform state from S3..."
           aws s3 cp s3://omolaso-terraform-state/envs/prod/terraform.tfstate ./terraform.tfstate \
@@ -618,8 +614,6 @@ jobs:
             echo "❌ Failed to download state file"
             exit 1
           }
-          
-          cd terraform/envs/prod
           
           # Initialize with local backend (bypasses S3 checksum validation)
           echo "🔧 Initializing Terraform with local state..."
@@ -632,9 +626,6 @@ jobs:
                           -backend-config="dynamodb_table=portfolio-tf-locks" \
                           -backend-config="encrypt=true"
           }
-          
-          # Copy downloaded state to terraform working directory
-          cp ../../terraform.tfstate terraform.tfstate
           
           # Apply changes using local state
           echo "🚀 Applying Terraform changes..."
