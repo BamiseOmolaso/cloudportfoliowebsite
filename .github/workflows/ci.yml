@@ -214,19 +214,40 @@ jobs:
           # echo "REDIS_URL=" >> $GITHUB_ENV
       
       - name: Install dependencies
-        run: npm ci
-      
-      - name: Verify autoprefixer is installed
         run: |
-          echo "Checking autoprefixer installation..."
+          npm ci
+          echo "✅ Dependencies installed"
+      
+      - name: Verify autoprefixer installation
+        run: |
+          echo "🔍 Checking autoprefixer..."
           if npm list autoprefixer > /dev/null 2>&1; then
             echo "✅ autoprefixer is installed"
             npm list autoprefixer
           else
             echo "❌ autoprefixer NOT found after npm ci"
-            echo "Installing autoprefixer..."
-            npm install --save-dev autoprefixer
+            echo "📦 Installing autoprefixer..."
+            npm install --save-dev autoprefixer@^10.4.22 --legacy-peer-deps
+            echo "✅ Verifying installation..."
             npm list autoprefixer
+          fi
+          echo ""
+          echo "🔍 Checking PostCSS config..."
+          if [ -f postcss.config.js ]; then
+            echo "✅ postcss.config.js found:"
+            cat postcss.config.js
+          else
+            echo "❌ postcss.config.js NOT found!"
+            echo "Creating postcss.config.js..."
+            cat > postcss.config.js << 'EOF'
+          module.exports = {
+            plugins: {
+              tailwindcss: {},
+              autoprefixer: {},
+            },
+          };
+          EOF
+            cat postcss.config.js
           fi
       
       - name: Generate Prisma Client
