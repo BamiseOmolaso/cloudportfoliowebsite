@@ -213,6 +213,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.3
+          terraform_wrapper: false
+      
       - name: Set AWS role ARN
         id: aws-role
         env:
@@ -295,6 +301,12 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
       
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.3
+          terraform_wrapper: false
+      
       - name: Set AWS role ARN
         id: aws-role
         env:
@@ -375,6 +387,12 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+      
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.13.3
+          terraform_wrapper: false
       
       - name: Set AWS role ARN
         id: aws-role
