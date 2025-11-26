@@ -171,6 +171,13 @@ jobs:
             terraform/envs/${{ steps.env.outputs.ENV_NAME }}/.terraform.lock.hcl
           retention-days: 7
       
+      - name: Set Plan Run ID
+        if: steps.plan.outputs.plan_success == 'true'
+        id: plan-run-id
+        run: |
+          echo "run_id=${{ github.run_id }}" >> $GITHUB_OUTPUT
+          echo "artifact_name=tfplan-${{ steps.env.outputs.ENV_NAME }}-${{ github.run_id }}" >> $GITHUB_OUTPUT
+      
       - name: Comment PR with Plan
         if: github.event_name == 'pull_request'
         uses: actions/github-script@v7
