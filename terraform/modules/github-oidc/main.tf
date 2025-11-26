@@ -131,6 +131,8 @@ resource "aws_iam_role_policy" "deploy_policy" {
           "ecr:DescribeRepositories",
           "ecr:DescribeImages",
           "ecr:ListTagsForResource",
+          "ecr:GetLifecyclePolicy",
+          "ecr:GetRepositoryPolicy",
           # ECS permissions
           "ecs:UpdateService",
           "ecs:DescribeServices",
@@ -138,6 +140,8 @@ resource "aws_iam_role_policy" "deploy_policy" {
           "ecs:ListServices",
           "ecs:DescribeTaskDefinition",
           "ecs:RegisterTaskDefinition",
+          "ecs:DescribeCapacityProviders",
+          "ecs:ListCapacityProviders",
           "ecs:ListTasks",
           "ecs:DescribeTasks",
           "ecs:RunTask",
@@ -152,6 +156,10 @@ resource "aws_iam_role_policy" "deploy_policy" {
           "logs:DescribeLogGroups",
           "logs:DescribeLogStreams",
           "logs:ListTagsForResource",
+          # CloudWatch (for monitoring and metrics)
+          "cloudwatch:GetMetricStatistics",
+          "cloudwatch:DescribeAlarms",
+          "cloudwatch:ListMetrics",
           # IAM (for Terraform state refresh)
           "iam:GetRole",
           "iam:ListRolePolicies",
@@ -159,6 +167,9 @@ resource "aws_iam_role_policy" "deploy_policy" {
           "iam:GetRolePolicy",
           "iam:ListOpenIDConnectProviders",
           "iam:GetOpenIDConnectProvider",
+          "iam:GetPolicy",
+          "iam:GetPolicyVersion",
+          "iam:ListPolicyVersions",
           # EC2 (for Terraform state refresh - VPC, subnets, security groups, networking)
           "ec2:DescribeVpcs",
           "ec2:DescribeSubnets",
@@ -166,18 +177,22 @@ resource "aws_iam_role_policy" "deploy_policy" {
           "ec2:DescribeVpcAttribute",
           "ec2:DescribeInternetGateways",
           "ec2:DescribeRouteTables",
+          "ec2:DescribeAvailabilityZones",
+          "ec2:DescribeAccountAttributes",
           # Elastic Load Balancing (ALB, Target Groups, Listeners)
           "elasticloadbalancing:DescribeLoadBalancers",
           "elasticloadbalancing:DescribeTargetGroups",
           "elasticloadbalancing:DescribeLoadBalancerAttributes",
           "elasticloadbalancing:DescribeTargetGroupAttributes",
           "elasticloadbalancing:DescribeListeners",
+          "elasticloadbalancing:DescribeListenerAttributes",
           "elasticloadbalancing:DescribeRules",
           "elasticloadbalancing:DescribeTags",
           # RDS (for Terraform state refresh)
           "rds:DescribeDBInstances",
           "rds:DescribeDBSubnetGroups",
           "rds:ListTagsForResource",
+          "rds:DescribeDBParameterGroups",
           # Application Auto Scaling (for ECS service scaling)
           "application-autoscaling:DescribeScalableTargets",
           "application-autoscaling:DescribeScalingPolicies"
