@@ -63,3 +63,13 @@ output "application_url" {
   value       = "http://${aws_lb.main.dns_name}"
 }
 
+output "terraform_role_arn" {
+  description = "ARN of the GitHub Actions Terraform role"
+  value       = module.github_oidc.terraform_role_arn
+}
+
+output "deploy_role_arn" {
+  description = "ARN of the GitHub Actions Deploy role"
+  value       = module.github_oidc.deploy_role_arn
+}
+

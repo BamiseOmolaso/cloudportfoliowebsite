@@ -22,6 +22,14 @@ provider "aws" {
 
 locals {
   environment = "prod"
+  github_repo = "BamiseOmolaso/cloudportfoliowebsite"
+}
+
+# GitHub Actions OIDC Roles (shared across all environments)
+module "github_oidc" {
+  source = "../../modules/github-oidc"
+
+  github_repo = local.github_repo
 }
 
 # VPC with PUBLIC subnets only (cost savings)
