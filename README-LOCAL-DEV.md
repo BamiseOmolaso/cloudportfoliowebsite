@@ -4,7 +4,7 @@ This project supports both Docker and native PostgreSQL for local development.
 
 ## Prerequisites
 
-- Node.js 18+ installed
+- Node.js 20+ installed
 - Choose ONE of:
   - **Docker Desktop** (recommended for beginners)
   - **PostgreSQL 15+** installed locally

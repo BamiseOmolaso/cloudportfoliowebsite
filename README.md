@@ -55,7 +55,7 @@ See `.github/workflows/test.yml` for the complete CI/CD configuration.
 
 ### Prerequisites
 
-- Node.js 18.x or later
+- Node.js 20.x or later
 - npm or yarn
 - PostgreSQL database (AWS RDS or local)
 - Resend account for email

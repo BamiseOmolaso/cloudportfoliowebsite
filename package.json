@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "next lint",
     "format": "prettier --write .",
-    "prepare": "husky install",
+    "prepare": "[ \"$CI\" = true ] || husky install || true",
     "postinstall": "prisma generate",
     "test": "jest",
     "test:watch": "jest --watch",
