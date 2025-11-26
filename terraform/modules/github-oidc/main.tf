@@ -130,6 +130,7 @@ resource "aws_iam_role_policy" "deploy_policy" {
           "ecr:CompleteLayerUpload",
           "ecr:DescribeRepositories",
           "ecr:DescribeImages",
+          "ecr:ListTagsForResource",
           # ECS permissions
           "ecs:UpdateService",
           "ecs:DescribeServices",
@@ -155,11 +156,14 @@ resource "aws_iam_role_policy" "deploy_policy" {
           "iam:GetRole",
           "iam:ListRolePolicies",
           "iam:ListAttachedRolePolicies",
+          "iam:GetRolePolicy",
           "iam:ListOpenIDConnectProviders",
+          "iam:GetOpenIDConnectProvider",
           # EC2 (for Terraform state refresh - VPC, subnets, security groups)
           "ec2:DescribeVpcs",
           "ec2:DescribeSubnets",
-          "ec2:DescribeSecurityGroups"
+          "ec2:DescribeSecurityGroups",
+          "ec2:DescribeVpcAttribute"
         ]
         Resource = "*"
       },
