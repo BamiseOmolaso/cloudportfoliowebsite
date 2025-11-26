@@ -460,7 +460,7 @@ jobs:
         run: terraform apply -input=false -auto-approve tfplan
       
       - name: Terraform Apply (fresh plan)
-        if: steps.verify-plan.outputs.plan_valid != 'true' || steps.verify-plan-fallback.outputs.plan_valid == 'false'
+        if: steps.verify-plan.outputs.plan_valid != 'true' || steps.plan-exists.outputs.exists == 'false'
         working-directory: terraform/envs/staging
         run: |
           if [ -f terraform.tfvars ]; then
@@ -594,7 +594,7 @@ jobs:
         run: terraform apply -input=false -auto-approve tfplan
       
       - name: Terraform Apply (fresh plan)
-        if: steps.verify-plan.outputs.plan_valid != 'true' || steps.verify-plan-fallback.outputs.plan_valid == 'false'
+        if: steps.verify-plan.outputs.plan_valid != 'true' || steps.plan-exists.outputs.exists == 'false'
         working-directory: terraform/envs/prod
         run: |
           if [ -f terraform.tfvars ]; then
