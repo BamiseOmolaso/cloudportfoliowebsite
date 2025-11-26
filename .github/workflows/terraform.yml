@@ -56,6 +56,9 @@ jobs:
       github.event_name == 'push' ||
       github.event_name == 'pull_request' ||
       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+    outputs:
+      run_id: ${{ github.run_id }}
+      plan_success: ${{ steps.plan.outputs.plan_success }}
     permissions:
       contents: read
       id-token: write  # Required for OIDC
@@ -254,10 +257,23 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       
       - name: Download Plan and Lock File
+        id: download-plan
         uses: actions/download-artifact@v4
         with:
-          name: tfplan-dev-${{ github.run_id }}
+          name: tfplan-dev-${{ needs.terraform-plan.outputs.run_id }}
           path: terraform/envs/dev
+        continue-on-error: true
+      
+      - name: Check if Plan Artifact Exists
+        id: plan-exists
+        run: |
+          if [ -f terraform/envs/dev/tfplan ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Plan artifact found"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Plan artifact not found, will create fresh plan"
+          fi
       
       - name: Terraform Init
         working-directory: terraform/envs/dev
@@ -265,6 +281,7 @@ jobs:
       
       - name: Verify Plan File
         id: verify-plan
+        if: steps.plan-exists.outputs.exists == 'true'
         working-directory: terraform/envs/dev
         run: |
           # Check if plan file exists and is complete
@@ -292,13 +309,20 @@ jobs:
           fi
         continue-on-error: true
       
+      - name: Set Plan Valid (if artifact missing)
+        if: steps.plan-exists.outputs.exists == 'false'
+        id: verify-plan-fallback
+        run: |
+          echo "plan_valid=false" >> $GITHUB_OUTPUT
+          echo "⚠️ Plan artifact not found, will create fresh plan"
+      
       - name: Terraform Apply (with saved plan)
         if: steps.verify-plan.outputs.plan_valid == 'true'
         working-directory: terraform/envs/dev
         run: terraform apply -input=false -auto-approve tfplan
       
       - name: Terraform Apply (fresh plan)
-        if: steps.verify-plan.outputs.plan_valid != 'true'
+        if: steps.verify-plan.outputs.plan_valid != 'true' || steps.plan-exists.outputs.exists == 'false'
         working-directory: terraform/envs/dev
         run: |
           if [ -f terraform.tfvars ]; then
@@ -371,10 +395,23 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       
       - name: Download Plan and Lock File
+        id: download-plan
         uses: actions/download-artifact@v4
         with:
-          name: tfplan-staging-${{ github.run_id }}
+          name: tfplan-staging-${{ needs.terraform-plan.outputs.run_id }}
           path: terraform/envs/staging
+        continue-on-error: true
+      
+      - name: Check if Plan Artifact Exists
+        id: plan-exists
+        run: |
+          if [ -f terraform/envs/staging/tfplan ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Plan artifact found"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Plan artifact not found, will create fresh plan"
+          fi
       
       - name: Terraform Init
         working-directory: terraform/envs/staging
@@ -382,6 +419,7 @@ jobs:
       
       - name: Verify Plan File
         id: verify-plan
+        if: steps.plan-exists.outputs.exists == 'true'
         working-directory: terraform/envs/staging
         run: |
           # Check if plan file exists and is complete
@@ -409,13 +447,20 @@ jobs:
           fi
         continue-on-error: true
       
+      - name: Set Plan Valid (if artifact missing)
+        if: steps.plan-exists.outputs.exists == 'false'
+        id: verify-plan-fallback
+        run: |
+          echo "plan_valid=false" >> $GITHUB_OUTPUT
+          echo "⚠️ Plan artifact not found, will create fresh plan"
+      
       - name: Terraform Apply (with saved plan)
         if: steps.verify-plan.outputs.plan_valid == 'true'
         working-directory: terraform/envs/staging
         run: terraform apply -input=false -auto-approve tfplan
       
       - name: Terraform Apply (fresh plan)
-        if: steps.verify-plan.outputs.plan_valid != 'true'
+        if: steps.verify-plan.outputs.plan_valid != 'true' || steps.verify-plan-fallback.outputs.plan_valid == 'false'
         working-directory: terraform/envs/staging
         run: |
           if [ -f terraform.tfvars ]; then
@@ -484,10 +529,23 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
       
       - name: Download Plan and Lock File
+        id: download-plan
         uses: actions/download-artifact@v4
         with:
-          name: tfplan-prod-${{ github.run_id }}
+          name: tfplan-prod-${{ needs.terraform-plan.outputs.run_id }}
           path: terraform/envs/prod
+        continue-on-error: true
+      
+      - name: Check if Plan Artifact Exists
+        id: plan-exists
+        run: |
+          if [ -f terraform/envs/prod/tfplan ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+            echo "✅ Plan artifact found"
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Plan artifact not found (may be from different workflow run), will create fresh plan"
+          fi
       
       - name: Terraform Init
         working-directory: terraform/envs/prod
@@ -495,6 +553,7 @@ jobs:
       
       - name: Verify Plan File
         id: verify-plan
+        if: steps.plan-exists.outputs.exists == 'true'
         working-directory: terraform/envs/prod
         run: |
           # Check if plan file exists and is complete
@@ -522,13 +581,20 @@ jobs:
           fi
         continue-on-error: true
       
+      - name: Set Plan Valid (if artifact missing)
+        if: steps.plan-exists.outputs.exists == 'false'
+        id: verify-plan-fallback
+        run: |
+          echo "plan_valid=false" >> $GITHUB_OUTPUT
+          echo "⚠️ Plan artifact not found, will create fresh plan"
+      
       - name: Terraform Apply (with saved plan)
         if: steps.verify-plan.outputs.plan_valid == 'true'
         working-directory: terraform/envs/prod
         run: terraform apply -input=false -auto-approve tfplan
       
       - name: Terraform Apply (fresh plan)
-        if: steps.verify-plan.outputs.plan_valid != 'true'
+        if: steps.verify-plan.outputs.plan_valid != 'true' || steps.verify-plan-fallback.outputs.plan_valid == 'false'
         working-directory: terraform/envs/prod
         run: |
           if [ -f terraform.tfvars ]; then
