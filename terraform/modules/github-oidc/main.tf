@@ -159,11 +159,28 @@ resource "aws_iam_role_policy" "deploy_policy" {
           "iam:GetRolePolicy",
           "iam:ListOpenIDConnectProviders",
           "iam:GetOpenIDConnectProvider",
-          # EC2 (for Terraform state refresh - VPC, subnets, security groups)
+          # EC2 (for Terraform state refresh - VPC, subnets, security groups, networking)
           "ec2:DescribeVpcs",
           "ec2:DescribeSubnets",
           "ec2:DescribeSecurityGroups",
-          "ec2:DescribeVpcAttribute"
+          "ec2:DescribeVpcAttribute",
+          "ec2:DescribeInternetGateways",
+          "ec2:DescribeRouteTables",
+          # Elastic Load Balancing (ALB, Target Groups, Listeners)
+          "elasticloadbalancing:DescribeLoadBalancers",
+          "elasticloadbalancing:DescribeTargetGroups",
+          "elasticloadbalancing:DescribeLoadBalancerAttributes",
+          "elasticloadbalancing:DescribeTargetGroupAttributes",
+          "elasticloadbalancing:DescribeListeners",
+          "elasticloadbalancing:DescribeRules",
+          "elasticloadbalancing:DescribeTags",
+          # RDS (for Terraform state refresh)
+          "rds:DescribeDBInstances",
+          "rds:DescribeDBSubnetGroups",
+          "rds:ListTagsForResource",
+          # Application Auto Scaling (for ECS service scaling)
+          "application-autoscaling:DescribeScalableTargets",
+          "application-autoscaling:DescribeScalingPolicies"
         ]
         Resource = "*"
       },
