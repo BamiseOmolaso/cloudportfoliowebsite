@@ -210,9 +210,29 @@ jobs:
         working-directory: terraform/envs/dev
         run: terraform init -input=false -upgrade
       
-      - name: Terraform Apply
+      - name: Verify Plan File
+        id: verify-plan
+        working-directory: terraform/envs/dev
+        run: |
+          if terraform show tfplan > /dev/null 2>&1; then
+            echo "plan_valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "plan_valid=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Plan file is invalid or stale, will create new plan"
+          fi
+        continue-on-error: true
+      
+      - name: Terraform Apply (with saved plan)
+        if: steps.verify-plan.outputs.plan_valid == 'true'
         working-directory: terraform/envs/dev
         run: terraform apply -input=false -auto-approve tfplan
+      
+      - name: Terraform Apply (fresh plan)
+        if: steps.verify-plan.outputs.plan_valid != 'true'
+        working-directory: terraform/envs/dev
+        run: |
+          terraform plan -input=false -out=tfplan-fresh
+          terraform apply -input=false -auto-approve tfplan-fresh
       
       - name: Get Terraform Outputs
         id: outputs
@@ -286,9 +306,29 @@ jobs:
         working-directory: terraform/envs/staging
         run: terraform init -input=false -upgrade
       
-      - name: Terraform Apply
+      - name: Verify Plan File
+        id: verify-plan
+        working-directory: terraform/envs/staging
+        run: |
+          if terraform show tfplan > /dev/null 2>&1; then
+            echo "plan_valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "plan_valid=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Plan file is invalid or stale, will create new plan"
+          fi
+        continue-on-error: true
+      
+      - name: Terraform Apply (with saved plan)
+        if: steps.verify-plan.outputs.plan_valid == 'true'
         working-directory: terraform/envs/staging
         run: terraform apply -input=false -auto-approve tfplan
+      
+      - name: Terraform Apply (fresh plan)
+        if: steps.verify-plan.outputs.plan_valid != 'true'
+        working-directory: terraform/envs/staging
+        run: |
+          terraform plan -input=false -out=tfplan-fresh
+          terraform apply -input=false -auto-approve tfplan-fresh
       
       - name: Get Terraform Outputs
         id: outputs
@@ -358,9 +398,29 @@ jobs:
         working-directory: terraform/envs/prod
         run: terraform init -input=false -upgrade
       
-      - name: Terraform Apply
+      - name: Verify Plan File
+        id: verify-plan
+        working-directory: terraform/envs/prod
+        run: |
+          if terraform show tfplan > /dev/null 2>&1; then
+            echo "plan_valid=true" >> $GITHUB_OUTPUT
+          else
+            echo "plan_valid=false" >> $GITHUB_OUTPUT
+            echo "⚠️ Plan file is invalid or stale, will create new plan"
+          fi
+        continue-on-error: true
+      
+      - name: Terraform Apply (with saved plan)
+        if: steps.verify-plan.outputs.plan_valid == 'true'
         working-directory: terraform/envs/prod
         run: terraform apply -input=false -auto-approve tfplan
+      
+      - name: Terraform Apply (fresh plan)
+        if: steps.verify-plan.outputs.plan_valid != 'true'
+        working-directory: terraform/envs/prod
+        run: |
+          terraform plan -input=false -out=tfplan-fresh
+          terraform apply -input=false -auto-approve tfplan-fresh
       
       - name: Get Terraform Outputs
         id: outputs
