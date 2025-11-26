@@ -108,7 +108,7 @@ resource "aws_iam_role" "deploy_role" {
   }
 }
 
-# Policy for Deploy Role - ECR, ECS, and Terraform read permissions
+# Policy for Deploy Role - ECR, ECS, Terraform state, and resource read permissions
 resource "aws_iam_role_policy" "deploy_policy" {
   name = "deploy-access"
   role = aws_iam_role.deploy_role.id
@@ -128,9 +128,13 @@ resource "aws_iam_role_policy" "deploy_policy" {
           "ecr:InitiateLayerUpload",
           "ecr:UploadLayerPart",
           "ecr:CompleteLayerUpload",
+          "ecr:DescribeRepositories",
+          "ecr:DescribeImages",
           # ECS permissions
           "ecs:UpdateService",
           "ecs:DescribeServices",
+          "ecs:DescribeClusters",
+          "ecs:ListServices",
           "ecs:DescribeTaskDefinition",
           "ecs:RegisterTaskDefinition",
           "ecs:ListTasks",
@@ -140,11 +144,22 @@ resource "aws_iam_role_policy" "deploy_policy" {
           # Secrets Manager (for reading secrets)
           "secretsmanager:GetSecretValue",
           "secretsmanager:DescribeSecret",
+          "secretsmanager:GetResourcePolicy",
           # CloudWatch logs
           "logs:CreateLogStream",
           "logs:PutLogEvents",
           "logs:DescribeLogGroups",
-          "logs:DescribeLogStreams"
+          "logs:DescribeLogStreams",
+          "logs:ListTagsForResource",
+          # IAM (for Terraform state refresh)
+          "iam:GetRole",
+          "iam:ListRolePolicies",
+          "iam:ListAttachedRolePolicies",
+          "iam:ListOpenIDConnectProviders",
+          # EC2 (for Terraform state refresh - VPC, subnets, security groups)
+          "ec2:DescribeVpcs",
+          "ec2:DescribeSubnets",
+          "ec2:DescribeSecurityGroups"
         ]
         Resource = "*"
       },
