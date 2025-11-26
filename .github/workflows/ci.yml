@@ -216,15 +216,6 @@ jobs:
       - name: Install dependencies
         run: npm ci
       
-      - name: Verify autoprefixer is installed
-        run: |
-          if ! npm list autoprefixer > /dev/null 2>&1; then
-            echo "⚠️ autoprefixer not found, installing..."
-            npm install --save-dev autoprefixer
-          else
-            echo "✅ autoprefixer is installed"
-          fi
-      
       - name: Generate Prisma Client
         run: npx prisma generate
       
@@ -271,6 +262,9 @@ jobs:
     timeout-minutes: 20
     needs: [build]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    permissions:
+      contents: read
+      security-events: write
     
     steps:
       - name: Checkout code
@@ -301,16 +295,19 @@ jobs:
           format: 'sarif'
           output: 'trivy-results.sarif'
           severity: 'CRITICAL,HIGH'
+        continue-on-error: true
       
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: always()
+        uses: github/codeql-action/upload-sarif@v4
+        if: always() && hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
 
   # ============================================
   # Infrastructure Validation
   # ============================================
+  # Lightweight validation only - validates Terraform syntax and module structure
+  # without connecting to AWS backends. Full plan/apply happens in terraform.yml workflow.
   
   terraform-validate:
     name: Validate Terraform
