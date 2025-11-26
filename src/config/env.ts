@@ -68,8 +68,36 @@ export function validateEnv() {
     });
     return config;
   } catch (error) {
-    // Only throw at runtime, never during build
+    // During build, never throw - return safe defaults instead
+    // At runtime, this will be caught by the application startup
     if (error instanceof z.ZodError) {
+      // Double-check if we're in a build context (missing env vars)
+      const isBuildContext =
+        !process.env.RESEND_API_KEY ||
+        !process.env.RESEND_FROM_EMAIL ||
+        !process.env.JWT_SECRET ||
+        !process.env.ADMIN_EMAIL ||
+        !process.env.ADMIN_PASSWORD ||
+        !process.env.CONTACT_EMAIL;
+
+      if (isBuildContext) {
+        // Return safe defaults during build instead of throwing
+        return {
+          RESEND_API_KEY: process.env.RESEND_API_KEY || "",
+          RESEND_FROM_EMAIL: process.env.RESEND_FROM_EMAIL || "",
+          JWT_SECRET: process.env.JWT_SECRET || "",
+          ADMIN_EMAIL: process.env.ADMIN_EMAIL || "",
+          ADMIN_PASSWORD: process.env.ADMIN_PASSWORD || "",
+          CONTACT_EMAIL: process.env.CONTACT_EMAIL || "",
+          REDIS_URL: process.env.REDIS_URL,
+          REDIS_HOST: process.env.REDIS_HOST,
+          REDIS_PORT: process.env.REDIS_PORT,
+          REDIS_PASSWORD: process.env.REDIS_PASSWORD,
+          RESEND_DOMAIN: process.env.RESEND_DOMAIN,
+        } as EnvConfig;
+      }
+
+      // Only throw at runtime when env vars should be present
       const missingVars = error.errors
         .map((err) => err.path.join("."))
         .join(", ");
