@@ -253,13 +253,13 @@ jobs:
           else
             echo "❌ postcss.config.js NOT found! Creating it..."
             cat > postcss.config.js << 'EOF'
-module.exports = {
-  plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
-  },
-};
-EOF
+            module.exports = {
+              plugins: {
+                tailwindcss: {},
+                autoprefixer: {},
+              },
+            };
+            EOF
             cat postcss.config.js
           fi
       
