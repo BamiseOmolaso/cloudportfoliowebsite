@@ -30,7 +30,6 @@ PRE_DEPLOYMENT_CHECKLIST.md
 *.md
 jest.config.js
 jest.setup.js
-tsconfig.json
 .eslintrc.json
 .prettierrc
 .github
