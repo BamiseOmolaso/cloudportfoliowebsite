@@ -286,7 +286,7 @@ jobs:
           # Extract repository name from full URL
           REPO_NAME=$(echo "$ECR_REPO" | sed 's|.*/||')
           
-          # Check if image exists
+          # Check if image exists with the specific tag
           if aws ecr describe-images \
             --repository-name "$REPO_NAME" \
             --image-ids imageTag="$IMAGE_TAG" \
@@ -294,10 +294,36 @@ jobs:
             echo "✅ Image $ECR_REPO:$IMAGE_TAG exists in ECR"
           else
             echo "❌ Image $ECR_REPO:$IMAGE_TAG NOT FOUND in ECR!"
-            echo "📋 Available images in repository:"
-            aws ecr list-images --repository-name "$REPO_NAME" --region ${{ env.AWS_REGION }} || true
             echo ""
-            echo "💡 The build-and-push job may have failed. Check the build-and-push job logs."
+            echo "📋 Checking available images and tags in repository:"
+            # Get all images with their tags
+            IMAGES=$(aws ecr describe-images \
+              --repository-name "$REPO_NAME" \
+              --region ${{ env.AWS_REGION }} \
+              --query 'imageDetails[*].[imageTags, imagePushedAt]' \
+              --output json 2>/dev/null || echo "[]")
+            
+            if [ "$IMAGES" != "[]" ] && [ -n "$IMAGES" ]; then
+              echo "$IMAGES" | jq -r '.[] | "Tags: \(.[0] // ["<untagged>"]) | Pushed: \(.[1])"' || echo "$IMAGES"
+            else
+              echo "No images found or could not list images"
+            fi
+            echo ""
+            echo "💡 Possible solutions:"
+            echo "   1. Check if build-and-push job ran and succeeded"
+            echo "   2. Use latest image if available:"
+            echo "      aws ecs update-service --cluster <cluster> --service <service> --force-new-deployment"
+            echo "   3. Check build-and-push job logs for actual tags pushed"
+            echo ""
+            echo "🔍 Build-and-push job status: ${{ needs.build-and-push.result }}"
+            if [ "${{ needs.build-and-push.result }}" != "success" ]; then
+              echo "❌ build-and-push job did not succeed!"
+              echo "   Please check the build-and-push job logs and fix any errors"
+            else
+              echo "✅ build-and-push job succeeded, but image tag mismatch"
+              echo "   Expected tag: $IMAGE_TAG"
+              echo "   This may be a timing issue - try re-running the workflow"
+            fi
             exit 1
           fi
       
@@ -416,7 +442,7 @@ jobs:
           # Extract repository name from full URL
           REPO_NAME=$(echo "$ECR_REPO" | sed 's|.*/||')
           
-          # Check if image exists
+          # Check if image exists with the specific tag
           if aws ecr describe-images \
             --repository-name "$REPO_NAME" \
             --image-ids imageTag="$IMAGE_TAG" \
@@ -424,10 +450,36 @@ jobs:
             echo "✅ Image $ECR_REPO:$IMAGE_TAG exists in ECR"
           else
             echo "❌ Image $ECR_REPO:$IMAGE_TAG NOT FOUND in ECR!"
-            echo "📋 Available images in repository:"
-            aws ecr list-images --repository-name "$REPO_NAME" --region ${{ env.AWS_REGION }} || true
             echo ""
-            echo "💡 The build-and-push job may have failed. Check the build-and-push job logs."
+            echo "📋 Checking available images and tags in repository:"
+            # Get all images with their tags
+            IMAGES=$(aws ecr describe-images \
+              --repository-name "$REPO_NAME" \
+              --region ${{ env.AWS_REGION }} \
+              --query 'imageDetails[*].[imageTags, imagePushedAt]' \
+              --output json 2>/dev/null || echo "[]")
+            
+            if [ "$IMAGES" != "[]" ] && [ -n "$IMAGES" ]; then
+              echo "$IMAGES" | jq -r '.[] | "Tags: \(.[0] // ["<untagged>"]) | Pushed: \(.[1])"' || echo "$IMAGES"
+            else
+              echo "No images found or could not list images"
+            fi
+            echo ""
+            echo "💡 Possible solutions:"
+            echo "   1. Check if build-and-push job ran and succeeded"
+            echo "   2. Use latest image if available:"
+            echo "      aws ecs update-service --cluster <cluster> --service <service> --force-new-deployment"
+            echo "   3. Check build-and-push job logs for actual tags pushed"
+            echo ""
+            echo "🔍 Build-and-push job status: ${{ needs.build-and-push.result }}"
+            if [ "${{ needs.build-and-push.result }}" != "success" ]; then
+              echo "❌ build-and-push job did not succeed!"
+              echo "   Please check the build-and-push job logs and fix any errors"
+            else
+              echo "✅ build-and-push job succeeded, but image tag mismatch"
+              echo "   Expected tag: $IMAGE_TAG"
+              echo "   This may be a timing issue - try re-running the workflow"
+            fi
             exit 1
           fi
       
@@ -546,7 +598,7 @@ jobs:
           # Extract repository name from full URL
           REPO_NAME=$(echo "$ECR_REPO" | sed 's|.*/||')
           
-          # Check if image exists
+          # Check if image exists with the specific tag
           if aws ecr describe-images \
             --repository-name "$REPO_NAME" \
             --image-ids imageTag="$IMAGE_TAG" \
@@ -554,10 +606,36 @@ jobs:
             echo "✅ Image $ECR_REPO:$IMAGE_TAG exists in ECR"
           else
             echo "❌ Image $ECR_REPO:$IMAGE_TAG NOT FOUND in ECR!"
-            echo "📋 Available images in repository:"
-            aws ecr list-images --repository-name "$REPO_NAME" --region ${{ env.AWS_REGION }} || true
             echo ""
-            echo "💡 The build-and-push job may have failed. Check the build-and-push job logs."
+            echo "📋 Checking available images and tags in repository:"
+            # Get all images with their tags
+            IMAGES=$(aws ecr describe-images \
+              --repository-name "$REPO_NAME" \
+              --region ${{ env.AWS_REGION }} \
+              --query 'imageDetails[*].[imageTags, imagePushedAt]' \
+              --output json 2>/dev/null || echo "[]")
+            
+            if [ "$IMAGES" != "[]" ] && [ -n "$IMAGES" ]; then
+              echo "$IMAGES" | jq -r '.[] | "Tags: \(.[0] // ["<untagged>"]) | Pushed: \(.[1])"' || echo "$IMAGES"
+            else
+              echo "No images found or could not list images"
+            fi
+            echo ""
+            echo "💡 Possible solutions:"
+            echo "   1. Check if build-and-push job ran and succeeded"
+            echo "   2. Use latest image if available:"
+            echo "      aws ecs update-service --cluster <cluster> --service <service> --force-new-deployment"
+            echo "   3. Check build-and-push job logs for actual tags pushed"
+            echo ""
+            echo "🔍 Build-and-push job status: ${{ needs.build-and-push.result }}"
+            if [ "${{ needs.build-and-push.result }}" != "success" ]; then
+              echo "❌ build-and-push job did not succeed!"
+              echo "   Please check the build-and-push job logs and fix any errors"
+            else
+              echo "✅ build-and-push job succeeded, but image tag mismatch"
+              echo "   Expected tag: $IMAGE_TAG"
+              echo "   This may be a timing issue - try re-running the workflow"
+            fi
             exit 1
           fi
       
