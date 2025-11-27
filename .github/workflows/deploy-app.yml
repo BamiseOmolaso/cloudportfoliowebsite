@@ -170,10 +170,7 @@ jobs:
           images: ${{ steps.ecr.outputs.ECR_URL }}
           tags: |
             type=raw,value=${{ steps.image-tag.outputs.IMAGE_TAG }}
-            type=raw,value=${{ steps.env.outputs.ENV_NAME }}-latest
-            type=sha,prefix=${{ steps.env.outputs.ENV_NAME }}-
-          flavor: |
-            suffix=-${{ steps.env.outputs.ENV_NAME }}
+            type=raw,value=latest
         if: steps.ecr.outputs.ECR_URL != ''
       
       - name: Build and push Docker image
