@@ -1,11 +1,11 @@
 output "alb_dns_name" {
-  description = "DNS name of the Application Load Balancer"
-  value       = aws_lb.main.dns_name
+  description = "DNS name of the Application Load Balancer (empty when paused)"
+  value       = var.paused_mode ? "N/A - Infrastructure is paused" : aws_lb.main[0].dns_name
 }
 
 output "alb_zone_id" {
-  description = "Zone ID of the ALB for Route53"
-  value       = aws_lb.main.zone_id
+  description = "Zone ID of the ALB for Route53 (empty when paused)"
+  value       = var.paused_mode ? "N/A - Infrastructure is paused" : aws_lb.main[0].zone_id
 }
 
 output "ecr_repository_url" {
@@ -54,12 +54,17 @@ output "vpc_id" {
 }
 
 output "target_group_arn" {
-  description = "Target group ARN"
-  value       = aws_lb_target_group.app.arn
+  description = "Target group ARN (empty when paused)"
+  value       = var.paused_mode ? "N/A - Infrastructure is paused" : aws_lb_target_group.app[0].arn
 }
 
 output "application_url" {
-  description = "Application URL"
-  value       = "http://${aws_lb.main.dns_name}"
+  description = "Application URL (empty when paused)"
+  value       = var.paused_mode ? "N/A - Infrastructure is paused. Run 'terraform apply -var=\"paused_mode=false\"' to resume" : "http://${aws_lb.main[0].dns_name}"
+}
+
+output "infrastructure_status" {
+  description = "Current infrastructure status"
+  value       = var.paused_mode ? "PAUSED - All expensive resources paused. Cost: ~$1-2/month" : "ACTIVE - All resources running"
 }
 

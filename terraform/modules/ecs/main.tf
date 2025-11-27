@@ -112,7 +112,7 @@ resource "aws_ecs_task_definition" "app" {
   cpu                      = "512"
   memory                   = "1024"
   execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
-  task_role_arn           = aws_iam_role.ecs_task_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
 
   container_definitions = jsonencode([
     {
@@ -210,37 +210,46 @@ resource "aws_ecs_service" "app" {
   name            = "${var.environment}-portfolio-service"
   cluster         = aws_ecs_cluster.main.id
   task_definition = aws_ecs_task_definition.app.arn
-  desired_count   = var.desired_count
+  desired_count   = var.paused_mode ? 0 : var.desired_count
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = var.subnet_ids
+    # Use public subnets when paused (for direct access), private when active
+    subnets          = var.paused_mode ? var.public_subnet_ids : var.subnet_ids
     security_groups  = [var.security_group_id]
     assign_public_ip = true
   }
 
-  load_balancer {
-    target_group_arn = var.target_group_arn
-    container_name   = "portfolio-app"
-    container_port   = 3000
+  # Only attach to load balancer when not paused
+  dynamic "load_balancer" {
+    for_each = var.paused_mode || var.target_group_arn == "" ? [] : [1]
+    content {
+      target_group_arn = var.target_group_arn
+      container_name   = "portfolio-app"
+      container_port   = 3000
+    }
   }
 
-  health_check_grace_period_seconds = 60
+  # health_check_grace_period_seconds is only valid when load balancer is configured
+  # When paused_mode=true, there's no load balancer, so we can't set this
+  health_check_grace_period_seconds = (var.paused_mode || var.target_group_arn == "") ? null : 60
 
   enable_execute_command = true
 
   deployment_maximum_percent         = 200
   deployment_minimum_healthy_percent = 100
 
-  depends_on = [var.alb_listener_arn]
+  # Note: depends_on removed - var.alb_listener_arn is a string (ARN), not a resource reference
+  # The load_balancer block above already handles the conditional attachment
 
   tags = {
     Environment = var.environment
   }
 }
 
-# Auto Scaling Target
+# Auto Scaling Target - Only create when not paused
 resource "aws_appautoscaling_target" "ecs" {
+  count              = var.paused_mode ? 0 : 1
   max_capacity       = 4
   min_capacity       = 1
   resource_id        = "service/${aws_ecs_cluster.main.name}/${aws_ecs_service.app.name}"
@@ -248,13 +257,14 @@ resource "aws_appautoscaling_target" "ecs" {
   service_namespace  = "ecs"
 }
 
-# Auto Scaling Policy - CPU
+# Auto Scaling Policy - CPU - Only create when not paused
 resource "aws_appautoscaling_policy" "ecs_cpu" {
+  count              = var.paused_mode ? 0 : 1
   name               = "${var.environment}-ecs-cpu-scaling"
   policy_type        = "TargetTrackingScaling"
-  resource_id        = aws_appautoscaling_target.ecs.resource_id
-  scalable_dimension = aws_appautoscaling_target.ecs.scalable_dimension
-  service_namespace  = aws_appautoscaling_target.ecs.service_namespace
+  resource_id        = aws_appautoscaling_target.ecs[0].resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs[0].scalable_dimension
+  service_namespace  = aws_appautoscaling_target.ecs[0].service_namespace
 
   target_tracking_scaling_policy_configuration {
     predefined_metric_specification {
@@ -266,13 +276,14 @@ resource "aws_appautoscaling_policy" "ecs_cpu" {
   }
 }
 
-# Auto Scaling Policy - Memory
+# Auto Scaling Policy - Memory - Only create when not paused
 resource "aws_appautoscaling_policy" "ecs_memory" {
+  count              = var.paused_mode ? 0 : 1
   name               = "${var.environment}-ecs-memory-scaling"
   policy_type        = "TargetTrackingScaling"
-  resource_id        = aws_appautoscaling_target.ecs.resource_id
-  scalable_dimension = aws_appautoscaling_target.ecs.scalable_dimension
-  service_namespace  = aws_appautoscaling_target.ecs.service_namespace
+  resource_id        = aws_appautoscaling_target.ecs[0].resource_id
+  scalable_dimension = aws_appautoscaling_target.ecs[0].scalable_dimension
+  service_namespace  = aws_appautoscaling_target.ecs[0].service_namespace
 
   target_tracking_scaling_policy_configuration {
     predefined_metric_specification {

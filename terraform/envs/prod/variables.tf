@@ -60,3 +60,15 @@ variable "image_tag" {
   default     = "latest"
 }
 
+variable "paused_mode" {
+  description = "When true, pauses expensive resources (ALB, scales ECS to 0). RDS must be stopped separately via AWS CLI."
+  type        = bool
+  default     = false
+}
+
+variable "enable_alb_deletion_protection" {
+  description = "Enable deletion protection on ALB. When paused_mode=true, this is automatically disabled to allow ALB destruction."
+  type        = bool
+  default     = true # Enabled by default for production
+}
+

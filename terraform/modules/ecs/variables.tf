@@ -54,3 +54,15 @@ variable "desired_count" {
   type        = number
   default     = 2
 }
+
+variable "public_subnet_ids" {
+  description = "Public subnet IDs for ECS tasks (used when paused for direct access)"
+  type        = list(string)
+  default     = []
+}
+
+variable "paused_mode" {
+  description = "When true, scale to 0 and skip ALB attachment"
+  type        = bool
+  default     = false
+}

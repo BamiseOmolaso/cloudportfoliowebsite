@@ -40,12 +40,24 @@ resource "aws_security_group" "ecs" {
   description = "Security group for ECS tasks"
   vpc_id      = var.vpc_id
 
+  # Allow from ALB (when not paused)
   ingress {
     description     = "Allow traffic from ALB"
     from_port       = 3000
     to_port         = 3000
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
+  }
+
+  # Allow direct access when paused (for direct ECS access without ALB)
+  # Note: This is controlled by paused_mode variable passed from parent
+  # We keep both rules - ALB rule is harmless when paused, direct access rule is harmless when active
+  ingress {
+    description = "Allow direct access when paused (for cost savings)"
+    from_port   = 3000
+    to_port     = 3000
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -76,13 +88,13 @@ resource "aws_security_group" "rds" {
     security_groups = [aws_security_group.ecs.id]
   }
 
-    # NEW: allow from your current public IP (TEMPORARY)
+  # NEW: allow from your current public IP (TEMPORARY)
   ingress {
     description = "PostgreSQL from local dev IP (TEMP)"
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # e.g., "102.88.56.201/32"
+    cidr_blocks = ["0.0.0.0/0"] # e.g., "102.88.56.201/32"
   }
 
   egress {

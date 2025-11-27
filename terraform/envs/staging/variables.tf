@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "vpc_cidr" {
   description = "VPC CIDR block"
   type        = string
-  default     = "10.0.2.0/24"  # Different CIDR per environment
+  default     = "10.0.2.0/24" # Different CIDR per environment
 }
 
 variable "availability_zones" {
@@ -58,5 +58,11 @@ variable "image_tag" {
   description = "Docker image tag to deploy"
   type        = string
   default     = "latest"
+}
+
+variable "paused_mode" {
+  description = "When true, pauses expensive resources (ALB, scales ECS to 0). RDS must be stopped separately via AWS CLI."
+  type        = bool
+  default     = false
 }
 
