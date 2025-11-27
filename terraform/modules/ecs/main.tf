@@ -141,7 +141,7 @@ resource "aws_ecs_task_definition" "app" {
       secrets = [
         {
           name      = "DATABASE_URL"
-          valueFrom = var.db_secret_arn
+          valueFrom = "${var.db_secret_arn}:url::"
         },
         {
           name      = "RESEND_API_KEY"
