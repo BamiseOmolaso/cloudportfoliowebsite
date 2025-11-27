@@ -44,7 +44,7 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Additional policy for Secrets Manager
+# Additional policy for Secrets Manager - Full access to all secrets
 resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
   name = "${var.environment}-ecs-secrets-policy"
   role = aws_iam_role.ecs_task_execution_role.id
@@ -55,11 +55,10 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
       {
         Effect = "Allow"
         Action = [
-          "secretsmanager:GetSecretValue"
+          "secretsmanager:GetSecretValue",
+          "secretsmanager:DescribeSecret"
         ]
-        Resource = [
-          "arn:aws:secretsmanager:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:secret:omolaso-portfolio/*"
-        ]
+        Resource = "*"
       }
     ]
   })
