@@ -276,6 +276,31 @@ jobs:
           echo "cluster_name=$CLUSTER" >> $GITHUB_OUTPUT
           echo "service_name=$SERVICE" >> $GITHUB_OUTPUT
       
+      - name: Verify Docker image exists in ECR
+        run: |
+          ECR_REPO=${{ needs.build-and-push.outputs.ecr_repository }}
+          IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}
+          
+          echo "🔍 Verifying image exists: $ECR_REPO:$IMAGE_TAG"
+          
+          # Extract repository name from full URL
+          REPO_NAME=$(echo "$ECR_REPO" | sed 's|.*/||')
+          
+          # Check if image exists
+          if aws ecr describe-images \
+            --repository-name "$REPO_NAME" \
+            --image-ids imageTag="$IMAGE_TAG" \
+            --region ${{ env.AWS_REGION }} 2>/dev/null; then
+            echo "✅ Image $ECR_REPO:$IMAGE_TAG exists in ECR"
+          else
+            echo "❌ Image $ECR_REPO:$IMAGE_TAG NOT FOUND in ECR!"
+            echo "📋 Available images in repository:"
+            aws ecr list-images --repository-name "$REPO_NAME" --region ${{ env.AWS_REGION }} || true
+            echo ""
+            echo "💡 The build-and-push job may have failed. Check the build-and-push job logs."
+            exit 1
+          fi
+      
       - name: Update ECS Service with new image
         run: |
           cd terraform/envs/dev
@@ -381,6 +406,31 @@ jobs:
           echo "cluster_name=$CLUSTER" >> $GITHUB_OUTPUT
           echo "service_name=$SERVICE" >> $GITHUB_OUTPUT
       
+      - name: Verify Docker image exists in ECR
+        run: |
+          ECR_REPO=${{ needs.build-and-push.outputs.ecr_repository }}
+          IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}
+          
+          echo "🔍 Verifying image exists: $ECR_REPO:$IMAGE_TAG"
+          
+          # Extract repository name from full URL
+          REPO_NAME=$(echo "$ECR_REPO" | sed 's|.*/||')
+          
+          # Check if image exists
+          if aws ecr describe-images \
+            --repository-name "$REPO_NAME" \
+            --image-ids imageTag="$IMAGE_TAG" \
+            --region ${{ env.AWS_REGION }} 2>/dev/null; then
+            echo "✅ Image $ECR_REPO:$IMAGE_TAG exists in ECR"
+          else
+            echo "❌ Image $ECR_REPO:$IMAGE_TAG NOT FOUND in ECR!"
+            echo "📋 Available images in repository:"
+            aws ecr list-images --repository-name "$REPO_NAME" --region ${{ env.AWS_REGION }} || true
+            echo ""
+            echo "💡 The build-and-push job may have failed. Check the build-and-push job logs."
+            exit 1
+          fi
+      
       - name: Update ECS Service with new image
         run: |
           cd terraform/envs/staging
@@ -485,6 +535,31 @@ jobs:
           SERVICE=$(terraform output -raw ecs_service_name)
           echo "cluster_name=$CLUSTER" >> $GITHUB_OUTPUT
           echo "service_name=$SERVICE" >> $GITHUB_OUTPUT
+      
+      - name: Verify Docker image exists in ECR
+        run: |
+          ECR_REPO=${{ needs.build-and-push.outputs.ecr_repository }}
+          IMAGE_TAG=${{ needs.build-and-push.outputs.image_tag }}
+          
+          echo "🔍 Verifying image exists: $ECR_REPO:$IMAGE_TAG"
+          
+          # Extract repository name from full URL
+          REPO_NAME=$(echo "$ECR_REPO" | sed 's|.*/||')
+          
+          # Check if image exists
+          if aws ecr describe-images \
+            --repository-name "$REPO_NAME" \
+            --image-ids imageTag="$IMAGE_TAG" \
+            --region ${{ env.AWS_REGION }} 2>/dev/null; then
+            echo "✅ Image $ECR_REPO:$IMAGE_TAG exists in ECR"
+          else
+            echo "❌ Image $ECR_REPO:$IMAGE_TAG NOT FOUND in ECR!"
+            echo "📋 Available images in repository:"
+            aws ecr list-images --repository-name "$REPO_NAME" --region ${{ env.AWS_REGION }} || true
+            echo ""
+            echo "💡 The build-and-push job may have failed. Check the build-and-push job logs."
+            exit 1
+          fi
       
       - name: Update ECS Service with new image
         run: |
