@@ -9,13 +9,13 @@ Quick reference to all documentation in this project.
 
 ## 🏗️ Infrastructure & Deployment
 
-- **`DEPLOYMENT_GUIDE.md`** - Complete deployment guide with current status and todos
-- **`terraform/README.md`** - Terraform infrastructure documentation
+- **`DEPLOYMENT_GUIDE.md`** - Complete deployment guide with pause/resume functionality
+- **`terraform/README.md`** - Terraform infrastructure documentation with pause/resume
 - **`terraform/MIGRATION_GUIDE.md`** - Guide for migrating Terraform state
 
 ## 🔄 CI/CD & DevOps
 
-- **`CI_CD_GUIDE.md`** - Complete CI/CD pipeline guide and DevOps best practices
+- **`CI_CD_GUIDE.md`** - Complete CI/CD pipeline guide, workflow architecture, and DevOps best practices
 
 ## 🔐 Setup & Configuration
 

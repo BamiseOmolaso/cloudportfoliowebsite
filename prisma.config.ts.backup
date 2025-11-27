@@ -1,4 +1,0 @@
-// prisma.config.ts
-// Empty config - let Prisma use environment variables from .env.local
-// Prisma will read DATABASE_URL from environment variables automatically
-export default {};

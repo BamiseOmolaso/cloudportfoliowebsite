@@ -1,7 +1,7 @@
 name: Terraform Infrastructure
 
 on:
-  # Run after CI passes (recommended - ensures code is validated first)
+  # Run after CI passes (required - ensures code is validated first)
   workflow_run:
     workflows: ["CI Pipeline"]
     types:
@@ -10,15 +10,7 @@ on:
       - develop
       - staging
       - main
-  # Also allow direct push (for flexibility)
-  push:
-    branches:
-      - develop
-      - staging
-      - main
-    paths:
-      - 'terraform/**'
-      - '.github/workflows/terraform.yml'
+  # Allow PRs to trigger plan (for review, no apply)
   pull_request:
     branches:
       - develop
@@ -27,6 +19,7 @@ on:
     paths:
       - 'terraform/**'
       - '.github/workflows/terraform.yml'
+  # Manual trigger (for emergency infrastructure changes or testing)
   workflow_dispatch:
     inputs:
       environment:
@@ -50,12 +43,13 @@ jobs:
   terraform-plan:
     name: Terraform Plan - ${{ github.ref_name }}
     runs-on: ubuntu-latest
-    # Only run if CI passed (when triggered by workflow_run)
+    # Only run if CI passed (when triggered by workflow_run), PR (for plan review), or manual dispatch
     if: |
       github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'push' ||
       github.event_name == 'pull_request' ||
-      (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success')
+      (github.event_name == 'workflow_run' && 
+       github.event.workflow_run.conclusion == 'success' &&
+       github.event.workflow_run.event == 'push')
     outputs:
       run_id: ${{ github.run_id }}
       plan_success: ${{ steps.plan.outputs.plan_success }}
@@ -254,7 +248,7 @@ jobs:
     needs: [terraform-plan]
     if: |
       github.ref_name == 'develop' &&
-      github.event_name == 'push' &&
+      (github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch') &&
       needs.terraform-plan.outputs.plan_exit_code == '0'
     environment:
       name: development
@@ -391,7 +385,7 @@ jobs:
     needs: [terraform-plan]
     if: |
       (github.ref_name == 'staging' || github.event.inputs.environment == 'staging') &&
-      github.event_name == 'push' &&
+      (github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch') &&
       needs.terraform-plan.outputs.plan_exit_code == '0'
     environment:
       name: staging
@@ -525,7 +519,7 @@ jobs:
     needs: [terraform-plan]
     if: |
       (github.ref_name == 'main' || github.event.inputs.environment == 'prod') &&
-      github.event_name == 'push' &&
+      (github.event_name == 'workflow_run' || github.event_name == 'workflow_dispatch') &&
       needs.terraform-plan.outputs.plan_exit_code == '0'
     environment:
       name: production
