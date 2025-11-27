@@ -108,7 +108,7 @@ resource "aws_iam_role" "deploy_role" {
   }
 }
 
-# Policy for Deploy Role - ECR, ECS, Terraform state, and resource read permissions
+# Policy for Deploy Role - Full access to services we use, scoped to our resources
 resource "aws_iam_role_policy" "deploy_policy" {
   name = "deploy-access"
   role = aws_iam_role.deploy_role.id
@@ -119,49 +119,29 @@ resource "aws_iam_role_policy" "deploy_policy" {
       {
         Effect = "Allow"
         Action = [
-          # ECR permissions
-          "ecr:GetAuthorizationToken",
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage",
-          "ecr:PutImage",
-          "ecr:InitiateLayerUpload",
-          "ecr:UploadLayerPart",
-          "ecr:CompleteLayerUpload",
-          "ecr:DescribeRepositories",
-          "ecr:DescribeImages",
-          "ecr:ListTagsForResource",
-          "ecr:GetLifecyclePolicy",
-          "ecr:GetRepositoryPolicy",
-          # ECS permissions
-          "ecs:UpdateService",
-          "ecs:DescribeServices",
-          "ecs:DescribeClusters",
-          "ecs:ListServices",
-          "ecs:DescribeTaskDefinition",
-          "ecs:RegisterTaskDefinition",
-          "ecs:DescribeCapacityProviders",
-          "ecs:ListCapacityProviders",
-          "ecs:ListTasks",
-          "ecs:DescribeTasks",
-          "ecs:RunTask",
-          "ecs:StopTask",
-          "ecs:DeregisterTaskDefinition",
-          # Secrets Manager (for reading secrets)
-          "secretsmanager:GetSecretValue",
-          "secretsmanager:DescribeSecret",
-          "secretsmanager:GetResourcePolicy",
-          # CloudWatch logs
-          "logs:CreateLogStream",
-          "logs:PutLogEvents",
-          "logs:DescribeLogGroups",
-          "logs:DescribeLogStreams",
-          "logs:ListTagsForResource",
-          # CloudWatch (for monitoring and metrics)
-          "cloudwatch:GetMetricStatistics",
-          "cloudwatch:DescribeAlarms",
-          "cloudwatch:ListMetrics",
-          # IAM (for Terraform state refresh)
+          # ECR - Full access (for image push/pull)
+          "ecr:*",
+          # ECS - Full access (for task definitions, services, clusters)
+          "ecs:*",
+          # Elastic Load Balancing - Full access (for ALB, target groups, listeners)
+          "elasticloadbalancing:*",
+          # RDS - Full access (for database management)
+          "rds:*",
+          # Application Auto Scaling - Full access (for ECS scaling)
+          "application-autoscaling:*",
+          # Secrets Manager - Full access (for secrets)
+          "secretsmanager:*",
+          # CloudWatch Logs - Full access (for logging)
+          "logs:*",
+          # CloudWatch - Full access (for metrics and alarms)
+          "cloudwatch:*"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          # IAM - Read and tag operations only (for roles, policies, OIDC)
           "iam:GetRole",
           "iam:ListRolePolicies",
           "iam:ListAttachedRolePolicies",
@@ -171,54 +151,21 @@ resource "aws_iam_role_policy" "deploy_policy" {
           "iam:GetPolicy",
           "iam:GetPolicyVersion",
           "iam:ListPolicyVersions",
-          # EC2 (for Terraform state refresh - VPC, subnets, security groups, networking)
-          "ec2:DescribeVpcs",
-          "ec2:DescribeSubnets",
-          "ec2:DescribeSecurityGroups",
-          "ec2:DescribeVpcAttribute",
-          "ec2:DescribeInternetGateways",
-          "ec2:DescribeRouteTables",
-          "ec2:DescribeAvailabilityZones",
-          "ec2:DescribeAccountAttributes",
-          # Elastic Load Balancing (ALB, Target Groups, Listeners)
-          "elasticloadbalancing:DescribeLoadBalancers",
-          "elasticloadbalancing:DescribeTargetGroups",
-          "elasticloadbalancing:DescribeLoadBalancerAttributes",
-          "elasticloadbalancing:DescribeTargetGroupAttributes",
-          "elasticloadbalancing:DescribeListeners",
-          "elasticloadbalancing:DescribeListenerAttributes",
-          "elasticloadbalancing:DescribeRules",
-          "elasticloadbalancing:DescribeTags",
-          # RDS (for Terraform state refresh)
-          "rds:DescribeDBInstances",
-          "rds:DescribeDBSubnetGroups",
-          "rds:ListTagsForResource",
-          "rds:DescribeDBParameterGroups",
-          # Application Auto Scaling (for ECS service scaling)
-          "application-autoscaling:DescribeScalableTargets",
-          "application-autoscaling:DescribeScalingPolicies",
-          "application-autoscaling:DescribeScalingActivities",
-          "application-autoscaling:ListTagsForResource",
-          # ECS additional permissions
-          "ecs:ListTaskDefinitions",
-          "ecs:ListClusters",
-          # Secrets Manager additional permissions
-          "secretsmanager:ListSecrets",
-          # RDS additional permissions
-          "rds:DescribeDBEngineVersions",
-          # ELB additional permissions
-          "elasticloadbalancing:DescribeAccountLimits",
-          "elasticloadbalancing:DescribeSSLPolicies",
-          # EC2 additional permissions (for networking)
-          "ec2:DescribeNetworkInterfaces",
-          "ec2:DescribeNetworkAcls",
-          "ec2:DescribeRouteTableAssociations",
-          # IAM additional permissions
           "iam:ListRoles",
           "iam:ListPolicies",
-          # S3 additional permissions (for state bucket)
-          "s3:GetBucketLocation",
-          "s3:GetBucketVersioning"
+          "iam:TagRole",
+          "iam:UntagRole",
+          "iam:PassRole"
+        ]
+        Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          # EC2 - Describe operations only (for VPC, subnets, security groups)
+          "ec2:Describe*",
+          "ec2:Get*",
+          "ec2:List*"
         ]
         Resource = "*"
       },
