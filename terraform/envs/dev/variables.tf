@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "vpc_cidr" {
   description = "VPC CIDR block"
   type        = string
-  default     = "10.0.1.0/24"  # Different CIDR per environment
+  default     = "10.0.1.0/24" # Different CIDR per environment
 }
 
 variable "availability_zones" {
@@ -39,7 +39,7 @@ variable "db_password" {
 variable "ecs_desired_count" {
   description = "Desired number of ECS tasks"
   type        = number
-  default     = 1  # Lower for dev
+  default     = 1 # Lower for dev
 }
 
 variable "rds_instance_class" {

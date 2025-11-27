@@ -66,3 +66,9 @@ variable "paused_mode" {
   default     = false
 }
 
+variable "enable_alb_deletion_protection" {
+  description = "Enable deletion protection on ALB. When paused_mode=true, this is automatically disabled to allow ALB destruction."
+  type        = bool
+  default     = true # Enabled by default for production
+}
+

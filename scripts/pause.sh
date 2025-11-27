@@ -43,9 +43,43 @@ fi
 
 echo ""
 echo "🔧 Applying Terraform with paused_mode=true..."
+
+# For production, we need to disable ALB deletion protection first
+# before destroying the ALB. This requires two applies:
+# 1. First: Disable deletion protection (if ALB exists with protection enabled)
+# 2. Second: Destroy ALB by setting paused_mode=true
+
 cd "terraform/envs/$ENV"
 
-# Apply Terraform with paused mode
+if [ "$ENV" = "prod" ]; then
+  echo "⚠️  Production detected - checking ALB deletion protection..."
+  
+  # Check if ALB exists and has deletion protection enabled
+  ALB_NAME="${ENV}-portfolio-alb"
+  ALB_EXISTS=$(aws elbv2 describe-load-balancers \
+    --names "$ALB_NAME" \
+    --region "$REGION" \
+    --query 'LoadBalancers[0].LoadBalancerArn' \
+    --output text 2>/dev/null || echo "")
+  
+  if [ -n "$ALB_EXISTS" ] && [ "$ALB_EXISTS" != "None" ]; then
+    DELETION_PROTECTION=$(aws elbv2 describe-load-balancer-attributes \
+      --load-balancer-arn "$ALB_EXISTS" \
+      --region "$REGION" \
+      --query 'Attributes[?Key==`deletion_protection.enabled`].Value' \
+      --output text 2>/dev/null || echo "false")
+    
+    if [ "$DELETION_PROTECTION" = "true" ]; then
+      echo "🔓 ALB has deletion protection enabled. Disabling it first..."
+      # First apply: Disable deletion protection but keep ALB (paused_mode=false, enable_alb_deletion_protection=false)
+      terraform apply -var="paused_mode=false" -var="enable_alb_deletion_protection=false" -auto-approve
+      echo "⏳ Waiting 10 seconds for AWS to propagate changes..."
+      sleep 10
+    fi
+  fi
+fi
+
+# Apply Terraform with paused mode (this will destroy ALB if deletion protection is disabled)
 terraform apply -var="paused_mode=true" -auto-approve
 
 echo ""

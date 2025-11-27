@@ -21,7 +21,12 @@ fi
 echo "🔧 Applying Terraform with paused_mode=false..."
 cd "terraform/envs/$ENV"
 
-terraform apply -var="paused_mode=false" -auto-approve
+# For production, re-enable ALB deletion protection when resuming
+if [ "$ENV" = "prod" ]; then
+  terraform apply -var="paused_mode=false" -var="enable_alb_deletion_protection=true" -auto-approve
+else
+  terraform apply -var="paused_mode=false" -auto-approve
+fi
 
 echo ""
 echo "📊 Starting RDS database..."

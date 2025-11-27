@@ -66,7 +66,7 @@ output "application_url" {
 # Output instructions for next steps
 output "next_steps" {
   description = "Next steps to complete deployment"
-  value = <<-EOT
+  value       = <<-EOT
     
     ✅ Infrastructure deployed successfully!
     

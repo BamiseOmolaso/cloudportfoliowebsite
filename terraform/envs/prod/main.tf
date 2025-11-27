@@ -65,6 +65,7 @@ module "rds" {
 }
 
 # Application Load Balancer - Only create if not paused
+# Note: When paused_mode=true, deletion protection is disabled to allow destruction
 resource "aws_lb" "main" {
   count              = var.paused_mode ? 0 : 1
   name               = "${local.environment}-portfolio-alb"
@@ -73,7 +74,9 @@ resource "aws_lb" "main" {
   security_groups    = [module.security.alb_security_group_id]
   subnets            = module.networking.public_subnet_ids
 
-  enable_deletion_protection = true # Enabled for prod
+  # Disable deletion protection when paused to allow ALB destruction
+  # For prod: deletion protection is enabled when active, disabled when paused
+  enable_deletion_protection = var.paused_mode ? false : var.enable_alb_deletion_protection
   enable_http2               = true
 
   tags = {
@@ -167,18 +170,18 @@ data "aws_secretsmanager_secret" "app_secrets" {
 module "ecs" {
   source = "../../modules/ecs"
 
-  cluster_name        = "${local.environment}-portfolio-cluster"
-  environment         = local.environment
-  subnet_ids          = module.networking.public_subnet_ids
-  public_subnet_ids   = module.networking.public_subnet_ids
-  security_group_id   = module.security.ecs_security_group_id
-  target_group_arn    = var.paused_mode ? "" : aws_lb_target_group.app[0].arn
-  alb_listener_arn    = var.paused_mode ? "" : aws_lb_listener.http[0].arn
-  ecr_repository_url  = aws_ecr_repository.app.repository_url
-  image_tag           = var.image_tag
-  db_secret_arn       = module.rds.db_secret_arn
-  app_secrets_arn     = data.aws_secretsmanager_secret.app_secrets.arn
-  desired_count       = var.ecs_desired_count
-  paused_mode         = var.paused_mode
+  cluster_name       = "${local.environment}-portfolio-cluster"
+  environment        = local.environment
+  subnet_ids         = module.networking.public_subnet_ids
+  public_subnet_ids  = module.networking.public_subnet_ids
+  security_group_id  = module.security.ecs_security_group_id
+  target_group_arn   = var.paused_mode ? "" : aws_lb_target_group.app[0].arn
+  alb_listener_arn   = var.paused_mode ? "" : aws_lb_listener.http[0].arn
+  ecr_repository_url = aws_ecr_repository.app.repository_url
+  image_tag          = var.image_tag
+  db_secret_arn      = module.rds.db_secret_arn
+  app_secrets_arn    = data.aws_secretsmanager_secret.app_secrets.arn
+  desired_count      = var.ecs_desired_count
+  paused_mode        = var.paused_mode
 }
 

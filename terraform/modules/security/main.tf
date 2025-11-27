@@ -88,13 +88,13 @@ resource "aws_security_group" "rds" {
     security_groups = [aws_security_group.ecs.id]
   }
 
-    # NEW: allow from your current public IP (TEMPORARY)
+  # NEW: allow from your current public IP (TEMPORARY)
   ingress {
     description = "PostgreSQL from local dev IP (TEMP)"
     from_port   = 5432
     to_port     = 5432
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]  # e.g., "102.88.56.201/32"
+    cidr_blocks = ["0.0.0.0/0"] # e.g., "102.88.56.201/32"
   }
 
   egress {
