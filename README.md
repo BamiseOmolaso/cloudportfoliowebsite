@@ -40,16 +40,38 @@ A modern, responsive portfolio website showcasing Dr. Oluwabamise David Omolaso'
 
 ## CI/CD
 
-This project uses GitHub Actions for continuous integration and deployment:
+This project uses GitHub Actions for continuous integration and deployment with a multi-environment setup:
+
+### Workflows
+
+- **`ci.yml`** - Continuous Integration
+  - Runs tests, linting, and type checking
+  - Triggers on all branches
+  - Validates code quality before deployment
+
+- **`terraform.yml`** - Infrastructure Management
+  - Plans and applies Terraform changes
+  - Supports dev/staging/prod environments
+  - Requires approval for staging/production
+  - Auto-deploys to dev on push to `develop`
+
+- **`deploy-app.yml`** - Application Deployment
+  - Builds Docker images and pushes to ECR
+  - Updates ECS services with new images
+  - Supports dev/staging/prod environments
+  - Requires approval for staging/production
+
+### Features
 
 - **Automated Testing**: Runs on every push and pull request
-- **Multi-Node Testing**: Tests on Node.js 18.x and 20.x
+- **Multi-Node Testing**: Tests on Node.js 20.x
 - **Code Quality**: ESLint and TypeScript type checking
-- **Security**: Automated security audits
+- **Security**: Automated security audits with Trivy
 - **Build Verification**: Production build validation
 - **Coverage Reports**: Test coverage tracking
+- **Multi-Environment**: Separate dev, staging, and production deployments
 
-See `.github/workflows/test.yml` for the complete CI/CD configuration.
+See `.github/workflows/` for complete workflow configurations.
 
 ## Getting Started
 
@@ -279,25 +301,88 @@ Default credentials are configured via environment variables:
 
 ### AWS Deployment (Current Setup)
 
-The application is configured for AWS deployment using:
-- **RDS PostgreSQL**: Database
-- **ECS**: Container orchestration
-- **ALB**: Load balancing
-- **Terraform**: Infrastructure as Code
+The application is configured for AWS deployment using **Terraform** with a **multi-environment structure**:
 
-Deployment steps:
+#### Infrastructure Components
+- **RDS PostgreSQL**: Database (separate per environment)
+- **ECS Fargate**: Container orchestration
+- **ALB**: Application Load Balancer
+- **ECR**: Docker image registry
+- **Secrets Manager**: Environment variables and credentials
+- **CloudWatch**: Logging and monitoring
 
-1. Set up AWS credentials
-2. Configure Terraform variables
-3. Run Terraform to provision infrastructure:
-   ```bash
-   cd terraform
-   terraform init
-   terraform plan
-   terraform apply
-   ```
-4. Set environment variables in AWS Secrets Manager
-5. Deploy application to ECS
+#### Environments
+
+- **Development** (`terraform/envs/dev/`)
+  - Auto-deploys on push to `develop` branch
+  - Smaller instance sizes for cost savings
+  - Single ECS task, minimal resources
+
+- **Staging** (`terraform/envs/staging/`)
+  - Deploys on push to `staging` branch (with approval)
+  - Similar to production, smaller scale
+  - Used for pre-production testing
+
+- **Production** (`terraform/envs/prod/`)
+  - Deploys on push to `main` branch (with approval)
+  - Full scale with backups and monitoring
+  - ALB deletion protection enabled
+
+#### Deployment via CI/CD
+
+The recommended way to deploy is through GitHub Actions workflows:
+
+1. **Push to branch** (`develop`, `staging`, or `main`)
+2. **CI Pipeline** runs tests and validation
+3. **Terraform Plan** shows infrastructure changes
+4. **Manual Approval** required for staging/production
+5. **Terraform Apply** updates infrastructure
+6. **Deploy App** workflow builds and deploys Docker image
+7. **ECS Service** updates with new image
+
+#### Manual Deployment
+
+For manual deployment:
+
+```bash
+# Navigate to environment directory
+cd terraform/envs/prod  # or dev/staging
+
+# Initialize Terraform
+terraform init
+
+# Review changes
+terraform plan
+
+# Apply changes
+terraform apply
+```
+
+See `DEPLOYMENT_GUIDE.md` and `terraform/README.md` for detailed instructions.
+
+### Infrastructure Cost Management
+
+To save costs when not actively using the application, use the pause/resume scripts:
+
+```bash
+# Pause infrastructure (stops expensive resources)
+./scripts/pause.sh prod us-east-1
+
+# Resume infrastructure (restarts all resources)
+./scripts/resume.sh prod us-east-1
+```
+
+**When Paused:**
+- ALB, Target Group, Listener are destroyed
+- ECS tasks scaled to 0
+- RDS database stopped
+- Cost: ~$1-2/month (just storage/secrets)
+
+**When Running:**
+- All resources active and accessible
+- Cost: ~$200-250/month (full infrastructure)
+
+See `scripts/pause.sh` and `scripts/resume.sh` for details.
 
 ### Other Deployment Options
 
@@ -316,7 +401,6 @@ npm run dev          # Start development server
 npm run build        # Build for production
 npm start            # Start production server
 npm run predeploy    # Run all pre-deployment checks
-npm run predeploy    # Run all pre-deployment checks
 
 # Code Quality
 npm run lint         # Run ESLint
@@ -332,6 +416,10 @@ npm run test:coverage # Run tests with coverage report
 npx prisma generate  # Generate Prisma Client
 npx prisma migrate   # Run migrations
 npx prisma studio    # Open Prisma Studio
+
+# Infrastructure Management
+./scripts/pause.sh [env] [region]   # Pause infrastructure (save costs)
+./scripts/resume.sh [env] [region]  # Resume infrastructure
 ```
 
 ## Contributing

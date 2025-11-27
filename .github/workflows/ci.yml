@@ -6,10 +6,22 @@ on:
       - main
       - develop
       - 'feature/**'
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/workflows/README.md'
+      - 'CLEANUP_REPORT.md'
+      - 'DOCUMENTATION_*.md'
   pull_request:
     branches:
       - main
       - develop
+    paths-ignore:
+      - '**.md'
+      - 'docs/**'
+      - '.github/workflows/README.md'
+      - 'CLEANUP_REPORT.md'
+      - 'DOCUMENTATION_*.md'
 
 env:
   NODE_VERSION: '20.x'

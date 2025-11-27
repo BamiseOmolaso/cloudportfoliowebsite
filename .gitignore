@@ -53,11 +53,15 @@ terraform/envs/*/terraform.tfvars
 *.tfplan
 crash.log
 terraform.tfstate.backup
+terraform-state-backup-*.tfstate
 
 # Sensitive files
 db-credentials.json
 *.pem
 *.key
+
+# Backup files
+*.backup
 
 /prisma/generated/prisma
 

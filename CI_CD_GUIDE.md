@@ -94,18 +94,96 @@ Create environments in GitHub Settings → Environments:
 - **Triggers:** Every push/PR
 - **Runs:** Lint, test, build, security scan
 - **No deployment**
+- **Duration:** ~5-10 minutes
 
 ### Terraform Workflow (`terraform.yml`)
-- **Triggers:** Changes to `terraform/**` or manual
+- **Triggers:** 
+  - Changes to `terraform/**` files
+  - After CI passes (via `workflow_run`)
+  - Manual dispatch
 - **Runs:** Plan and apply infrastructure changes
 - **Auto-apply:** Dev only
 - **Manual approval:** Staging/Prod (via GitHub Environments)
+- **Duration:** ~3-5 minutes (plan) + ~5-10 minutes (apply)
 
 ### App Deployment (`deploy-app.yml`)
-- **Triggers:** Code changes (non-Terraform files) or manual
+- **Triggers:** 
+  - Code changes (non-Terraform files)
+  - After CI passes (via `workflow_run`)
+  - Manual dispatch
 - **Runs:** Build Docker image, push to ECR, deploy to ECS
 - **Auto-deploy:** Dev
 - **Manual approval:** Staging/Prod
+- **Duration:** ~5-10 minutes (build) + ~3-5 minutes (deploy)
+
+## 🔄 Workflow Execution Order
+
+### How Workflows Coordinate
+
+Workflows coordinate through:
+
+1. **File Path Filters** (Primary Method)
+   - `terraform.yml` runs only when `terraform/**` files change
+   - `deploy-app.yml` runs only when app code changes (excludes `terraform/**`)
+   - `ci.yml` runs on all changes
+   - This prevents conflicts - only relevant workflows run
+
+2. **Shared State** (Indirect Communication)
+   - Terraform State: S3 (`omolaso-terraform-state`)
+   - Docker Images: ECR (shared across environments)
+   - Secrets: AWS Secrets Manager
+
+3. **Branch-Based Triggers**
+   - `develop` → dev environment
+   - `staging` → staging environment
+   - `main` → production environment
+
+### Execution Flow
+
+```
+Developer pushes code
+        │
+        ▼
+┌───────────────────────┐
+│  CI Pipeline (ci.yml) │
+│  - Validates code      │
+│  - Runs on ALL pushes  │
+└───────────┬───────────┘
+            │
+    ┌───────┴───────┐
+    │               │
+    ▼               ▼
+┌──────────┐  ┌──────────┐
+│Terraform │  │App Code  │
+│Files?    │  │Files?    │
+└────┬─────┘  └────┬─────┘
+     │             │
+     ▼             ▼
+┌──────────┐  ┌──────────┐
+│terraform │  │deploy-app│
+│.yml      │  │.yml      │
+└──────────┘  └──────────┘
+```
+
+### Example Scenarios
+
+**Scenario 1: App Code Only**
+- `ci.yml` runs → validates
+- `terraform.yml` skipped (no Terraform changes)
+- `deploy-app.yml` runs → builds and deploys
+- **Total time:** ~15-20 minutes
+
+**Scenario 2: Terraform Only**
+- `ci.yml` runs → validates Terraform syntax
+- `terraform.yml` runs → plans and applies
+- `deploy-app.yml` skipped (no app code changes)
+- **Total time:** ~15-25 minutes (with approval)
+
+**Scenario 3: Both App Code and Terraform**
+- `ci.yml` runs → validates everything
+- `terraform.yml` runs → updates infrastructure
+- `deploy-app.yml` runs → deploys new app version
+- **Total time:** ~25-35 minutes (with approval)
 
 ## ✅ Best Practices Implemented
 

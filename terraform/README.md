@@ -138,6 +138,77 @@ terraform state show <resource>
 terraform force-unlock <LOCK_ID>
 ```
 
+## 💰 Cost Management: Pause/Resume Infrastructure
+
+To save costs when not actively using the application, you can pause and resume infrastructure:
+
+### Pause Infrastructure
+
+```bash
+# Pause production (stops expensive resources)
+./scripts/pause.sh prod us-east-1
+
+# Pause staging
+./scripts/pause.sh staging us-east-1
+
+# Pause development
+./scripts/pause.sh dev us-east-1
+```
+
+**What gets paused:**
+- ✅ ALB, Target Group, Listener (destroyed)
+- ✅ ECS tasks (scaled to 0)
+- ✅ RDS database (stopped via AWS CLI)
+- ✅ Auto-scaling (disabled)
+
+**What stays running (FREE):**
+- VPC, Subnets, Security Groups
+- ECS Cluster (empty)
+- ECR with Docker images
+- Secrets in Secrets Manager
+- S3 Terraform state
+
+**Cost when paused:** ~$1-2/month
+
+### Resume Infrastructure
+
+```bash
+# Resume production
+./scripts/resume.sh prod us-east-1
+
+# Resume staging
+./scripts/resume.sh staging us-east-1
+
+# Resume development
+./scripts/resume.sh dev us-east-1
+```
+
+**What happens:**
+1. RDS database starts (~5 minutes)
+2. ALB, Target Group, Listener are recreated
+3. ECS tasks scale back up
+4. Auto-scaling re-enabled
+
+**Cost when running:** ~$200-250/month
+
+### Paused Mode Variable
+
+The `paused_mode` variable controls resource creation:
+
+```hcl
+# In terraform/envs/prod/main.tf or via CLI
+variable "paused_mode" {
+  description = "When true, pauses expensive resources"
+  type        = bool
+  default     = false
+}
+
+# Apply with paused mode
+terraform apply -var="paused_mode=true"
+```
+
+**Note:** For production, the pause script automatically handles ALB deletion protection before pausing.
+
 ## 🔄 Migration from Old Structure
 
 If you're migrating from the old single-environment structure:

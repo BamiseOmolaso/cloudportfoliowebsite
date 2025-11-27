@@ -2,37 +2,33 @@
 
 ## ✅ Current Status
 
-- ✅ Secrets added to AWS Secrets Manager (production)
-- ✅ ECS task definition updated with all required secrets
-- ✅ Terraform infrastructure configured
-- ✅ CI/CD pipelines ready
-- ✅ Redis Cloud migration complete (production only)
+- ✅ Multi-environment Terraform structure (dev/staging/prod)
+- ✅ Secrets configured in AWS Secrets Manager
+- ✅ ECS task definitions with all required secrets
+- ✅ CI/CD pipelines fully operational
+- ✅ Redis Cloud integration (production only)
+- ✅ Pause/resume infrastructure functionality
+- ✅ GitHub Actions OIDC authentication
+- ✅ Production deployment live and stable
 
-## 📋 Next Steps (In Order)
+## 🚀 Quick Start
 
-### Current Todo List
+### Deploy via CI/CD (Recommended)
 
-1. **Verify GitHub Setup** ⚠️ REQUIRED
-   - [ ] Check GitHub Environments exist (development, staging, production)
-   - [ ] Check GitHub Secrets configured (AWS credentials)
+1. **Push to branch:**
+   - `develop` → Auto-deploys to dev
+   - `staging` → Requires approval, deploys to staging
+   - `main` → Requires approval, deploys to production
 
-2. **Deploy Infrastructure Changes**
-   - [ ] Commit Terraform changes (`terraform/modules/ecs/main.tf`)
-   - [ ] Push to `main` branch
-   - [ ] Approve `terraform.yml` workflow in GitHub Actions
-   - [ ] Verify ECS task definition updated
+2. **Workflows run automatically:**
+   - CI Pipeline validates code
+   - Terraform Plan shows infrastructure changes
+   - Manual approval for staging/production
+   - Application builds and deploys
 
-3. **Deploy Application**
-   - [ ] Commit application changes
-   - [ ] Push to `main` branch
-   - [ ] Approve `deploy-app.yml` workflow in GitHub Actions
-   - [ ] Verify deployment health
+### Manual Deployment
 
-4. **Verify Deployment**
-   - [ ] Check ECS service status
-   - [ ] Check health endpoints (`/api/health`, `/api/health/redis`)
-   - [ ] Check CloudWatch logs
-   - [ ] Verify application is accessible
+See `terraform/README.md` for detailed Terraform deployment instructions.
 
 ## 📋 Detailed Steps
 
@@ -107,15 +103,70 @@ aws logs tail /ecs/prod-portfolio --follow
 
 ## 🔄 CI/CD Workflow Overview
 
+### CI Pipeline (`ci.yml`)
+- **Triggers**: All pushes and pull requests
+- **Runs**: Tests, linting, type checking, security scans
+- **Purpose**: Validate code quality before deployment
+
 ### Terraform Workflow (`terraform.yml`)
-- **Triggers**: Changes to `terraform/**` or manual
-- **On `main`**: Plan → Manual approval → Apply
-- **Updates**: Infrastructure (VPC, RDS, ECS task definition)
+- **Triggers**: Changes to `terraform/**` or manual dispatch
+- **On `develop`**: Plan → Auto-apply to dev
+- **On `staging`/`main`**: Plan → Manual approval → Apply
+- **Updates**: Infrastructure (VPC, RDS, ECS, ALB)
 
 ### App Deployment Workflow (`deploy-app.yml`)
-- **Triggers**: Code changes (non-Terraform) or manual
-- **On `main`**: Build → Push to ECR → Manual approval → Deploy to ECS
-- **Updates**: Application container
+- **Triggers**: Code changes (non-Terraform) or manual dispatch
+- **On `develop`**: Build → Push to ECR → Auto-deploy to dev
+- **On `staging`/`main`**: Build → Push to ECR → Manual approval → Deploy
+- **Updates**: Application container image
+
+## 💰 Cost Management: Pause/Resume
+
+To save costs when not actively using the application:
+
+### Pause Infrastructure
+
+```bash
+# Pause production (saves ~$200/month)
+./scripts/pause.sh prod us-east-1
+
+# Pause staging
+./scripts/pause.sh staging us-east-1
+
+# Pause development
+./scripts/pause.sh dev us-east-1
+```
+
+**What happens:**
+- ALB, Target Group, Listener are destroyed
+- ECS tasks scaled to 0
+- RDS database stopped
+- Auto-scaling disabled
+
+**Cost when paused:** ~$1-2/month (just storage/secrets)
+
+### Resume Infrastructure
+
+```bash
+# Resume production
+./scripts/resume.sh prod us-east-1
+
+# Resume staging
+./scripts/resume.sh staging us-east-1
+
+# Resume development
+./scripts/resume.sh dev us-east-1
+```
+
+**What happens:**
+1. RDS database starts (~5 minutes)
+2. ALB and related resources recreated
+3. ECS tasks scale back up
+4. Full functionality restored
+
+**Cost when running:** ~$200-250/month
+
+**Note:** The resume script waits for RDS to be available before starting ECS tasks to prevent connection failures.
 
 ## 📚 Related Documentation
 
