@@ -195,7 +195,29 @@ resource "aws_iam_role_policy" "deploy_policy" {
           "rds:DescribeDBParameterGroups",
           # Application Auto Scaling (for ECS service scaling)
           "application-autoscaling:DescribeScalableTargets",
-          "application-autoscaling:DescribeScalingPolicies"
+          "application-autoscaling:DescribeScalingPolicies",
+          "application-autoscaling:DescribeScalingActivities",
+          "application-autoscaling:ListTagsForResource",
+          # ECS additional permissions
+          "ecs:ListTaskDefinitions",
+          "ecs:ListClusters",
+          # Secrets Manager additional permissions
+          "secretsmanager:ListSecrets",
+          # RDS additional permissions
+          "rds:DescribeDBEngineVersions",
+          # ELB additional permissions
+          "elasticloadbalancing:DescribeAccountLimits",
+          "elasticloadbalancing:DescribeSSLPolicies",
+          # EC2 additional permissions (for networking)
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DescribeNetworkAcls",
+          "ec2:DescribeRouteTableAssociations",
+          # IAM additional permissions
+          "iam:ListRoles",
+          "iam:ListPolicies",
+          # S3 additional permissions (for state bucket)
+          "s3:GetBucketLocation",
+          "s3:GetBucketVersioning"
         ]
         Resource = "*"
       },
