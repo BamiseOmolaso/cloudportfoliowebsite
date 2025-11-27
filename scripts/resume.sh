@@ -17,18 +17,8 @@ if [[ ! "$ENV" =~ ^(dev|staging|prod)$ ]]; then
   exit 1
 fi
 
-# Apply Terraform without paused mode
-echo "🔧 Applying Terraform with paused_mode=false..."
-cd "terraform/envs/$ENV"
-
-# For production, re-enable ALB deletion protection when resuming
-if [ "$ENV" = "prod" ]; then
-  terraform apply -var="paused_mode=false" -var="enable_alb_deletion_protection=true" -auto-approve
-else
-  terraform apply -var="paused_mode=false" -auto-approve
-fi
-
-echo ""
+# Start RDS database FIRST (before ECS tasks)
+# ECS tasks need DATABASE_URL to connect, so RDS must be available first
 echo "📊 Starting RDS database..."
 DB_INSTANCE="${ENV}-portfolio-db"
 
@@ -43,17 +33,79 @@ if [ "$DB_STATUS" = "stopped" ]; then
   aws rds start-db-instance \
     --db-instance-identifier "$DB_INSTANCE" \
     --region "$REGION"
-  echo "✅ RDS start initiated (takes ~5 minutes)"
+  echo "⏳ Waiting for RDS to become available (this takes ~5 minutes)..."
+  
+  # Poll until RDS is available
+  MAX_WAIT=600  # 10 minutes max
+  ELAPSED=0
+  while [ $ELAPSED -lt $MAX_WAIT ]; do
+    DB_STATUS=$(aws rds describe-db-instances \
+      --db-instance-identifier "$DB_INSTANCE" \
+      --region "$REGION" \
+      --query 'DBInstances[0].DBInstanceStatus' \
+      --output text 2>/dev/null || echo "unknown")
+    
+    if [ "$DB_STATUS" = "available" ]; then
+      echo "✅ RDS is now available!"
+      break
+    elif [ "$DB_STATUS" = "stopped" ] || [ "$DB_STATUS" = "stopping" ]; then
+      echo "⚠️  RDS is in unexpected state: $DB_STATUS"
+      break
+    else
+      echo "   Status: $DB_STATUS (waiting... ${ELAPSED}s / ${MAX_WAIT}s)"
+      sleep 15
+      ELAPSED=$((ELAPSED + 15))
+    fi
+  done
+  
+  if [ "$DB_STATUS" != "available" ]; then
+    echo "⚠️  Warning: RDS did not become available within ${MAX_WAIT} seconds"
+    echo "   Current status: $DB_STATUS"
+    echo "   Continuing anyway, but ECS tasks may fail to connect..."
+  fi
 elif [ "$DB_STATUS" = "available" ]; then
   echo "✅ RDS already running"
 elif [ "$DB_STATUS" = "starting" ]; then
-  echo "⏳ RDS is already starting..."
+  echo "⏳ RDS is already starting, waiting for it to become available..."
+  
+  # Poll until RDS is available
+  MAX_WAIT=600  # 10 minutes max
+  ELAPSED=0
+  while [ $ELAPSED -lt $MAX_WAIT ]; do
+    DB_STATUS=$(aws rds describe-db-instances \
+      --db-instance-identifier "$DB_INSTANCE" \
+      --region "$REGION" \
+      --query 'DBInstances[0].DBInstanceStatus' \
+      --output text 2>/dev/null || echo "unknown")
+    
+    if [ "$DB_STATUS" = "available" ]; then
+      echo "✅ RDS is now available!"
+      break
+    else
+      echo "   Status: $DB_STATUS (waiting... ${ELAPSED}s / ${MAX_WAIT}s)"
+      sleep 15
+      ELAPSED=$((ELAPSED + 15))
+    fi
+  done
 else
   echo "⚠️  RDS instance not found or in unexpected state: $DB_STATUS"
+  echo "   Continuing anyway, but ECS tasks may fail to connect..."
 fi
 
 echo ""
-echo "⏳ Waiting for services to stabilize..."
+echo "🔧 Applying Terraform with paused_mode=false..."
+echo "   (ECS tasks will start now that RDS is available)"
+cd "terraform/envs/$ENV"
+
+# For production, re-enable ALB deletion protection when resuming
+if [ "$ENV" = "prod" ]; then
+  terraform apply -var="paused_mode=false" -var="enable_alb_deletion_protection=true" -auto-approve
+else
+  terraform apply -var="paused_mode=false" -auto-approve
+fi
+
+echo ""
+echo "⏳ Waiting for ECS services to stabilize..."
 sleep 30
 
 # Get ALB DNS

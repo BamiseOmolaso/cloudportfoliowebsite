@@ -62,6 +62,7 @@ jobs:
     permissions:
       contents: read
       id-token: write  # Required for OIDC
+      pull-requests: write  # Required to comment on PRs
     steps:
       - name: Check CI Status (if triggered by workflow_run)
         if: github.event_name == 'workflow_run'
