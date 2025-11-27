@@ -146,6 +146,7 @@ resource "aws_iam_role_policy" "deploy_policy" {
           "ecs:DescribeTasks",
           "ecs:RunTask",
           "ecs:StopTask",
+          "ecs:DeregisterTaskDefinition",
           # Secrets Manager (for reading secrets)
           "secretsmanager:GetSecretValue",
           "secretsmanager:DescribeSecret",
@@ -231,6 +232,16 @@ resource "aws_iam_role_policy" "deploy_policy" {
         Resource = [
           "arn:aws:s3:::omolaso-terraform-state",
           "arn:aws:s3:::omolaso-terraform-state/*"
+        ]
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          # Terraform state file - write state after apply
+          "s3:PutObject"
+        ]
+        Resource = [
+          "arn:aws:s3:::omolaso-terraform-state/envs/*/terraform.tfstate"
         ]
       },
       {
