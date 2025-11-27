@@ -230,7 +230,9 @@ resource "aws_ecs_service" "app" {
     }
   }
 
-  health_check_grace_period_seconds = 60
+  # health_check_grace_period_seconds is only valid when load balancer is configured
+  # When paused_mode=true, there's no load balancer, so we can't set this
+  health_check_grace_period_seconds = (var.paused_mode || var.target_group_arn == "") ? null : 60
 
   enable_execute_command = true
 
