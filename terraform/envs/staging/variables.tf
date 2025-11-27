@@ -60,3 +60,9 @@ variable "image_tag" {
   default     = "latest"
 }
 
+variable "paused_mode" {
+  description = "When true, pauses expensive resources (ALB, scales ECS to 0). RDS must be stopped separately via AWS CLI."
+  type        = bool
+  default     = false
+}
+
