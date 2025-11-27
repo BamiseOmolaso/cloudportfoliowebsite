@@ -75,6 +75,6 @@ aws ecs describe-services \
   --output table 2>/dev/null || echo "⚠️  Could not retrieve ECS service status"
 
 echo ""
-echo "💰 Costs resumed: ~$200-250/month when running 24/7"
+echo "💰 Costs resumed: ~\$200-250/month when running 24/7"
 echo "💡 Tip: Run ./scripts/pause.sh $ENV $REGION when done to save money"
 

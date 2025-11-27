@@ -237,8 +237,8 @@ resource "aws_ecs_service" "app" {
   deployment_maximum_percent         = 200
   deployment_minimum_healthy_percent = 100
 
-  # Only depend on ALB listener when not paused
-  depends_on = var.paused_mode ? [] : [var.alb_listener_arn]
+  # Note: depends_on removed - var.alb_listener_arn is a string (ARN), not a resource reference
+  # The load_balancer block above already handles the conditional attachment
 
   tags = {
     Environment = var.environment
