@@ -298,11 +298,22 @@ jobs:
       
       - name: Wait for ECS Service to Stabilize
         run: |
-          aws ecs wait services-stable \
+          echo "⏳ Waiting for ECS service to stabilize (max 10 minutes)..."
+          timeout 600 aws ecs wait services-stable \
             --cluster ${{ steps.ecs.outputs.cluster_name }} \
             --services ${{ steps.ecs.outputs.service_name }} \
-            --region ${{ env.AWS_REGION }} \
-            --max-attempts 60
+            --region ${{ env.AWS_REGION }} || {
+              echo "⚠️ Service stabilization timeout or error"
+              echo "Checking service status..."
+              aws ecs describe-services \
+                --cluster ${{ steps.ecs.outputs.cluster_name }} \
+                --services ${{ steps.ecs.outputs.service_name }} \
+                --region ${{ env.AWS_REGION }} \
+                --query 'services[0].{Status:status,Running:runningCount,Desired:desiredCount,Events:events[0:3]}' \
+                --output json
+              exit 1
+            }
+          echo "✅ ECS service is stable"
 
   deploy-ecs-staging:
     name: Deploy to ECS - Staging
@@ -392,11 +403,22 @@ jobs:
       
       - name: Wait for ECS Service to Stabilize
         run: |
-          aws ecs wait services-stable \
+          echo "⏳ Waiting for ECS service to stabilize (max 10 minutes)..."
+          timeout 600 aws ecs wait services-stable \
             --cluster ${{ steps.ecs.outputs.cluster_name }} \
             --services ${{ steps.ecs.outputs.service_name }} \
-            --region ${{ env.AWS_REGION }} \
-            --max-attempts 60
+            --region ${{ env.AWS_REGION }} || {
+              echo "⚠️ Service stabilization timeout or error"
+              echo "Checking service status..."
+              aws ecs describe-services \
+                --cluster ${{ steps.ecs.outputs.cluster_name }} \
+                --services ${{ steps.ecs.outputs.service_name }} \
+                --region ${{ env.AWS_REGION }} \
+                --query 'services[0].{Status:status,Running:runningCount,Desired:desiredCount,Events:events[0:3]}' \
+                --output json
+              exit 1
+            }
+          echo "✅ ECS service is stable"
 
   deploy-ecs-prod:
     name: Deploy to ECS - Production
@@ -486,11 +508,22 @@ jobs:
       
       - name: Wait for ECS Service to Stabilize
         run: |
-          aws ecs wait services-stable \
+          echo "⏳ Waiting for ECS service to stabilize (max 10 minutes)..."
+          timeout 600 aws ecs wait services-stable \
             --cluster ${{ steps.ecs.outputs.cluster_name }} \
             --services ${{ steps.ecs.outputs.service_name }} \
-            --region ${{ env.AWS_REGION }} \
-            --max-attempts 60
+            --region ${{ env.AWS_REGION }} || {
+              echo "⚠️ Service stabilization timeout or error"
+              echo "Checking service status..."
+              aws ecs describe-services \
+                --cluster ${{ steps.ecs.outputs.cluster_name }} \
+                --services ${{ steps.ecs.outputs.service_name }} \
+                --region ${{ env.AWS_REGION }} \
+                --query 'services[0].{Status:status,Running:runningCount,Desired:desiredCount,Events:events[0:3]}' \
+                --output json
+              exit 1
+            }
+          echo "✅ ECS service is stable"
       
       - name: Verify Deployment
         run: |
