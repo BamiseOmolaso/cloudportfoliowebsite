@@ -1,165 +1,175 @@
-import { describe, it, expect, beforeEach, jest } from '@jest/globals';
-type AsyncMock<Args extends any[] = any[], Return = unknown> = jest.MockedFunction<
-  (...args: Args) => Promise<Return>
->;
+import { describe, it, expect, beforeEach, jest } from "@jest/globals";
+type AsyncMock<
+  Args extends any[] = any[],
+  Return = unknown,
+> = jest.MockedFunction<(...args: Args) => Promise<Return>>;
 
-const mockFindUnique: AsyncMock = jest.fn();
+const mockFindFirst: AsyncMock = jest.fn();
 
-jest.mock('@/lib/db', () => ({
+jest.mock("@/lib/db", () => ({
   db: {
     blogPost: {
-      findUnique: mockFindUnique,
+      findFirst: mockFindFirst,
     },
   },
 }));
 
-type BlogSlugModule = typeof import('@/app/api/blog/[slug]/route');
-let GET: BlogSlugModule['GET'];
+type BlogSlugModule = typeof import("@/app/api/blog/[slug]/route");
+let GET: BlogSlugModule["GET"];
 
 beforeAll(async () => {
-  ({ GET } = await import('@/app/api/blog/[slug]/route'));
+  ({ GET } = await import("@/app/api/blog/[slug]/route"));
 });
 beforeEach(() => {
   jest.clearAllMocks();
 });
 
-describe('GET /api/blog/[slug]', () => {
-  it('should return 404 if blog post not found', async () => {
-    mockFindUnique.mockResolvedValue(null);
+describe("GET /api/blog/[slug]", () => {
+  it("should return 404 if blog post not found", async () => {
+    mockFindFirst.mockResolvedValue(null);
 
-    const request = new Request('http://localhost:3000/api/blog/non-existent');
-    const response = await GET(request, { params: { slug: 'non-existent' } });
+    const request = new Request("http://localhost:3000/api/blog/non-existent");
+    const response = await GET(request, { params: { slug: "non-existent" } });
     const data = await response.json();
 
     expect(response.status).toBe(404);
-    expect(data.error).toBe('Post not found');
-    expect(mockFindUnique).toHaveBeenCalledWith({
+    expect(data.error).toBe("Post not found");
+    expect(mockFindFirst).toHaveBeenCalledWith({
       where: {
-        slug: 'non-existent',
-        status: 'published',
+        slug: "non-existent",
+        status: "published",
       },
       select: expect.any(Object),
     });
   });
 
-  it('should return blog post data for published post', async () => {
+  it("should return blog post data for published post", async () => {
     const mockPost = {
-      id: 'post-123',
-      title: 'Test Blog Post',
-      slug: 'test-blog-post',
-      excerpt: 'Test excerpt',
-      content: 'Test content',
-      coverImage: 'https://example.com/image.jpg',
-      metaTitle: 'Test Meta Title',
-      metaDescription: 'Test meta description',
-      tags: ['test', 'blog'],
-      author: 'Test Author',
-      createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-02'),
-      status: 'published',
+      id: "post-123",
+      title: "Test Blog Post",
+      slug: "test-blog-post",
+      excerpt: "Test excerpt",
+      content: "Test content",
+      coverImage: "https://example.com/image.jpg",
+      metaTitle: "Test Meta Title",
+      metaDescription: "Test meta description",
+      tags: ["test", "blog"],
+      author: "Test Author",
+      createdAt: new Date("2024-01-01"),
+      updatedAt: new Date("2024-01-02"),
+      status: "published",
     };
 
-    mockFindUnique.mockResolvedValue(mockPost);
+    mockFindFirst.mockResolvedValue(mockPost);
 
-    const request = new Request('http://localhost:3000/api/blog/test-blog-post');
-    const response = await GET(request, { params: { slug: 'test-blog-post' } });
+    const request = new Request(
+      "http://localhost:3000/api/blog/test-blog-post",
+    );
+    const response = await GET(request, { params: { slug: "test-blog-post" } });
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.id).toBe('post-123');
-    expect(data.title).toBe('Test Blog Post');
-    expect(data.slug).toBe('test-blog-post');
-    expect(data.excerpt).toBe('Test excerpt');
-    expect(data.content).toBe('Test content');
-    expect(data.cover_image).toBe('https://example.com/image.jpg');
-    expect(data.meta_title).toBe('Test Meta Title');
-    expect(data.meta_description).toBe('Test meta description');
-    expect(data.tags).toEqual(['test', 'blog']);
-    expect(data.author).toBe('Test Author');
-    expect(data.status).toBe('published');
+    expect(data.id).toBe("post-123");
+    expect(data.title).toBe("Test Blog Post");
+    expect(data.slug).toBe("test-blog-post");
+    expect(data.excerpt).toBe("Test excerpt");
+    expect(data.content).toBe("Test content");
+    expect(data.cover_image).toBe("https://example.com/image.jpg");
+    expect(data.meta_title).toBe("Test Meta Title");
+    expect(data.meta_description).toBe("Test meta description");
+    expect(data.tags).toEqual(["test", "blog"]);
+    expect(data.author).toBe("Test Author");
+    expect(data.status).toBe("published");
     expect(data.created_at).toBe(mockPost.createdAt.toISOString());
     expect(data.updated_at).toBe(mockPost.updatedAt.toISOString());
   });
 
-  it('should handle null optional fields', async () => {
+  it("should handle null optional fields", async () => {
     const mockPost = {
-      id: 'post-123',
-      title: 'Test Blog Post',
-      slug: 'test-blog-post',
+      id: "post-123",
+      title: "Test Blog Post",
+      slug: "test-blog-post",
       excerpt: null,
-      content: 'Test content',
+      content: "Test content",
       coverImage: null,
       metaTitle: null,
       metaDescription: null,
       tags: [],
-      author: 'Test Author',
-      createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-02'),
-      status: 'published',
+      author: "Test Author",
+      createdAt: new Date("2024-01-01"),
+      updatedAt: new Date("2024-01-02"),
+      status: "published",
     };
 
-    mockFindUnique.mockResolvedValue(mockPost);
+    mockFindFirst.mockResolvedValue(mockPost);
 
-    const request = new Request('http://localhost:3000/api/blog/test-blog-post');
-    const response = await GET(request, { params: { slug: 'test-blog-post' } });
+    const request = new Request(
+      "http://localhost:3000/api/blog/test-blog-post",
+    );
+    const response = await GET(request, { params: { slug: "test-blog-post" } });
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.excerpt).toBe('');
-    expect(data.cover_image).toBe('');
-    expect(data.meta_title).toBe('');
-    expect(data.meta_description).toBe('');
+    expect(data.excerpt).toBe("");
+    expect(data.cover_image).toBe("");
+    expect(data.meta_title).toBe("");
+    expect(data.meta_description).toBe("");
   });
 
-  it('should only return published posts', async () => {
-    mockFindUnique.mockResolvedValue(null);
+  it("should only return published posts", async () => {
+    mockFindFirst.mockResolvedValue(null);
 
-    const request = new Request('http://localhost:3000/api/blog/draft-post');
-    await GET(request, { params: { slug: 'draft-post' } });
+    const request = new Request("http://localhost:3000/api/blog/draft-post");
+    await GET(request, { params: { slug: "draft-post" } });
 
-    expect(mockFindUnique).toHaveBeenCalledWith({
+    expect(mockFindFirst).toHaveBeenCalledWith({
       where: {
-        slug: 'draft-post',
-        status: 'published',
+        slug: "draft-post",
+        status: "published",
       },
       select: expect.any(Object),
     });
   });
 
-  it('should include cache headers in response', async () => {
+  it("should include cache headers in response", async () => {
     const mockPost = {
-      id: 'post-123',
-      title: 'Test Blog Post',
-      slug: 'test-blog-post',
-      excerpt: 'Test excerpt',
-      content: 'Test content',
+      id: "post-123",
+      title: "Test Blog Post",
+      slug: "test-blog-post",
+      excerpt: "Test excerpt",
+      content: "Test content",
       coverImage: null,
       metaTitle: null,
       metaDescription: null,
       tags: [],
-      author: 'Test Author',
-      createdAt: new Date('2024-01-01'),
-      updatedAt: new Date('2024-01-02'),
-      status: 'published',
+      author: "Test Author",
+      createdAt: new Date("2024-01-01"),
+      updatedAt: new Date("2024-01-02"),
+      status: "published",
     };
 
-    mockFindUnique.mockResolvedValue(mockPost);
+    mockFindFirst.mockResolvedValue(mockPost);
 
-    const request = new Request('http://localhost:3000/api/blog/test-blog-post');
-    const response = await GET(request, { params: { slug: 'test-blog-post' } });
+    const request = new Request(
+      "http://localhost:3000/api/blog/test-blog-post",
+    );
+    const response = await GET(request, { params: { slug: "test-blog-post" } });
 
-    expect(response.headers.get('Cache-Control')).toBe('public, s-maxage=3600, stale-while-revalidate=86400');
+    expect(response.headers.get("Cache-Control")).toBe(
+      "public, s-maxage=3600, stale-while-revalidate=86400",
+    );
   });
 
-  it('should return 500 on database error', async () => {
-    mockFindUnique.mockRejectedValue(new Error('Database error'));
+  it("should return 500 on database error", async () => {
+    mockFindFirst.mockRejectedValue(new Error("Database error"));
 
-    const request = new Request('http://localhost:3000/api/blog/test-blog-post');
-    const response = await GET(request, { params: { slug: 'test-blog-post' } });
+    const request = new Request(
+      "http://localhost:3000/api/blog/test-blog-post",
+    );
+    const response = await GET(request, { params: { slug: "test-blog-post" } });
     const data = await response.json();
 
     expect(response.status).toBe(500);
-    expect(data.error).toBe('Failed to fetch blog post');
+    expect(data.error).toBe("Failed to fetch blog post");
   });
 });
-

@@ -96,15 +96,17 @@ We actively support and provide security updates for the following versions:
 
 #### 1. Input Sanitization
 
-- **HTML Sanitization**: DOMPurify for client-side, custom server-safe sanitization
+- **HTML Sanitization**: `isomorphic-dompurify` (DOMPurify on both client and server) via `src/lib/sanitize-server.ts`, with an allowlist of tags/attributes
 - **Text Sanitization**: Email, subject, and text field sanitization
+- **HTML-Escaping in Email Templates**: User-controlled fields (subscriber name, email, location) interpolated into outbound HTML are escaped to block stored XSS in admin notifications
 - **XSS Protection**: All user inputs are sanitized before rendering
 
 #### 2. Rate Limiting
 
 - **Public Endpoints**: Rate limiting via Redis Cloud (production) or in-memory (development)
-- **Admin Endpoints**: Stricter rate limits
-- **IP-based Tracking**: Failed attempts tracked per IP
+- **Admin Endpoints**: Stricter rate limits via `secureAdminRoute`
+- **Per-IP Keying**: `withRateLimit` keys on `${endpoint}:${client_ip}` (derived from `x-forwarded-for` / `x-real-ip`) so one abusive client cannot lock out other users
+- **Failed-Attempt Tracking**: `trackFailedAttempt` records IP + email + action type for CAPTCHA escalation
 
 #### 3. Authentication
 
@@ -127,9 +129,10 @@ We actively support and provide security updates for the following versions:
 
 #### 6. IP Blacklisting
 
-- Automatic blacklisting after failed attempts
-- Configurable thresholds
-- Temporary and permanent blacklists
+- **Lookup path is wired**: `/api/newsletter/subscribe` checks `isIPBlacklisted()` on every request
+- **Population path is manual**: `blacklistIP()` exists in `src/lib/security.ts` but is not currently invoked from automated triggers — operators add entries manually until an automatic-blacklist policy is wired in
+- Configurable expiry (default 24h); permanent entries supported by passing `expiresAt = null`
+- CAPTCHA escalation after 3+ failed attempts in 1 hour (`isCaptchaRequired`) currently provides the automatic-defence behaviour
 
 #### 7. Audit Logging
 
@@ -250,5 +253,5 @@ For security concerns:
 
 ---
 
-**Last Updated:** November 24, 2025
+**Last Updated:** May 11, 2026
 

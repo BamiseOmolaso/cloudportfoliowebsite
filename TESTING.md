@@ -259,7 +259,6 @@ As of the latest build:
 - Middleware
 - Redis client
 - Email service (Resend)
-- Cache layer
 - Database client
 
 ## Coverage Requirements

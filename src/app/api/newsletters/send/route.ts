@@ -1,21 +1,19 @@
-// Tell Next.js this route is dynamic and should not be pre-rendered
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/lib/db";
 import { resend } from "@/lib/resend";
 import { convert } from "html-to-text";
 import { sanitizeHtmlServer } from "@/lib/sanitize-server";
-import { withRateLimit, apiLimiter } from "@/lib/rate-limit";
+import { secureAdminRoute, handleError } from "@/lib/api-security";
+import { newsletterSendSchema } from "@/lib/validation-schemas";
+import { z } from "zod";
 import { randomBytes } from "crypto";
 
-// Secure HTML sanitization and text conversion utility
 const sanitizeAndConvertToText = (dirtyHtml: string): string => {
-  // Step 1: Sanitize HTML (server-safe)
   const cleanHtml = sanitizeHtmlServer(dirtyHtml);
 
-  // Step 2: Convert to plain text
   const plainText = convert(cleanHtml, {
     wordwrap: 130,
     selectors: [
@@ -24,7 +22,6 @@ const sanitizeAndConvertToText = (dirtyHtml: string): string => {
     ],
   });
 
-  // Step 3: Verify no HTML tags remain
   if (/<[a-z][\s\S]*>/i.test(plainText)) {
     throw new Error("Security: HTML tags detected in plaintext output");
   }
@@ -32,89 +29,97 @@ const sanitizeAndConvertToText = (dirtyHtml: string): string => {
   return plainText;
 };
 
-export const POST = withRateLimit(
-  apiLimiter,
-  "newsletter-send",
-  async (request: Request) => {
-    try {
-      const { newsletterId } = await request.json();
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
 
-      if (!newsletterId) {
-        return NextResponse.json(
-          { error: "Newsletter ID is required" },
-          { status: 400 },
-        );
-      }
+export const POST = secureAdminRoute(async (request: NextRequest, user) => {
+  try {
+    const body = await request.json();
+    const { newsletterId } = newsletterSendSchema.parse(body);
 
-      // Get newsletter content
-      const newsletter = await db.newsletter.findUnique({
-        where: { id: newsletterId },
-      });
+    const newsletter = await db.newsletter.findUnique({
+      where: { id: newsletterId },
+    });
 
-      if (!newsletter) {
-        return NextResponse.json(
-          { error: "Newsletter not found" },
-          { status: 404 },
-        );
-      }
+    if (!newsletter) {
+      return NextResponse.json(
+        { error: "Newsletter not found" },
+        { status: 404 },
+      );
+    }
 
-      // Get subscribers
-      const subscribers = await db.newsletterSubscriber.findMany({
-        where: {
-          isSubscribed: true,
-          isDeleted: false,
-        },
-        select: {
-          id: true,
-          email: true,
-          name: true,
-          unsubscribeToken: true,
-          unsubscribeTokenExpiresAt: true,
-        },
-      });
+    const subscribers = await db.newsletterSubscriber.findMany({
+      where: {
+        isSubscribed: true,
+        isDeleted: false,
+      },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        unsubscribeToken: true,
+        unsubscribeTokenExpiresAt: true,
+      },
+    });
 
-      // Sanitize HTML content (server-safe)
-      const sanitizedHtml = sanitizeHtmlServer(newsletter.content);
+    const sanitizedHtml = sanitizeHtmlServer(newsletter.content);
+    const plainText = sanitizeAndConvertToText(sanitizedHtml);
 
-      // Create plain text version using the secure utility
-      const plainText = sanitizeAndConvertToText(sanitizedHtml);
+    console.log("AUDIT:", {
+      userId: user.id,
+      userEmail: user.email,
+      action: "newsletter_send_started",
+      resourceType: "Newsletter",
+      resourceId: newsletter.id,
+      details: {
+        recipientCount: subscribers.length,
+        subject: newsletter.subject,
+      },
+      ipAddress:
+        request.headers.get("x-forwarded-for") ||
+        request.headers.get("x-real-ip") ||
+        null,
+      userAgent: request.headers.get("user-agent") || null,
+      timestamp: new Date().toISOString(),
+    });
 
-      // Send emails to subscribers
-      const emailPromises = subscribers.map(
-        async (subscriber: (typeof subscribers)[0]) => {
-          let unsubscribeToken = subscriber.unsubscribeToken;
+    const emailPromises = subscribers.map(
+      async (subscriber: (typeof subscribers)[0]) => {
+        let unsubscribeToken = subscriber.unsubscribeToken;
 
-          // Generate unsubscribe token if not exists or expired
-          if (
-            !unsubscribeToken ||
-            (subscriber.unsubscribeTokenExpiresAt &&
-              subscriber.unsubscribeTokenExpiresAt < new Date())
-          ) {
-            unsubscribeToken = randomBytes(32).toString("hex");
-            const tokenExpiresAt = new Date();
-            tokenExpiresAt.setDate(tokenExpiresAt.getDate() + 30); // Token expires in 30 days
+        if (
+          !unsubscribeToken ||
+          (subscriber.unsubscribeTokenExpiresAt &&
+            subscriber.unsubscribeTokenExpiresAt < new Date())
+        ) {
+          unsubscribeToken = randomBytes(32).toString("hex");
+          const tokenExpiresAt = new Date();
+          tokenExpiresAt.setDate(tokenExpiresAt.getDate() + 30);
 
-            await db.newsletterSubscriber.update({
-              where: { id: subscriber.id },
-              data: {
-                unsubscribeToken,
-                unsubscribeTokenExpiresAt: tokenExpiresAt,
-              },
-            });
-          }
+          await db.newsletterSubscriber.update({
+            where: { id: subscriber.id },
+            data: {
+              unsubscribeToken,
+              unsubscribeTokenExpiresAt: tokenExpiresAt,
+            },
+          });
+        }
 
-          const baseUrl =
-            process.env.NEXT_PUBLIC_BASE_URL ||
-            process.env.NEXT_PUBLIC_SITE_URL ||
-            "http://localhost:3000";
-          const unsubscribeLink = `${baseUrl}/unsubscribe?token=${unsubscribeToken}`;
-          const personalizedContent = sanitizedHtml.replace(
-            /{name}/g,
-            subscriber.name || "there",
-          );
+        const baseUrl =
+          process.env.NEXT_PUBLIC_BASE_URL ||
+          process.env.NEXT_PUBLIC_SITE_URL ||
+          "http://localhost:3000";
+        const unsubscribeLink = `${baseUrl}/unsubscribe?token=${unsubscribeToken}`;
+        const safeName = escapeHtml(subscriber.name || "there");
+        const personalizedContent = sanitizedHtml.replace(/{name}/g, safeName);
 
-          // Add unsubscribe link to the email content
-          const emailContent = `
+        const emailContent = `
         ${personalizedContent}
         <div style="margin-top: 20px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #666;">
           <p>You received this email because you subscribed to our newsletter.</p>
@@ -123,70 +128,68 @@ export const POST = withRateLimit(
         </div>
       `;
 
-          try {
-            const emailResult = await resend().emails.send({
-              from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
-              to: subscriber.email,
-              subject: newsletter.subject,
-              html: emailContent,
-              text:
-                plainText +
-                `\n\nTo unsubscribe, visit: ${unsubscribeLink}\n\nNote: This link will expire in 30 days.`,
-              headers: {
-                "List-Unsubscribe": `<${unsubscribeLink}>`,
-                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-              },
-            });
+        try {
+          const emailResult = await resend().emails.send({
+            from: process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev",
+            to: subscriber.email,
+            subject: newsletter.subject,
+            html: emailContent,
+            text:
+              plainText +
+              `\n\nTo unsubscribe, visit: ${unsubscribeLink}\n\nNote: This link will expire in 30 days.`,
+            headers: {
+              "List-Unsubscribe": `<${unsubscribeLink}>`,
+              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
+          });
 
-            // Create send record
-            await db.newsletterSend.create({
-              data: {
-                newsletterId: newsletter.id,
-                subscriberId: subscriber.id,
-                status: "sent",
-                sentAt: new Date(),
-              },
-            });
+          await db.newsletterSend.create({
+            data: {
+              newsletterId: newsletter.id,
+              subscriberId: subscriber.id,
+              status: "sent",
+              sentAt: new Date(),
+            },
+          });
 
-            return emailResult;
-          } catch (error) {
-            console.error(`Error sending email to ${subscriber.email}:`, error);
+          return emailResult;
+        } catch (error) {
+          console.error(`Error sending email to ${subscriber.email}:`, error);
 
-            // Create failed send record
-            await db.newsletterSend.create({
-              data: {
-                newsletterId: newsletter.id,
-                subscriberId: subscriber.id,
-                status: "failed",
-                errorMessage:
-                  error instanceof Error ? error.message : "Unknown error",
-                sentAt: new Date(),
-              },
-            });
+          await db.newsletterSend.create({
+            data: {
+              newsletterId: newsletter.id,
+              subscriberId: subscriber.id,
+              status: "failed",
+              errorMessage:
+                error instanceof Error ? error.message : "Unknown error",
+              sentAt: new Date(),
+            },
+          });
 
-            throw error;
-          }
-        },
-      );
+          throw error;
+        }
+      },
+    );
 
-      await Promise.allSettled(emailPromises);
+    await Promise.allSettled(emailPromises);
 
-      // Update newsletter status
-      await db.newsletter.update({
-        where: { id: newsletterId },
-        data: {
-          status: "sent",
-          sentAt: new Date(),
-        },
-      });
+    await db.newsletter.update({
+      where: { id: newsletterId },
+      data: {
+        status: "sent",
+        sentAt: new Date(),
+      },
+    });
 
-      return NextResponse.json({ message: "Newsletter sent successfully" });
-    } catch (error) {
-      console.error("Error sending newsletter:", error);
+    return NextResponse.json({ message: "Newsletter sent successfully" });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { error: "Failed to send newsletter" },
-        { status: 500 },
+        { error: "Validation failed", details: error.errors },
+        { status: 400 },
       );
     }
-  },
-);
+    return handleError(error, "Failed to send newsletter");
+  }
+});

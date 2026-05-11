@@ -202,10 +202,12 @@ src/
 ├── lib/                   # Utility functions
 │   ├── db.ts              # Prisma database client
 │   ├── resend.ts          # Email sending utilities
-│   ├── security.ts        # Security utilities
-│   ├── rate-limit.ts      # Rate limiting utilities
-│   ├── sanitize.ts        # Input sanitization utilities
-│   └── cache.ts           # Caching utilities
+│   ├── security.ts        # Security utilities (CAPTCHA, IP blacklist lookup)
+│   ├── rate-limit.ts      # Rate limiting utilities (per-IP, Redis/in-memory)
+│   ├── sanitize-server.ts # Server-side HTML sanitization (isomorphic-dompurify)
+│   ├── sanitize-text.ts   # Plain-text input sanitization
+│   ├── api-security.ts    # secureAdminRoute, CSRF check, security headers
+│   └── auth-middleware.ts # JWT auth + requireAuth/withAuth wrappers
 ├── config/                # Configuration files
 │   └── env.ts             # Environment variable validation
 ├── types/                 # TypeScript type definitions

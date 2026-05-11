@@ -5,6 +5,15 @@
 import { Resend } from "resend";
 import { db } from "./db";
 
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // Lazy-load Resend client to avoid initialization during build time
 let resendInstance: Resend | null = null;
 
@@ -37,7 +46,7 @@ export async function sendWelcomeEmail(
     });
 
     const isResubscription = subscriber?.unsubscribeReason != null;
-    const firstName = name.split(" ")[0];
+    const firstName = escapeHtml(name.split(" ")[0] || "there");
 
     const { data, error } = await getResend().emails.send({
       from: `Bamise Omolaso <${process.env.RESEND_FROM_EMAIL}>`,
@@ -136,7 +145,7 @@ export async function sendAdminNotification(email: string, name?: string) {
     );
 
     const locationList = Object.entries(locationStats)
-      .map(([location, count]) => `${location}: ${count}`)
+      .map(([location, count]) => `${escapeHtml(location)}: ${count}`)
       .join("<br>");
 
     const contactEmail = process.env.CONTACT_EMAIL;
@@ -154,13 +163,13 @@ export async function sendAdminNotification(email: string, name?: string) {
           
           <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
             <p style="font-size: 16px; line-height: 1.5; color: #333; margin: 0;">
-              <strong>Email:</strong> ${email}
+              <strong>Email:</strong> ${escapeHtml(email)}
             </p>
             ${
               name
                 ? `
             <p style="font-size: 16px; line-height: 1.5; color: #333; margin: 10px 0 0 0;">
-              <strong>Name:</strong> ${name}
+              <strong>Name:</strong> ${escapeHtml(name)}
             </p>
             `
                 : ""
