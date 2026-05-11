@@ -1,14 +1,14 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import {
   setupEmailAuthentication,
   verifyEmailAuthentication,
   getEmailAuthenticationStatus,
 } from "@/lib/resend";
+import { secureAdminRoute } from "@/lib/api-security";
 
-// Mark route as dynamic to prevent build-time analysis
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export const GET = secureAdminRoute(async (_request: NextRequest) => {
   try {
     const status = await getEmailAuthenticationStatus();
 
@@ -27,9 +27,9 @@ export async function GET() {
       { status: 500 },
     );
   }
-}
+});
 
-export async function POST() {
+export const POST = secureAdminRoute(async (_request: NextRequest) => {
   try {
     const setup = await setupEmailAuthentication();
 
@@ -48,9 +48,9 @@ export async function POST() {
       { status: 500 },
     );
   }
-}
+});
 
-export async function PUT() {
+export const PUT = secureAdminRoute(async (_request: NextRequest) => {
   try {
     const verified = await verifyEmailAuthentication();
 
@@ -69,4 +69,4 @@ export async function PUT() {
       { status: 500 },
     );
   }
-}
+});

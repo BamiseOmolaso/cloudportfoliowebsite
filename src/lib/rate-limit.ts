@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
-import { getRedisClient } from './redis-client';
+import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getRedisClient } from "./redis-client";
 
 interface RateLimiterConfig {
   maxRequests: number;
@@ -25,9 +25,12 @@ class InMemoryRateLimiter {
   private cleanupInterval: NodeJS.Timeout | null = null;
 
   constructor() {
-    this.cleanupInterval = setInterval(() => {
-      this.cleanup();
-    }, 5 * 60 * 1000); // Cleanup every 5 minutes
+    this.cleanupInterval = setInterval(
+      () => {
+        this.cleanup();
+      },
+      5 * 60 * 1000,
+    ); // Cleanup every 5 minutes
   }
 
   private cleanup() {
@@ -38,10 +41,14 @@ class InMemoryRateLimiter {
         keysToDelete.push(key);
       }
     });
-    keysToDelete.forEach(key => this.store.delete(key));
+    keysToDelete.forEach((key) => this.store.delete(key));
   }
 
-  async check(identifier: string, limit: number, windowMs: number): Promise<RateLimitResult> {
+  async check(
+    identifier: string,
+    limit: number,
+    windowMs: number,
+  ): Promise<RateLimitResult> {
     const now = Date.now();
     const key = identifier;
 
@@ -82,7 +89,7 @@ async function redisRateLimit(
   redis: any,
   identifier: string,
   limit: number,
-  windowMs: number
+  windowMs: number,
 ): Promise<RateLimitResult> {
   const key = `ratelimit:${identifier}`;
   const now = Date.now();
@@ -121,7 +128,7 @@ async function redisRateLimit(
 
     return { success, remaining, resetTime };
   } catch (error) {
-    console.error('Redis rate limit error:', error);
+    console.error("Redis rate limit error:", error);
     // Fallback to in-memory on Redis error
     return getInMemoryLimiter().check(identifier, limit, windowMs);
   }
@@ -132,7 +139,7 @@ export class RateLimiter {
 
   constructor(config: RateLimiterConfig) {
     this.config = {
-      prefix: 'rate-limit:',
+      prefix: "rate-limit:",
       ...config,
     };
   }
@@ -148,13 +155,29 @@ export class RateLimiter {
     // Use Redis if available, otherwise fall back to in-memory
     if (redis) {
       try {
-        return await redisRateLimit(redis, key, this.config.maxRequests, this.config.windowMs);
+        return await redisRateLimit(
+          redis,
+          key,
+          this.config.maxRequests,
+          this.config.windowMs,
+        );
       } catch (error) {
-        console.error('Redis rate limit failed, falling back to in-memory:', error);
-        return getInMemoryLimiter().check(key, this.config.maxRequests, this.config.windowMs);
+        console.error(
+          "Redis rate limit failed, falling back to in-memory:",
+          error,
+        );
+        return getInMemoryLimiter().check(
+          key,
+          this.config.maxRequests,
+          this.config.windowMs,
+        );
       }
     } else {
-      return getInMemoryLimiter().check(key, this.config.maxRequests, this.config.windowMs);
+      return getInMemoryLimiter().check(
+        key,
+        this.config.maxRequests,
+        this.config.windowMs,
+      );
     }
   }
 
@@ -170,7 +193,7 @@ export class RateLimiter {
           await redis.del(keys);
         }
       } catch (error) {
-        console.error('Redis cleanup error:', error);
+        console.error("Redis cleanup error:", error);
       }
     }
     // In-memory cleanup is handled automatically
@@ -181,60 +204,77 @@ export class RateLimiter {
 export const contactFormLimiter = new RateLimiter({
   maxRequests: 5,
   windowMs: 60 * 60 * 1000, // 1 hour
-  prefix: 'contact-form:',
+  prefix: "contact-form:",
 });
 
 export const authLimiter = new RateLimiter({
   maxRequests: 10,
   windowMs: 15 * 60 * 1000, // 15 minutes
-  prefix: 'auth:',
+  prefix: "auth:",
 });
 
 export const apiLimiter = new RateLimiter({
   maxRequests: 100,
   windowMs: 60 * 60 * 1000, // 1 hour
-  prefix: 'api:',
+  prefix: "api:",
 });
 
 export const adminLimiter = new RateLimiter({
   maxRequests: 50,
   windowMs: 60 * 60 * 1000, // 1 hour
-  prefix: 'admin:',
+  prefix: "admin:",
 });
+
+function getClientIp(req: NextRequest): string {
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) {
+    const first = forwarded.split(",")[0]?.trim();
+    if (first) return first;
+  }
+  const realIp = req.headers.get("x-real-ip");
+  if (realIp) return realIp;
+  return "unknown";
+}
 
 export function withRateLimit(
   limiter: RateLimiter,
   identifier: string,
-  handler: (req: NextRequest) => Promise<NextResponse>
+  handler: (req: NextRequest) => Promise<NextResponse>,
 ) {
   return async (req: NextRequest) => {
-    const result = await limiter.check(identifier);
+    const key = `${identifier}:${getClientIp(req)}`;
+    const result = await limiter.check(key);
 
     if (!result.success) {
       return new NextResponse(
         JSON.stringify({
-          error: 'Too many requests',
+          error: "Too many requests",
           retryAfter: Math.ceil((result.resetTime - Date.now()) / 1000),
         }),
         {
           status: 429,
           headers: {
-            'Content-Type': 'application/json',
-            'Retry-After': Math.ceil((result.resetTime - Date.now()) / 1000).toString(),
-            'X-RateLimit-Limit': limiter.config.maxRequests.toString(),
-            'X-RateLimit-Remaining': result.remaining.toString(),
-            'X-RateLimit-Reset': result.resetTime.toString(),
+            "Content-Type": "application/json",
+            "Retry-After": Math.ceil(
+              (result.resetTime - Date.now()) / 1000,
+            ).toString(),
+            "X-RateLimit-Limit": limiter.config.maxRequests.toString(),
+            "X-RateLimit-Remaining": result.remaining.toString(),
+            "X-RateLimit-Reset": result.resetTime.toString(),
           },
-        }
+        },
       );
     }
 
     const response = await handler(req);
 
     // Add rate limit headers to the response
-    response.headers.set('X-RateLimit-Limit', limiter.config.maxRequests.toString());
-    response.headers.set('X-RateLimit-Remaining', result.remaining.toString());
-    response.headers.set('X-RateLimit-Reset', result.resetTime.toString());
+    response.headers.set(
+      "X-RateLimit-Limit",
+      limiter.config.maxRequests.toString(),
+    );
+    response.headers.set("X-RateLimit-Remaining", result.remaining.toString());
+    response.headers.set("X-RateLimit-Reset", result.resetTime.toString());
 
     return response;
   };
