@@ -23,6 +23,10 @@ Quick reference to all documentation in this project.
 - **`REDIS_SETUP.md`** - Redis Cloud configuration guide
 - **`OIDC_SETUP.md`** - OIDC authentication setup for GitHub Actions
 
+## 🏛️ Architecture
+
+- **`ARCHITECTURE_GUIDE.md`** - End-to-end architecture: request flow, auth, DB layer, API patterns, security, caching, infra, CI/CD, frontend
+
 ## 📖 Reference
 
 - **`SECURITY.md`** - Security practices and guidelines
