@@ -218,9 +218,9 @@ describe("RateLimiter", () => {
       const mockMulti: any = redisMock.multi();
       mockMulti.exec.mockRejectedValue(new Error("Redis error"));
 
-      // eslint-disable-next-line @typescript-eslint/no-empty-function
       const consoleErrorSpy = jest
         .spyOn(console, "error")
+        // eslint-disable-next-line @typescript-eslint/no-empty-function
         .mockImplementation(() => {});
 
       const result = await limiter.check("test-identifier");
