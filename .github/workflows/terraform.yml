@@ -1,20 +1,21 @@
 name: Terraform Infrastructure
 
 on:
-  # Run after CI passes (required - ensures code is validated first)
+  # Run after CI passes — restricted to main only so develop and staging
+  # serve as branch-progression / code-review stages without spending money
+  # on duplicate AWS environments. The actual apply happens once code reaches
+  # main, with the production-environment approval gate as a safety net.
   workflow_run:
     workflows: ["CI Pipeline"]
     types:
       - completed
     branches:
-      - develop
-      - staging
       - main
-  # Allow PRs to trigger plan (for review, no apply)
+  # PR plans only for PRs targeting main (the only branch that actually
+  # deploys). PRs into develop/staging still run CI Pipeline; they just
+  # don't need a Terraform plan since neither will apply.
   pull_request:
     branches:
-      - develop
-      - staging
       - main
     paths:
       - 'terraform/**'
