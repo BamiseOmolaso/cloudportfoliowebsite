@@ -43,16 +43,21 @@ jobs:
   terraform-plan:
     name: Terraform Plan - ${{ github.ref_name }}
     runs-on: ubuntu-latest
-    # Only run if CI passed (when triggered by workflow_run), PR (for plan review), or manual dispatch
+    # Only run if CI passed (when triggered by workflow_run), PR (for plan review), or manual dispatch.
+    # The workflow_run guard requires the upstream run to come from the SAME repository
+    # (not a fork) and to have been triggered by a push, so a malicious fork-push cannot
+    # cause a downstream apply with our secrets.
     if: |
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'pull_request' ||
-      (github.event_name == 'workflow_run' && 
+      (github.event_name == 'workflow_run' &&
        github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push')
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     outputs:
       run_id: ${{ github.run_id }}
       plan_success: ${{ steps.plan.outputs.plan_success }}
+      plan_exit_code: ${{ steps.plan.outputs.plan_exit_code }}
     permissions:
       contents: read
       id-token: write  # Required for OIDC
@@ -70,6 +75,8 @@ jobs:
       
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       
       - name: Set AWS role ARN
         id: aws-role
@@ -222,20 +229,41 @@ jobs:
           script: |
             const fs = require('fs');
             const planPath = 'terraform/envs/${{ steps.env.outputs.ENV_NAME }}/plan.txt';
-            let planOutput = '## Terraform Plan Results\n\n';
-            
-            if (fs.existsSync(planPath)) {
-              const plan = fs.readFileSync(planPath, 'utf8');
-              planOutput += '```\n' + plan + '\n```';
+            const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
+            const env = '${{ steps.env.outputs.ENV_NAME }}';
+            let body = `## Terraform Plan (${env})\n\n`;
+
+            if (!fs.existsSync(planPath)) {
+              body += `⚠️ Plan file not found. See [workflow logs](${runUrl}) for details.`;
             } else {
-              planOutput += '⚠️ Plan file not found. Check workflow logs for details.';
+              let plan = fs.readFileSync(planPath, 'utf8');
+
+              // Strip ANSI escape codes that may have leaked through.
+              plan = plan.replace(/\x1b\[[0-9;]*m/g, '');
+
+              // Redact AWS account IDs (12 consecutive digits in ARN-like strings).
+              plan = plan.replace(/arn:aws:[^:]+:[^:]*:\d{12}:/g, (m) => m.replace(/\d{12}/, '<account-id>'));
+              plan = plan.replace(/(\b\d{12}\b)\.dkr\.ecr\./g, '<account-id>.dkr.ecr.');
+
+              // Truncate to a sane comment size. The full plan stays in the workflow artifact.
+              const MAX_BYTES = 60000;
+              const truncated = Buffer.byteLength(plan, 'utf8') > MAX_BYTES;
+              if (truncated) {
+                plan = plan.slice(0, MAX_BYTES);
+              }
+
+              body += '```hcl\n' + plan + '\n```\n';
+              if (truncated) {
+                body += `\n_Plan truncated for comment size. Full output in the [workflow artifact](${runUrl})._`;
+              }
+              body += `\n\n[View full plan in workflow logs](${runUrl})`;
             }
-            
+
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: planOutput
+              body
             });
 
   # ============================================
@@ -258,6 +286,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       
       - name: Set AWS role ARN
         id: aws-role
@@ -396,6 +426,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       
       - name: Set AWS role ARN
         id: aws-role
@@ -530,6 +562,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       
       - name: Set AWS role ARN
         id: aws-role

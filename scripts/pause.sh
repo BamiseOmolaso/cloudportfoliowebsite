@@ -1,12 +1,30 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # Pause Infrastructure Script
-# Usage: ./scripts/pause.sh [environment] [region]
+# Usage: ./scripts/pause.sh <dev|staging|prod> [region] [--yes]
 # Example: ./scripts/pause.sh prod us-east-1
+# Example (non-interactive): ./scripts/pause.sh prod us-east-1 --yes
 
-ENV=${1:-prod}
-REGION=${2:-us-east-1}
+# Always operate from the script's own directory so relative cd's are stable
+# regardless of the caller's working directory.
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+
+# Require the environment to be passed explicitly — this command destroys
+# the ALB and stops RDS, so we never want to default to prod silently.
+if [ "${1:-}" = "" ]; then
+  echo "❌ Error: environment is required."
+  echo "Usage: $0 <dev|staging|prod> [region] [--yes]"
+  exit 1
+fi
+
+ENV="$1"
+REGION="${2:-us-east-1}"
+ASSUME_YES="false"
+if [ "${3:-}" = "--yes" ] || [ "${3:-}" = "-y" ]; then
+  ASSUME_YES="true"
+fi
 
 echo "🛑 Pausing infrastructure for environment: $ENV"
 echo ""
@@ -15,6 +33,18 @@ echo ""
 if [[ ! "$ENV" =~ ^(dev|staging|prod)$ ]]; then
   echo "❌ Error: Environment must be dev, staging, or prod"
   exit 1
+fi
+
+# For prod, require explicit confirmation unless --yes was passed.
+if [ "$ENV" = "prod" ] && [ "$ASSUME_YES" != "true" ]; then
+  echo "⚠️  You are about to PAUSE PRODUCTION."
+  echo "    This will stop the RDS database and destroy the ALB, target group,"
+  echo "    and listener. Live traffic will fail until you resume."
+  read -r -p "Type 'pause-prod' to proceed: " CONFIRM
+  if [ "$CONFIRM" != "pause-prod" ]; then
+    echo "❌ Aborted."
+    exit 1
+  fi
 fi
 
 # Stop RDS first (manual - can't be done via Terraform)
@@ -49,7 +79,7 @@ echo "🔧 Applying Terraform with paused_mode=true..."
 # 1. First: Disable deletion protection (if ALB exists with protection enabled)
 # 2. Second: Destroy ALB by setting paused_mode=true
 
-cd "terraform/envs/$ENV"
+cd "${REPO_ROOT}/terraform/envs/${ENV}"
 
 if [ "$ENV" = "prod" ]; then
   echo "⚠️  Production detected - checking ALB deletion protection..."

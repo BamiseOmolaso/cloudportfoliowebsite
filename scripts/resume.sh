@@ -1,12 +1,22 @@
 #!/bin/bash
-set -e
+set -euo pipefail
 
 # Resume Infrastructure Script
-# Usage: ./scripts/resume.sh [environment] [region]
+# Usage: ./scripts/resume.sh <dev|staging|prod> [region]
 # Example: ./scripts/resume.sh prod us-east-1
 
-ENV=${1:-prod}
-REGION=${2:-us-east-1}
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd -- "${SCRIPT_DIR}/.." && pwd)"
+
+# Require the environment to be passed explicitly so we never default to prod.
+if [ "${1:-}" = "" ]; then
+  echo "❌ Error: environment is required."
+  echo "Usage: $0 <dev|staging|prod> [region]"
+  exit 1
+fi
+
+ENV="$1"
+REGION="${2:-us-east-1}"
 
 echo "🚀 Resuming infrastructure for environment: $ENV"
 echo ""
@@ -95,7 +105,7 @@ fi
 echo ""
 echo "🔧 Applying Terraform with paused_mode=false..."
 echo "   (ECS tasks will start now that RDS is available)"
-cd "terraform/envs/$ENV"
+cd "${REPO_ROOT}/terraform/envs/${ENV}"
 
 # For production, re-enable ALB deletion protection when resuming
 if [ "$ENV" = "prod" ]; then

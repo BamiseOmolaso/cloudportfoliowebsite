@@ -37,12 +37,16 @@ jobs:
   build-and-push:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
-    # Only run if CI passed (when triggered by workflow_run) or manual dispatch
+    # Only run if CI passed (when triggered by workflow_run) or manual dispatch.
+    # The workflow_run guard requires the upstream run to come from the SAME repository
+    # (not a fork) and to have been triggered by a push, so a malicious fork-push cannot
+    # cause a downstream deploy with our secrets.
     if: |
       github.event_name == 'workflow_dispatch' ||
-      (github.event_name == 'workflow_run' && 
+      (github.event_name == 'workflow_run' &&
        github.event.workflow_run.conclusion == 'success' &&
-       github.event.workflow_run.event == 'push')
+       github.event.workflow_run.event == 'push' &&
+       github.event.workflow_run.head_repository.full_name == github.repository)
     permissions:
       contents: read
       id-token: write
@@ -66,6 +70,8 @@ jobs:
       
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       
       - name: Select environment
         id: env
@@ -183,7 +189,7 @@ jobs:
         if: steps.ecr.outputs.ECR_URL != ''
       
       - name: Scan image for vulnerabilities
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8  # v0.36.0
         with:
           image-ref: ${{ steps.meta.outputs.tags }}
           format: 'sarif'
@@ -192,9 +198,9 @@ jobs:
           exit-code: '1'
         continue-on-error: true
         if: steps.ecr.outputs.ECR_URL != ''
-      
+
       - name: Upload Trivy results
-        uses: github/codeql-action/upload-sarif@v4
+        uses: github/codeql-action/upload-sarif@52485aec7be33610227643b0fe83936b8b5f061a  # v3
         if: hashFiles('trivy-results.sarif') != ''
         with:
           sarif_file: 'trivy-results.sarif'
@@ -220,6 +226,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -376,6 +384,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -532,6 +542,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       
       - name: Set AWS role ARN
         id: aws-role

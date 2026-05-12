@@ -53,16 +53,17 @@ This guide covers CI/CD pipelines, DevOps best practices, and how to use them fo
 
 Add these secrets in GitHub Settings → Secrets and variables → Actions:
 
-**Option A: Access Keys (Simpler)**
-```
-AWS_ACCESS_KEY_ID          # Your AWS access key
-AWS_SECRET_ACCESS_KEY      # Your AWS secret key
-```
-
-**Option B: OIDC (More Secure)**
+**Option A: OIDC (Recommended)** — short-lived credentials, no long-lived keys to leak.
 ```
 AWS_TERRAFORM_ROLE_ARN     # IAM role for Terraform
 AWS_DEPLOY_ROLE_ARN        # IAM role for deployments
+```
+See `OIDC_SETUP.md` for the IAM provider/role setup.
+
+**Option B: Access Keys (legacy fallback)** — used only if the role ARN secret above is missing or malformed. Plan to retire these once OIDC is verified across all environments.
+```
+AWS_ACCESS_KEY_ID          # Long-lived AWS access key
+AWS_SECRET_ACCESS_KEY      # Long-lived AWS secret key
 ```
 
 **Optional:**
@@ -201,9 +202,10 @@ Developer pushes code
 
 ### 3. Security Scanning
 - npm audit (dependency vulnerabilities)
-- Trivy (Docker image scanning)
+- Trivy (Docker image scanning) — SARIF results uploaded to GitHub Security via `github/codeql-action/upload-sarif`
 - TruffleHog (secret detection)
 - Snyk (additional security scanning)
+- **Third-party actions pinned to commit SHAs** (`trufflesecurity/trufflehog`, `snyk/actions/node`, `aquasecurity/trivy-action`, `github/codeql-action`) so a compromised upstream tag cannot inject malicious code into the pipeline. Bump the pins intentionally via a PR rather than tracking `@main` / `@master`.
 
 ### 4. Infrastructure as Code (IaC)
 - Terraform for all infrastructure
@@ -224,7 +226,11 @@ Developer pushes code
 ### 7. Approval Gates
 - Manual approval for production
 - Environment protection
-- Terraform plan review
+- Terraform plan review — PR comments redact AWS account IDs in ARN-shaped strings and link back to the full plan in the workflow run
+
+### 7a. Workflow Trust Boundary
+- `terraform.yml` and `deploy-app.yml` are triggered via `workflow_run` after CI passes. Both gate on `github.event.workflow_run.head_repository.full_name == github.repository` so a fork-push that happens to match a watched branch cannot trigger a downstream apply/deploy in the base repo with our secrets.
+- `actions/checkout` is configured with `persist-credentials: false` across all workflows since none of them push back to the repository.
 
 ### 8. Database Migration Automation
 - Automated Prisma migrations
