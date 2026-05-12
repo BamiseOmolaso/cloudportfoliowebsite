@@ -1,7 +1,10 @@
-# Read existing database credentials from Secrets Manager
-# Using ARN directly for more reliable lookup
+# Read existing database credentials from Secrets Manager.
+# The secret name is supplied per environment (see var.db_credentials_secret_name)
+# so dev/staging/prod each point at their own credentials. Previously this was a
+# hardcoded prod ARN which caused all environments to share the production
+# database password.
 data "aws_secretsmanager_secret" "db_credentials" {
-  arn = "arn:aws:secretsmanager:us-east-1:827327671360:secret:omolasowebportfolio/db/credentials-IPftJt"
+  name = var.db_credentials_secret_name
 }
 
 data "aws_secretsmanager_secret_version" "db_credentials" {
@@ -47,7 +50,10 @@ resource "aws_db_instance" "main" {
   backup_window           = "03:00-04:00"
   maintenance_window      = "sun:04:00-sun:05:00"
 
-  skip_final_snapshot       = true
+  # When skip_final_snapshot is true, final_snapshot_identifier is ignored;
+  # we set it anyway so production (which should pass false) produces a
+  # meaningfully-named snapshot on destroy.
+  skip_final_snapshot       = var.skip_final_snapshot
   final_snapshot_identifier = "${var.environment}-portfolio-db-final-snapshot"
 
   enabled_cloudwatch_logs_exports = ["postgresql", "upgrade"]

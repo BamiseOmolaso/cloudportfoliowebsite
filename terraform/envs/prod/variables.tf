@@ -54,6 +54,12 @@ variable "rds_allocated_storage" {
   default     = 20
 }
 
+variable "db_credentials_secret_name" {
+  description = "AWS Secrets Manager name for the prod database credentials. The existing live secret name is preserved here so this change does not orphan the running database."
+  type        = string
+  default     = "omolasowebportfolio/db/credentials"
+}
+
 variable "image_tag" {
   description = "Docker image tag to deploy"
   type        = string

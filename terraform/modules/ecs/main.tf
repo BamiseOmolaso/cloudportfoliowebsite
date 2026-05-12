@@ -44,7 +44,11 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Additional policy for Secrets Manager - Full access to all secrets
+# Additional policy for Secrets Manager — scoped to the two secrets the task
+# actually needs (db credentials + app env). Previously this used Resource = "*"
+# which let the execution role read every secret in the account. The trailing
+# "-*" wildcard preserves matching against Secrets Manager's auto-appended
+# 6-character suffix without granting access to other secret names.
 resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
   name = "${var.environment}-ecs-secrets-policy"
   role = aws_iam_role.ecs_task_execution_role.id
@@ -58,7 +62,12 @@ resource "aws_iam_role_policy" "ecs_task_execution_secrets" {
           "secretsmanager:GetSecretValue",
           "secretsmanager:DescribeSecret"
         ]
-        Resource = "*"
+        Resource = [
+          var.db_secret_arn,
+          "${var.db_secret_arn}-*",
+          var.app_secrets_arn,
+          "${var.app_secrets_arn}-*",
+        ]
       }
     ]
   })

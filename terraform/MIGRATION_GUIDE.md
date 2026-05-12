@@ -1,5 +1,7 @@
 # Terraform Migration Guide
 
+> **Historical note:** This migration has been completed. The old root-level Terraform config (`terraform/main.tf`, `backend.tf`, `variables.tf`, `outputs.tf`) was removed in the security-hardening pass. The canonical layout is now `terraform/envs/{dev,staging,prod}/`. This guide is retained as reference for anyone bootstrapping the per-env state from a fresh fork or restoring after a state-loss incident. The orphan state file at `s3://omolaso-terraform-state/portfolio/terraform.tfstate` (if present) can be deleted manually once nothing depends on it.
+
 ## 🎯 Overview
 
 This guide helps you migrate from the **old structure** (single `terraform/` directory) to the **new structure** (`terraform/envs/{dev,staging,prod}`).

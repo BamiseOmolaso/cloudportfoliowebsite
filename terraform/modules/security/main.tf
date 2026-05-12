@@ -40,24 +40,17 @@ resource "aws_security_group" "ecs" {
   description = "Security group for ECS tasks"
   vpc_id      = var.vpc_id
 
-  # Allow from ALB (when not paused)
+  # Allow traffic from ALB only. The previous rule that opened port 3000 to
+  # 0.0.0.0/0 "for direct access when paused" was permanent (no toggle on
+  # paused_mode), which made ECS tasks reachable from the internet whenever
+  # the service was running. When paused, ECS is scaled to 0 anyway — there
+  # is nothing to "directly access" — so the rule provided no real benefit.
   ingress {
     description     = "Allow traffic from ALB"
     from_port       = 3000
     to_port         = 3000
     protocol        = "tcp"
     security_groups = [aws_security_group.alb.id]
-  }
-
-  # Allow direct access when paused (for direct ECS access without ALB)
-  # Note: This is controlled by paused_mode variable passed from parent
-  # We keep both rules - ALB rule is harmless when paused, direct access rule is harmless when active
-  ingress {
-    description = "Allow direct access when paused (for cost savings)"
-    from_port   = 3000
-    to_port     = 3000
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
@@ -88,14 +81,15 @@ resource "aws_security_group" "rds" {
     security_groups = [aws_security_group.ecs.id]
   }
 
-  # NEW: allow from your current public IP (TEMPORARY)
-  ingress {
-    description = "PostgreSQL from local dev IP (TEMP)"
-    from_port   = 5432
-    to_port     = 5432
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # e.g., "102.88.56.201/32"
-  }
+  # NOTE: a previous "TEMP" rule allowed PostgreSQL from 0.0.0.0/0 for local
+  # admin access. That rule has been removed. To regain admin access to the
+  # database, prefer one of:
+  #   - ECS Exec into a running task and use psql there
+  #   - SSM Session Manager via a small EC2 bastion in the VPC
+  #   - A scoped ingress rule with `var.admin_cidr_blocks` (operator-supplied)
+  # The RDS instance also still has `publicly_accessible = true` in the rds
+  # module — flipping that to false is a follow-up that needs the admin path
+  # above to be in place first.
 
   egress {
     description = "Allow all outbound"

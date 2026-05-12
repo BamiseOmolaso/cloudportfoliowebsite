@@ -53,15 +53,17 @@ module "security" {
 module "rds" {
   source = "../../modules/rds"
 
-  vpc_id            = module.networking.vpc_id
-  subnet_ids        = module.networking.public_subnet_ids
-  security_group_id = module.security.rds_security_group_id
-  environment       = local.environment
-  db_name           = var.db_name
-  db_username       = var.db_username
-  db_password       = var.db_password
-  instance_class    = var.rds_instance_class
-  allocated_storage = var.rds_allocated_storage
+  vpc_id                     = module.networking.vpc_id
+  subnet_ids                 = module.networking.public_subnet_ids
+  security_group_id          = module.security.rds_security_group_id
+  environment                = local.environment
+  db_name                    = var.db_name
+  db_username                = var.db_username
+  db_password                = var.db_password
+  instance_class             = var.rds_instance_class
+  allocated_storage          = var.rds_allocated_storage
+  db_credentials_secret_name = var.db_credentials_secret_name
+  skip_final_snapshot        = false # prod must capture a final snapshot on destroy
 }
 
 # Application Load Balancer - Only create if not paused

@@ -84,6 +84,18 @@ Each environment has:
 
 **Important:** Copy `terraform.tfvars.example` to `terraform.tfvars` and fill in your values. **Never commit `terraform.tfvars` to git!**
 
+### Per-environment Secrets Manager prerequisites
+
+Each environment reads its database password and application secrets from **per-environment** Secrets Manager entries (the rds module no longer hardcodes a prod ARN — see `db_credentials_secret_name` in `terraform/modules/rds/variables.tf`). Create these out-of-band before `terraform apply` for any new environment:
+
+| Environment | DB credentials secret name              | App secrets secret name        |
+|-------------|------------------------------------------|--------------------------------|
+| dev         | `portfolio/dev/db-credentials`           | `portfolio/dev/app-secrets`    |
+| staging     | `portfolio/staging/db-credentials`       | `portfolio/staging/app-secrets`|
+| prod        | `omolasowebportfolio/db/credentials`     | `portfolio/prod/app-secrets`   |
+
+The DB credentials secret must contain `{ "username": "...", "password": "..." }`. See `SECRETS_MANAGER_SETUP.md` for the app-secrets schema and creation steps.
+
 ## 🔧 Modules
 
 ### Networking Module
@@ -113,7 +125,8 @@ Each environment has:
   - `envs/dev/terraform.tfstate`
   - `envs/staging/terraform.tfstate`
   - `envs/prod/terraform.tfstate`
-- **Locking**: DynamoDB table (`portfolio-tf-locks`)
+- **Locking**: S3 native locking (`use_lockfile = true` in each `backend.tf`). Requires Terraform ≥ 1.10. The `portfolio-tf-locks` DynamoDB table referenced in older docs is a leftover from before S3 native locking — safe to leave in place but no longer consulted by these backends.
+- **Orphan state from the old layout**: The previous single-config setup wrote state to `s3://omolaso-terraform-state/portfolio/terraform.tfstate`. That root-level Terraform config has been removed. If you previously applied it, the state object may still exist in S3 — verify nothing depends on it, then delete it manually.
 
 ## 🚨 Important Commands
 
@@ -209,7 +222,30 @@ terraform apply -var="paused_mode=true"
 
 **Note:** For production, the pause script automatically handles ALB deletion protection before pausing.
 
+## 🛡️ Security baseline (and known gaps)
+
+The Terraform code has had a hardening pass. **What's tightened in code:**
+
+- ECS security-group inbound 3000/tcp from `0.0.0.0/0` removed (ALB-only ingress).
+- RDS security-group inbound 5432/tcp from `0.0.0.0/0` removed (ECS-only ingress).
+- ECS task execution IAM role's `secretsmanager:GetSecretValue` scoped to the two task-specific secret ARNs instead of `Resource = "*"`.
+- GitHub OIDC trust subject claim narrowed from `repo:<repo>:*` to specific branches + `pull_request`.
+- RDS credentials secret name is per-environment (no cross-env contamination).
+- RDS `skip_final_snapshot` per-env (prod retains snapshot on destroy).
+- dev/staging VPC CIDR fixed (was `/24` + `cidrsubnet(8)` → invalid `/32`).
+
+**Known gaps not yet addressed in code** — needs operator coordination:
+
+- `aws_db_instance.main.publicly_accessible = true` (would need an admin path first — ECS Exec, bastion, or VPN).
+- ECS `assign_public_ip = true` with public subnets (would need private subnets + NAT).
+- ALB listener is HTTP-only on port 80 (needs ACM cert with DNS validation).
+- `terraform_role` / `deploy_role` IAM policies use wildcards (`ec2:*`, `iam:*`, `s3:*`, etc.). Scoping is high-blast-radius and warrants its own change.
+- No CloudWatch alarms yet (needs SNS + email subscribers).
+- ECR `image_tag_mutability = "MUTABLE"` (set to `IMMUTABLE` only after dropping `:latest` pushes from `deploy-app.yml`).
+
 ## 🔄 Migration from Old Structure
+
+The migration from the single-config layout (`terraform/main.tf`) to the per-env layout (`terraform/envs/<env>/`) has been completed and the old root-level config has been removed. The steps below are historical and only apply if you are bootstrapping the per-env state from a fresh fork.
 
 If you're migrating from the old single-environment structure:
 

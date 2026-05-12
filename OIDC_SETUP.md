@@ -2,6 +2,10 @@
 
 This guide shows you how to set up OIDC (OpenID Connect) authentication for GitHub Actions instead of using access keys.
 
+> **Note on trust-policy subject claims:** the policies below restrict `token.actions.githubusercontent.com:sub` to the three protected branches (`main`, `staging`, `develop`) plus `pull_request`. Avoid the wildcard form `repo:<owner>/<repo>:*` — it allows OIDC token issuance for arbitrary feature branches, manual `workflow_dispatch` runs from any branch, and any workflow run. The branch-and-PR list keeps the role usable for our actual CI flows (plan on PRs, apply on protected branches) without granting access to every push everywhere. PR runs from forks cannot match the `pull_request` entry because the OIDC token's sub claim for fork PRs uses the fork's repo path, not the base repo's.
+>
+> The wildcard `*:*` on action verbs in the IAM **policy** statements below (e.g. `"ec2:*"`, `"iam:*"`) is also broad — that's a separate scope-down task tracked as a follow-up, not in this guide yet.
+
 ## 🎯 Why OIDC?
 
 - ✅ **More Secure**: No long-lived access keys
@@ -51,7 +55,12 @@ cat > terraform-trust-policy.json << 'EOF'
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:BamiseOmolaso/cloudportfoliowebsite:*"
+          "token.actions.githubusercontent.com:sub": [
+            "repo:BamiseOmolaso/cloudportfoliowebsite:ref:refs/heads/main",
+            "repo:BamiseOmolaso/cloudportfoliowebsite:ref:refs/heads/staging",
+            "repo:BamiseOmolaso/cloudportfoliowebsite:ref:refs/heads/develop",
+            "repo:BamiseOmolaso/cloudportfoliowebsite:pull_request"
+          ]
         }
       }
     }
@@ -125,7 +134,12 @@ cat > deploy-trust-policy.json << 'EOF'
           "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
         },
         "StringLike": {
-          "token.actions.githubusercontent.com:sub": "repo:BamiseOmolaso/cloudportfoliowebsite:*"
+          "token.actions.githubusercontent.com:sub": [
+            "repo:BamiseOmolaso/cloudportfoliowebsite:ref:refs/heads/main",
+            "repo:BamiseOmolaso/cloudportfoliowebsite:ref:refs/heads/staging",
+            "repo:BamiseOmolaso/cloudportfoliowebsite:ref:refs/heads/develop",
+            "repo:BamiseOmolaso/cloudportfoliowebsite:pull_request"
+          ]
         }
       }
     }
