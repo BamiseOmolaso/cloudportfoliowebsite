@@ -89,32 +89,42 @@ Create environments in GitHub Settings → Environments:
 - Recommended: Add required reviewers
 - Add deployment branches: `main` only
 
+## 🌿 Branch & Deployment Model
+
+This repo uses **`feature → develop → staging → main`** as a branch-progression / code-review pipeline, but **only `main` deploys to AWS**. `develop` and `staging` exist to give each change three review stages with CI gating, without doubling/tripling the AWS bill on environments that wouldn't get much real traffic.
+
+| Branch | Runs CI? | Triggers deploy? | Purpose |
+|---|---|---|---|
+| `feature/*` | yes (on PR into develop) | no | Where new work happens. PR into `develop`. |
+| `develop` | yes (on push + PR) | **no** | Integration branch. PR `develop` → `staging`. |
+| `staging` | yes (on push + PR) | **no** | Pre-merge gate. PR `staging` → `main`. |
+| `main` | yes | **yes — to prod** | Production. Manual approval gate on the `production` GitHub Environment. |
+
+The mental model: branches replace the **environments** as your test gates. CI runs at every stage and a real human reviews each PR. The actual AWS rollout happens once when code lands on `main`.
+
 ## 🔄 Workflow Behavior
 
 ### CI Pipeline (`ci.yml`)
-- **Triggers:** Every push/PR
-- **Runs:** Lint, test, build, security scan
+- **Triggers:** every push to `main`, `develop`, `feature/**`; every PR into `main` or `develop`
+- **Runs:** Lint, type check, tests, build, security scan, Terraform validate
 - **No deployment**
 - **Duration:** ~5-10 minutes
 
 ### Terraform Workflow (`terraform.yml`)
-- **Triggers:** 
-  - Changes to `terraform/**` files
-  - After CI passes (via `workflow_run`)
-  - Manual dispatch
-- **Runs:** Plan and apply infrastructure changes
-- **Auto-apply:** Dev only
-- **Manual approval:** Staging/Prod (via GitHub Environments)
+- **Triggers:**
+  - PRs targeting `main` that touch `terraform/**` — runs `terraform plan` and posts a redacted diff to the PR
+  - After CI passes on `main` (via `workflow_run`) — runs `terraform apply` on the production state
+- **Restricted to main only.** Pushes to `develop` or `staging` do not trigger this workflow.
+- **Manual approval:** required for the production environment via GitHub Environments
 - **Duration:** ~3-5 minutes (plan) + ~5-10 minutes (apply)
 
 ### App Deployment (`deploy-app.yml`)
-- **Triggers:** 
-  - Code changes (non-Terraform files)
-  - After CI passes (via `workflow_run`)
+- **Triggers:**
+  - After CI passes on `main` (via `workflow_run`)
   - Manual dispatch
-- **Runs:** Build Docker image, push to ECR, deploy to ECS
-- **Auto-deploy:** Dev
-- **Manual approval:** Staging/Prod
+- **Restricted to main only.** Pushes to `develop` or `staging` do not trigger this workflow.
+- **Runs:** Build Docker image, push to ECR, force ECS service deployment to pick up the new image
+- **Manual approval:** required for the production environment
 - **Duration:** ~5-10 minutes (build) + ~3-5 minutes (deploy)
 
 ## 🔄 Workflow Execution Order
@@ -135,9 +145,11 @@ Workflows coordinate through:
    - Secrets: AWS Secrets Manager
 
 3. **Branch-Based Triggers**
-   - `develop` → dev environment
-   - `staging` → staging environment
-   - `main` → production environment
+   - `develop` → CI only (no deploy)
+   - `staging` → CI only (no deploy)
+   - `main` → CI + Terraform apply + App deployment to **production**
+
+   Only `main` triggers `terraform.yml` and `deploy-app.yml`. `develop` and `staging` are code-review checkpoints, not AWS environments.
 
 ### Execution Flow
 
