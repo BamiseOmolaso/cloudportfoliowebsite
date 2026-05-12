@@ -1,23 +1,25 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { useState } from 'react';
+import Link from "next/link";
+import { useState } from "react";
 
 const Footer = () => {
-  const [email, setEmail] = useState('');
-  const [status, setStatus] = useState<'idle' | 'subscribing' | 'success' | 'error'>('idle');
-  const [message, setMessage] = useState('');
+  const [email, setEmail] = useState("");
+  const [status, setStatus] = useState<
+    "idle" | "subscribing" | "success" | "error"
+  >("idle");
+  const [message, setMessage] = useState("");
 
   const handleSubscribe = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus('subscribing');
-    setMessage('');
+    setStatus("subscribing");
+    setMessage("");
 
     try {
-      const response = await fetch('/api/newsletter/subscribe', {
-        method: 'POST',
+      const response = await fetch("/api/newsletter/subscribe", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ email }),
       });
@@ -25,31 +27,36 @@ const Footer = () => {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to subscribe');
+        throw new Error(data.error || "Failed to subscribe");
       }
 
-      setStatus('success');
-      setMessage('Thank you for subscribing!');
-      setEmail('');
+      setStatus("success");
+      setMessage("Thank you for subscribing!");
+      setEmail("");
     } catch (error) {
-      setStatus('error');
-      setMessage(error instanceof Error ? error.message : 'Failed to subscribe');
+      setStatus("error");
+      setMessage(
+        error instanceof Error ? error.message : "Failed to subscribe",
+      );
     }
   };
 
   const socialLinks = [
-    { name: 'GitHub', href: 'https://github.com/BamiseOmolaso/' },
-    { name: 'LinkedIn', href: 'https://www.linkedin.com/in/oluwabamise-omolaso/' },
-    { name: 'Twitter', href: 'https://x.com/drbamiseomolaso' },
+    { name: "GitHub", href: "https://github.com/BamiseOmolaso/" },
+    {
+      name: "LinkedIn",
+      href: "https://www.linkedin.com/in/dr-bamise-omolaso/",
+    },
+    { name: "Twitter", href: "https://x.com/devsecops_dr" },
   ];
 
   const quickLinks = [
-    { name: 'Home', href: '/' },
-    { name: 'Blog', href: '/blog' },
-    { name: 'Projects', href: '/projects' },
-    { name: 'About', href: '/about' },
-    { name: 'Contact', href: '/contact' },
-    { name: 'Newsletter', href: '/newsletter' },
+    { name: "Home", href: "/" },
+    { name: "Blog", href: "/blog" },
+    { name: "Projects", href: "/projects" },
+    { name: "About", href: "/about" },
+    { name: "Contact", href: "/contact" },
+    { name: "Newsletter", href: "/newsletter" },
   ];
 
   return (
@@ -60,8 +67,11 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold text-white mb-4">Contact</h3>
             <p className="text-gray-400">
-              Email:{' '}
-              <a href="mailto:davidbams3@gmail.com" className="hover:text-purple-400">
+              Email:{" "}
+              <a
+                href="mailto:davidbams3@gmail.com"
+                className="hover:text-purple-400"
+              >
                 davidbams3@gmail.com
               </a>
             </p>
@@ -69,9 +79,11 @@ const Footer = () => {
 
           {/* Quick Links */}
           <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Quick Links</h3>
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Quick Links
+            </h3>
             <ul className="space-y-2">
-              {quickLinks.map(link => (
+              {quickLinks.map((link) => (
                 <li key={link.name}>
                   <Link
                     href={link.href}
@@ -88,7 +100,7 @@ const Footer = () => {
           <div>
             <h3 className="text-lg font-semibold text-white mb-4">Connect</h3>
             <div className="flex space-x-4">
-              {socialLinks.map(link => (
+              {socialLinks.map((link) => (
                 <a
                   key={link.name}
                   href={link.href}
@@ -104,29 +116,35 @@ const Footer = () => {
 
           {/* Newsletter */}
           <div>
-            <h3 className="text-lg font-semibold text-white mb-4">Newsletter</h3>
-            <p className="text-gray-400 mb-4">Subscribe to get the latest updates and insights.</p>
+            <h3 className="text-lg font-semibold text-white mb-4">
+              Newsletter
+            </h3>
+            <p className="text-gray-400 mb-4">
+              Subscribe to get the latest updates and insights.
+            </p>
             <form onSubmit={handleSubscribe} className="space-y-2">
               <input
                 type="email"
                 value={email}
-                onChange={e => setEmail(e.target.value)}
+                onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
                 className="w-full px-3 py-2 bg-gray-800 border border-gray-700 rounded-md focus:ring-2 focus:ring-purple-500 focus:border-transparent"
                 required
               />
               <button
                 type="submit"
-                disabled={status === 'subscribing'}
+                disabled={status === "subscribing"}
                 className={`w-full px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-900 ${
-                  status === 'subscribing' ? 'opacity-50 cursor-not-allowed' : ''
+                  status === "subscribing"
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
                 }`}
               >
-                {status === 'subscribing' ? 'Subscribing...' : 'Subscribe'}
+                {status === "subscribing" ? "Subscribing..." : "Subscribe"}
               </button>
               {message && (
                 <p
-                  className={`text-sm ${status === 'success' ? 'text-green-400' : 'text-red-400'}`}
+                  className={`text-sm ${status === "success" ? "text-green-400" : "text-red-400"}`}
                 >
                   {message}
                 </p>
@@ -137,7 +155,8 @@ const Footer = () => {
 
         <div className="mt-8 pt-8 border-t border-gray-800 text-center text-gray-400">
           <p>
-            &copy; {new Date().getFullYear()} Dr. Oluwabamise David Omolaso. All rights reserved.
+            &copy; {new Date().getFullYear()} Dr. Oluwabamise David Omolaso. All
+            rights reserved.
           </p>
         </div>
       </div>
