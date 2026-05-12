@@ -38,16 +38,18 @@ env:
 
 jobs:
   # ============================================
-  # Terraform Plan
+  # Detect Terraform changes
   # ============================================
-  
-  terraform-plan:
-    name: Terraform Plan - ${{ github.ref_name }}
+  # `workflow_run` does not accept a `paths:` filter, so every push to main
+  # used to fan out a Terraform run that sat at the production-approval gate
+  # even when the merge only touched app code or workflow YAML. This job
+  # diffs the triggering commit and short-circuits the rest of the workflow
+  # when no Terraform-relevant files changed. PR + workflow_dispatch events
+  # are already gated by their own trigger filters / operator intent, so for
+  # those we set the output to true unconditionally.
+  detect-changes:
+    name: Detect Terraform changes
     runs-on: ubuntu-latest
-    # Only run if CI passed (when triggered by workflow_run), PR (for plan review), or manual dispatch.
-    # The workflow_run guard requires the upstream run to come from the SAME repository
-    # (not a fork) and to have been triggered by a push, so a malicious fork-push cannot
-    # cause a downstream apply with our secrets.
     if: |
       github.event_name == 'workflow_dispatch' ||
       github.event_name == 'pull_request' ||
@@ -55,6 +57,60 @@ jobs:
        github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
+    outputs:
+      has_terraform_changes: ${{ steps.check.outputs.has_terraform_changes }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout (workflow_run only)
+        if: github.event_name == 'workflow_run'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Determine if Terraform-relevant files changed
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" != "workflow_run" ]; then
+            echo "has_terraform_changes=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Event '${{ github.event_name }}' is gated by its own trigger filters; running."
+            exit 0
+          fi
+
+          CHANGED=$(git diff --name-only HEAD~1 HEAD || true)
+          echo "Changed files in triggering commit:"
+          echo "$CHANGED"
+
+          if echo "$CHANGED" | grep -E '^(terraform/|\.github/workflows/terraform\.yml$)' >/dev/null; then
+            echo "has_terraform_changes=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Terraform-relevant files changed; running."
+          else
+            echo "has_terraform_changes=false" >> "$GITHUB_OUTPUT"
+            echo "⏭️  No terraform/ or terraform workflow changes; short-circuiting."
+          fi
+
+  # ============================================
+  # Terraform Plan
+  # ============================================
+
+  terraform-plan:
+    name: Terraform Plan - ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+    needs: [detect-changes]
+    # Only run if CI passed (when triggered by workflow_run), PR (for plan review), or manual dispatch.
+    # The workflow_run guard requires the upstream run to come from the SAME repository
+    # (not a fork) and to have been triggered by a push, so a malicious fork-push cannot
+    # cause a downstream apply with our secrets.
+    if: |
+      needs.detect-changes.outputs.has_terraform_changes == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       github.event_name == 'pull_request' ||
+       (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
     outputs:
       run_id: ${{ github.run_id }}
       plan_success: ${{ steps.plan.outputs.plan_success }}
