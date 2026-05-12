@@ -67,9 +67,9 @@ variable "admin_cidr_blocks" {
 }
 
 variable "acm_certificate_arn" {
-  description = "Optional ARN of an ACM certificate to attach to a HTTPS:443 listener on the ALB. When set, an HTTPS listener is created and the HTTP:80 listener becomes a permanent redirect to HTTPS. When empty (default), the ALB continues to serve plain HTTP on port 80."
+  description = "ARN of the ACM certificate attached to the ALB's HTTPS:443 listener. Defaulted here (rather than in gitignored terraform.tfvars) so CI runs don't see drift and destroy the HTTPS listener every deploy. The ARN identifies a public certificate — not sensitive."
   type        = string
-  default     = ""
+  default     = "arn:aws:acm:us-east-1:827327671360:certificate/652dba64-81dc-4141-84dd-cb7f3186fde2"
 }
 
 variable "site_url" {
