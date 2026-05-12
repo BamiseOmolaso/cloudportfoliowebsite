@@ -24,16 +24,23 @@ resource "aws_iam_role" "terraform_role" {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
-          # Restrict OIDC subject to the protected branches we deploy from
-          # plus pull_request runs (which use the base-repo subject claim, so
-          # forks cannot match). Previously this was `repo:<repo>:*` which
-          # would have matched any ref including arbitrary feature branches.
+          # Restrict OIDC subject to the protected branches we deploy from,
+          # PR runs (which use the base-repo subject claim, so forks can't
+          # match), AND the deployment-environment subs that GitHub emits
+          # whenever a job has an `environment:` declaration — which is
+          # the case for all our ECS deploy jobs gated on manual approval.
+          # Without the environment subs, the prod/staging/dev deploy jobs
+          # fail at AssumeRoleWithWebIdentity because their sub becomes
+          # `repo:<repo>:environment:<name>` instead of the branch ref.
           StringLike = {
             "token.actions.githubusercontent.com:sub" = [
               "repo:${var.github_repo}:ref:refs/heads/main",
               "repo:${var.github_repo}:ref:refs/heads/staging",
               "repo:${var.github_repo}:ref:refs/heads/develop",
               "repo:${var.github_repo}:pull_request",
+              "repo:${var.github_repo}:environment:production",
+              "repo:${var.github_repo}:environment:staging",
+              "repo:${var.github_repo}:environment:development",
             ]
           }
         }
@@ -102,16 +109,23 @@ resource "aws_iam_role" "deploy_role" {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
-          # Restrict OIDC subject to the protected branches we deploy from
-          # plus pull_request runs (which use the base-repo subject claim, so
-          # forks cannot match). Previously this was `repo:<repo>:*` which
-          # would have matched any ref including arbitrary feature branches.
+          # Restrict OIDC subject to the protected branches we deploy from,
+          # PR runs (which use the base-repo subject claim, so forks can't
+          # match), AND the deployment-environment subs that GitHub emits
+          # whenever a job has an `environment:` declaration — which is
+          # the case for all our ECS deploy jobs gated on manual approval.
+          # Without the environment subs, the prod/staging/dev deploy jobs
+          # fail at AssumeRoleWithWebIdentity because their sub becomes
+          # `repo:<repo>:environment:<name>` instead of the branch ref.
           StringLike = {
             "token.actions.githubusercontent.com:sub" = [
               "repo:${var.github_repo}:ref:refs/heads/main",
               "repo:${var.github_repo}:ref:refs/heads/staging",
               "repo:${var.github_repo}:ref:refs/heads/develop",
               "repo:${var.github_repo}:pull_request",
+              "repo:${var.github_repo}:environment:production",
+              "repo:${var.github_repo}:environment:staging",
+              "repo:${var.github_repo}:environment:development",
             ]
           }
         }
