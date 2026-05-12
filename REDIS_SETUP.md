@@ -145,6 +145,52 @@ This is **expected** - Redis is not used in development.
 - ⚠️ Rate limits reset on server restart
 - ⚠️ Not shared across multiple dev servers (if running multiple)
 
+## ⚠️ Pause / resume gotcha: free-tier instances get reclaimed
+
+Redis Cloud's free 30 MB tier deletes inactive databases after a period of inactivity (timing varies; observed at ~3 months on this project). If you've paused this stack with `./scripts/pause.sh` for an extended period and then resume, the `REDIS_URL` in `portfolio/prod/app-secrets` may point at a hostname that no longer exists. Symptom:
+
+- ECS tasks start fine (health check passes — `/api/health` doesn't touch Redis)
+- Any endpoint that goes through `withRateLimit` (login, blog, projects, …) hangs forever on the Redis DNS lookup
+- ALB eventually returns **HTTP 504 Gateway Time-out** with an HTML body
+- The client-side fetch JSON-parser dies with `Unexpected token '<'`
+
+**Pre-resume sanity check** — run before `./scripts/resume.sh` after a long pause:
+
+```bash
+HOST=$(aws secretsmanager get-secret-value \
+  --secret-id portfolio/prod/app-secrets \
+  --region us-east-1 \
+  --query SecretString --output text \
+  | jq -r '.REDIS_URL' | sed -E 's|.*@([^:]+):.*|\1|')
+dig +short "$HOST" @8.8.8.8
+# empty output = NXDOMAIN = Redis Cloud has reclaimed the instance; provision a new one before resuming
+```
+
+**Recovery if you only realise after resume** — provision a new Redis Cloud DB (Step 1 above), then:
+
+```bash
+NEW_REDIS_URL="redis://default:<password>@<new-host>:<port>"
+
+# Patch the secret without losing any other key
+aws secretsmanager get-secret-value --secret-id portfolio/prod/app-secrets --region us-east-1 \
+  --query SecretString --output text \
+  | jq --arg url "$NEW_REDIS_URL" '.REDIS_URL = $url' \
+  | aws secretsmanager put-secret-value \
+      --secret-id portfolio/prod/app-secrets --region us-east-1 \
+      --secret-string file:///dev/stdin --query VersionId --output text
+
+# Force ECS tasks to restart and pick up the new secret value
+aws ecs update-service \
+  --cluster prod-portfolio-cluster \
+  --service prod-portfolio-service \
+  --region us-east-1 \
+  --force-new-deployment
+```
+
+Wait ~3 minutes for the rolling deployment, then `curl -sk -X POST https://<ALB-DNS>/api/auth/login -d '{}'` should return a JSON 4xx instead of an HTML 504.
+
+**Defensive code change (TODO):** the Redis client in `src/lib/redis-client.ts` has no `socket.connectTimeout`, so a dead host hangs until the TCP timeout. Adding a 5 s `connectTimeout` would let the rate-limiter fall back to in-memory fast and surface the issue without bringing the site down.
+
 ## Troubleshooting
 
 ### "Redis not configured" in Production
