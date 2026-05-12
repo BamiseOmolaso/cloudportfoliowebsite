@@ -81,15 +81,21 @@ resource "aws_security_group" "rds" {
     security_groups = [aws_security_group.ecs.id]
   }
 
-  # NOTE: a previous "TEMP" rule allowed PostgreSQL from 0.0.0.0/0 for local
-  # admin access. That rule has been removed. To regain admin access to the
-  # database, prefer one of:
-  #   - ECS Exec into a running task and use psql there
-  #   - SSM Session Manager via a small EC2 bastion in the VPC
-  #   - A scoped ingress rule with `var.admin_cidr_blocks` (operator-supplied)
-  # The RDS instance also still has `publicly_accessible = true` in the rds
-  # module — flipping that to false is a follow-up that needs the admin path
-  # above to be in place first.
+  # Optional laptop/admin access on 5432, scoped to operator-supplied CIDRs.
+  # Defaults to [] (closed) — set `admin_cidr_blocks` in tfvars (e.g.
+  # ["203.0.113.10/32"]) to allow your home IP. This pairs with
+  # publicly_accessible=true on the RDS instance, which is a deliberate
+  # cost trade-off (no NAT/bastion/VPN).
+  dynamic "ingress" {
+    for_each = length(var.admin_cidr_blocks) > 0 ? [1] : []
+    content {
+      description = "PostgreSQL from operator-supplied admin CIDRs"
+      from_port   = 5432
+      to_port     = 5432
+      protocol    = "tcp"
+      cidr_blocks = var.admin_cidr_blocks
+    }
+  }
 
   egress {
     description = "Allow all outbound"
