@@ -221,5 +221,6 @@ module "ecs" {
   app_secrets_arn    = data.aws_secretsmanager_secret.app_secrets.arn
   desired_count      = var.ecs_desired_count
   paused_mode        = var.paused_mode
+  site_url           = var.site_url
 }
 

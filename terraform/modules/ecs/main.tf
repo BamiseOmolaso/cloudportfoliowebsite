@@ -136,16 +136,25 @@ resource "aws_ecs_task_definition" "app" {
         }
       ]
 
-      environment = [
-        {
-          name  = "NODE_ENV"
-          value = "production"
-        },
-        {
-          name  = "PORT"
-          value = "3000"
-        }
-      ]
+      environment = concat(
+        [
+          {
+            name  = "NODE_ENV"
+            value = "production"
+          },
+          {
+            name  = "PORT"
+            value = "3000"
+          },
+        ],
+        # Inject site URL only when caller configured one. The app helper
+        # (src/lib/site-url.ts) throws in production when missing, which is
+        # the desired loud failure mode if the operator forgets.
+        var.site_url == "" ? [] : [{
+          name  = "NEXT_PUBLIC_SITE_URL"
+          value = var.site_url
+        }],
+      )
 
       secrets = [
         {

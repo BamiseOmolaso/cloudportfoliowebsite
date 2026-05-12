@@ -72,6 +72,12 @@ variable "acm_certificate_arn" {
   default     = ""
 }
 
+variable "site_url" {
+  description = "Publicly-reachable URL of the prod site, injected into the ECS task as NEXT_PUBLIC_SITE_URL. Used by outbound emails to build absolute unsubscribe / preferences links. Defaults to the production custom domain."
+  type        = string
+  default     = "https://portfolio.oluwabamiseomolaso.com.ng"
+}
+
 variable "image_tag" {
   description = "Docker image tag to deploy"
   type        = string

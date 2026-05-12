@@ -66,3 +66,9 @@ variable "paused_mode" {
   type        = bool
   default     = false
 }
+
+variable "site_url" {
+  description = "Publicly-reachable base URL for the application. Injected into the ECS task as NEXT_PUBLIC_SITE_URL so outbound emails (welcome, unsubscribe, preferences) build absolute links to the real site instead of http://localhost:3000. Leave empty to omit the env var — the app will then throw at email-send time in production, which is the intended behaviour."
+  type        = string
+  default     = ""
+}
