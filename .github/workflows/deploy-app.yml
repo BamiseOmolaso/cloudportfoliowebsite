@@ -328,25 +328,45 @@ jobs:
             exit 1
           fi
       
-      - name: Update ECS Service with new image
+      # Register a new task-definition revision with the updated image, then
+      # point the ECS service at it via aws-cli. We deliberately avoid
+      # `terraform apply` here: terraform would reconcile every drifted
+      # resource (operator-only tfvars not in CI), and the deploy_role lacks
+      # iam:UpdateAssumeRolePolicy / ec2:RevokeSecurityGroupIngress / etc.
+      # by Phase 3 design. Infrastructure changes are the job of
+      # terraform.yml, not deploy-app.yml.
+      - name: Register new task definition with new image
+        id: register-td
+        env:
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+          ECR_REPO: ${{ needs.build-and-push.outputs.ecr_repository }}
+          CLUSTER: ${{ steps.ecs.outputs.cluster_name }}
+          SERVICE: ${{ steps.ecs.outputs.service_name }}
         run: |
-          cd terraform/envs/dev
-          terraform init -input=false
-          
-          # Run plan first to see full error messages
-          echo "📋 Running Terraform plan..."
-          terraform plan \
-            -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" \
-            -out=tfplan \
-            -input=false || {
-              echo "❌ Terraform plan failed. Full error:"
-              terraform plan -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" -input=false 2>&1 | tee plan-error.log
-              exit 1
-            }
-          
-          # Apply the plan
-          echo "🚀 Applying Terraform plan..."
-          terraform apply -input=false -auto-approve tfplan
+          TD_FAMILY=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
+            --region "$AWS_REGION" --query 'services[0].taskDefinition' --output text \
+            | awk -F'/' '{print $NF}' | awk -F':' '{print $1}')
+          CURRENT=$(aws ecs describe-task-definition --task-definition "$TD_FAMILY" \
+            --region "$AWS_REGION" --query 'taskDefinition' --output json)
+          NEW=$(echo "$CURRENT" | jq --arg img "${ECR_REPO}:${IMAGE_TAG}" '
+            .containerDefinitions[0].image = $img
+            | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
+          ')
+          NEW_ARN=$(echo "$NEW" | aws ecs register-task-definition --region "$AWS_REGION" \
+            --cli-input-json file:///dev/stdin \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "Registered: $NEW_ARN"
+          echo "task_def_arn=$NEW_ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Update ECS service to use new task definition
+        run: |
+          aws ecs update-service \
+            --cluster ${{ steps.ecs.outputs.cluster_name }} \
+            --service ${{ steps.ecs.outputs.service_name }} \
+            --task-definition ${{ steps.register-td.outputs.task_def_arn }} \
+            --region ${{ env.AWS_REGION }} \
+            --query 'service.deployments[0].{Status:status,Rollout:rolloutState}' \
+            --output table
       
       - name: Wait for ECS Service to Stabilize
         run: |
@@ -486,25 +506,38 @@ jobs:
             exit 1
           fi
       
-      - name: Update ECS Service with new image
+      - name: Register new task definition with new image
+        id: register-td
+        env:
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+          ECR_REPO: ${{ needs.build-and-push.outputs.ecr_repository }}
+          CLUSTER: ${{ steps.ecs.outputs.cluster_name }}
+          SERVICE: ${{ steps.ecs.outputs.service_name }}
         run: |
-          cd terraform/envs/staging
-          terraform init -input=false
-          
-          # Run plan first to see full error messages
-          echo "📋 Running Terraform plan..."
-          terraform plan \
-            -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" \
-            -out=tfplan \
-            -input=false || {
-              echo "❌ Terraform plan failed. Full error:"
-              terraform plan -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" -input=false 2>&1 | tee plan-error.log
-              exit 1
-            }
-          
-          # Apply the plan
-          echo "🚀 Applying Terraform plan..."
-          terraform apply -input=false -auto-approve tfplan
+          TD_FAMILY=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
+            --region "$AWS_REGION" --query 'services[0].taskDefinition' --output text \
+            | awk -F'/' '{print $NF}' | awk -F':' '{print $1}')
+          CURRENT=$(aws ecs describe-task-definition --task-definition "$TD_FAMILY" \
+            --region "$AWS_REGION" --query 'taskDefinition' --output json)
+          NEW=$(echo "$CURRENT" | jq --arg img "${ECR_REPO}:${IMAGE_TAG}" '
+            .containerDefinitions[0].image = $img
+            | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
+          ')
+          NEW_ARN=$(echo "$NEW" | aws ecs register-task-definition --region "$AWS_REGION" \
+            --cli-input-json file:///dev/stdin \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "Registered: $NEW_ARN"
+          echo "task_def_arn=$NEW_ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Update ECS service to use new task definition
+        run: |
+          aws ecs update-service \
+            --cluster ${{ steps.ecs.outputs.cluster_name }} \
+            --service ${{ steps.ecs.outputs.service_name }} \
+            --task-definition ${{ steps.register-td.outputs.task_def_arn }} \
+            --region ${{ env.AWS_REGION }} \
+            --query 'service.deployments[0].{Status:status,Rollout:rolloutState}' \
+            --output table
       
       - name: Wait for ECS Service to Stabilize
         run: |
@@ -644,25 +677,38 @@ jobs:
             exit 1
           fi
       
-      - name: Update ECS Service with new image
+      - name: Register new task definition with new image
+        id: register-td
+        env:
+          IMAGE_TAG: ${{ needs.build-and-push.outputs.image_tag }}
+          ECR_REPO: ${{ needs.build-and-push.outputs.ecr_repository }}
+          CLUSTER: ${{ steps.ecs.outputs.cluster_name }}
+          SERVICE: ${{ steps.ecs.outputs.service_name }}
         run: |
-          cd terraform/envs/prod
-          terraform init -input=false
-          
-          # Run plan first to see full error messages
-          echo "📋 Running Terraform plan..."
-          terraform plan \
-            -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" \
-            -out=tfplan \
-            -input=false || {
-              echo "❌ Terraform plan failed. Full error:"
-              terraform plan -var="image_tag=${{ needs.build-and-push.outputs.image_tag }}" -input=false 2>&1 | tee plan-error.log
-              exit 1
-            }
-          
-          # Apply the plan
-          echo "🚀 Applying Terraform plan..."
-          terraform apply -input=false -auto-approve tfplan
+          TD_FAMILY=$(aws ecs describe-services --cluster "$CLUSTER" --services "$SERVICE" \
+            --region "$AWS_REGION" --query 'services[0].taskDefinition' --output text \
+            | awk -F'/' '{print $NF}' | awk -F':' '{print $1}')
+          CURRENT=$(aws ecs describe-task-definition --task-definition "$TD_FAMILY" \
+            --region "$AWS_REGION" --query 'taskDefinition' --output json)
+          NEW=$(echo "$CURRENT" | jq --arg img "${ECR_REPO}:${IMAGE_TAG}" '
+            .containerDefinitions[0].image = $img
+            | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
+          ')
+          NEW_ARN=$(echo "$NEW" | aws ecs register-task-definition --region "$AWS_REGION" \
+            --cli-input-json file:///dev/stdin \
+            --query 'taskDefinition.taskDefinitionArn' --output text)
+          echo "Registered: $NEW_ARN"
+          echo "task_def_arn=$NEW_ARN" >> "$GITHUB_OUTPUT"
+
+      - name: Update ECS service to use new task definition
+        run: |
+          aws ecs update-service \
+            --cluster ${{ steps.ecs.outputs.cluster_name }} \
+            --service ${{ steps.ecs.outputs.service_name }} \
+            --task-definition ${{ steps.register-td.outputs.task_def_arn }} \
+            --region ${{ env.AWS_REGION }} \
+            --query 'service.deployments[0].{Status:status,Rollout:rolloutState}' \
+            --output table
       
       - name: Wait for ECS Service to Stabilize
         run: |
