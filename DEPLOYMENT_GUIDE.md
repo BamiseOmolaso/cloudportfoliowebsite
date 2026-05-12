@@ -80,6 +80,28 @@ git push origin main
 - After approval: Updates ECS service
 - Waits for deployment to stabilize
 
+### Step 3b (Optional): Enable HTTPS on the ALB
+
+By default the ALB serves HTTP on port 80. To switch to HTTPS:
+
+1. Request an ACM certificate with `aws acm request-certificate --domain-name <yourdomain> --validation-method DNS --region us-east-1`.
+2. Add the DNS validation CNAME record at your DNS provider (or Route 53).
+3. Once the cert reaches `Status: ISSUED`, set `acm_certificate_arn = "arn:aws:acm:..."` in `terraform/envs/<env>/terraform.tfvars` and re-apply.
+4. The HTTP:80 listener automatically becomes a 301 redirect to HTTPS:443.
+
+Full instructions in [`terraform/README.md`](terraform/README.md#enabling-https). Leaving `acm_certificate_arn` empty keeps the legacy HTTP-only behaviour.
+
+### Step 3c (Optional): Allow your laptop to reach RDS directly
+
+RDS sits in a public subnet with `publicly_accessible = true` to avoid NAT/bastion/VPN charges, but the security group ingress on 5432 is closed by default. To open it to your IP:
+
+```hcl
+# terraform/envs/<env>/terraform.tfvars
+admin_cidr_blocks = ["203.0.113.42/32"]  # replace with your home IP
+```
+
+Re-run `terraform apply`. Same recurring cost as the previous "open to the world" rule (i.e. $0), but only your IP can reach the database.
+
 ### Step 4: Verify Deployment
 
 ```bash

@@ -227,21 +227,61 @@ terraform apply -var="paused_mode=true"
 The Terraform code has had a hardening pass. **What's tightened in code:**
 
 - ECS security-group inbound 3000/tcp from `0.0.0.0/0` removed (ALB-only ingress).
-- RDS security-group inbound 5432/tcp from `0.0.0.0/0` removed (ECS-only ingress).
+- RDS security-group inbound 5432/tcp from `0.0.0.0/0` replaced with a `var.admin_cidr_blocks` ingress (default `[]`, closed). Set to your home IP `/32` in `terraform.tfvars` when you need direct laptop access — same cost as the old open rule but limits the attack surface.
+- Optional **HTTPS listener** via `var.acm_certificate_arn`. When empty (default), the ALB serves HTTP on :80 as before. When set, an HTTPS listener is added on :443 (TLS 1.3 policy) and the HTTP listener becomes a 301 redirect. See "Enabling HTTPS" below for the cert request flow.
 - ECS task execution IAM role's `secretsmanager:GetSecretValue` scoped to the two task-specific secret ARNs instead of `Resource = "*"`.
 - GitHub OIDC trust subject claim narrowed from `repo:<repo>:*` to specific branches + `pull_request`.
 - RDS credentials secret name is per-environment (no cross-env contamination).
 - RDS `skip_final_snapshot` per-env (prod retains snapshot on destroy).
 - dev/staging VPC CIDR fixed (was `/24` + `cidrsubnet(8)` → invalid `/32`).
 
-**Known gaps not yet addressed in code** — needs operator coordination:
+### Deliberate cost / convenience trade-offs (not bugs)
 
-- `aws_db_instance.main.publicly_accessible = true` (would need an admin path first — ECS Exec, bastion, or VPN).
-- ECS `assign_public_ip = true` with public subnets (would need private subnets + NAT).
-- ALB listener is HTTP-only on port 80 (needs ACM cert with DNS validation).
+These are kept open on purpose to avoid recurring AWS charges or operator overhead. Don't change them without explicit intent.
+
+| Setting | Why kept | If you wanted to close it |
+|---|---|---|
+| `aws_db_instance.main.publicly_accessible = true` | Lets you connect to RDS from a laptop without paying for a NAT gateway (~$32/mo), bastion EC2, or AWS Client VPN (~$72/mo). | Set `publicly_accessible = false` and put RDS in private subnets — then you'd need NAT or a bastion. The `admin_cidr_blocks` variable already scopes who can reach 5432 when it's open. |
+| ECS `assign_public_ip = true` + public subnets only | Same reason — avoids a NAT gateway. Egress from tasks (image pulls, Resend API, etc.) goes via the public IP. | Move to private subnets and provision a NAT gateway. The `networking` module would need a private-subnet branch. |
+| Single-AZ on dev/staging RDS | Multi-AZ doubles RDS cost. | Toggle `multi_az = true` in the rds module per-env. |
+| ALB HTTP-only by default | ACM is free, but the cert request flow needs a real domain and DNS validation. | Set `acm_certificate_arn` (see below). |
+
+### Real backlog (not cost-driven)
+
 - `terraform_role` / `deploy_role` IAM policies use wildcards (`ec2:*`, `iam:*`, `s3:*`, etc.). Scoping is high-blast-radius and warrants its own change.
-- No CloudWatch alarms yet (needs SNS + email subscribers).
+- No CloudWatch alarms yet (needs SNS + email subscribers — minimal cost, ~$0.10/alarm/month).
 - ECR `image_tag_mutability = "MUTABLE"` (set to `IMMUTABLE` only after dropping `:latest` pushes from `deploy-app.yml`).
+
+### Enabling HTTPS
+
+1. Request a certificate (replace with your domain — the project's primary domain is `oluwabamiseomolaso.com.ng`):
+
+   ```bash
+   aws acm request-certificate \
+     --domain-name "yourdomain.com" \
+     --subject-alternative-names "www.yourdomain.com" \
+     --validation-method DNS \
+     --region us-east-1
+   ```
+
+2. Note the returned `CertificateArn`, then describe it to get the DNS validation record:
+
+   ```bash
+   aws acm describe-certificate \
+     --certificate-arn arn:aws:acm:us-east-1:<account>:certificate/<uuid> \
+     --region us-east-1 \
+     --query 'Certificate.DomainValidationOptions'
+   ```
+
+3. Add the returned `Name` / `Value` CNAME record at your DNS provider (or in Route 53 if you host the zone). ACM auto-issues once the record propagates (a few minutes).
+4. Wait until `Status: ISSUED`, then drop the ARN into the env's `terraform.tfvars`:
+
+   ```hcl
+   acm_certificate_arn = "arn:aws:acm:us-east-1:<account>:certificate/<uuid>"
+   ```
+
+5. `terraform apply` — the HTTPS listener and HTTP→HTTPS redirect get created.
+6. Point your domain's A/ALIAS record at the ALB's `dns_name` (output by `terraform output alb_dns_name`).
 
 ## 🔄 Migration from Old Structure
 
