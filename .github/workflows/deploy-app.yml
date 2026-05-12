@@ -1,14 +1,14 @@
 name: Deploy Application
 
 on:
-  # Run after CI passes (required - prevents deploying broken code)
+  # Run after CI passes — restricted to main only. develop and staging
+  # branches exist as code-review stages and run CI but do not deploy.
+  # Keeping AWS infrastructure cost to a single environment (prod).
   workflow_run:
     workflows: ["CI Pipeline"]
     types:
       - completed
     branches:
-      - develop
-      - staging
       - main
   # Manual trigger (for emergency deployments or testing)
   workflow_dispatch:
