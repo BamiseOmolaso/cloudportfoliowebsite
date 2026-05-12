@@ -8,6 +8,7 @@ import { convert } from "html-to-text";
 import { sanitizeHtmlServer } from "@/lib/sanitize-server";
 import { secureAdminRoute, handleError } from "@/lib/api-security";
 import { newsletterSendSchema } from "@/lib/validation-schemas";
+import { getSiteUrl } from "@/lib/site-url";
 import { z } from "zod";
 import { randomBytes } from "crypto";
 
@@ -111,11 +112,7 @@ export const POST = secureAdminRoute(async (request: NextRequest, user) => {
           });
         }
 
-        const baseUrl =
-          process.env.NEXT_PUBLIC_BASE_URL ||
-          process.env.NEXT_PUBLIC_SITE_URL ||
-          "http://localhost:3000";
-        const unsubscribeLink = `${baseUrl}/unsubscribe?token=${unsubscribeToken}`;
+        const unsubscribeLink = `${getSiteUrl()}/unsubscribe?token=${unsubscribeToken}`;
         const safeName = escapeHtml(subscriber.name || "there");
         const personalizedContent = sanitizedHtml.replace(/{name}/g, safeName);
 

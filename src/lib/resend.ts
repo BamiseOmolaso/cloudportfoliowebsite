@@ -4,6 +4,7 @@
 
 import { Resend } from "resend";
 import { db } from "./db";
+import { getSiteUrl } from "./site-url";
 
 function escapeHtml(value: string): string {
   return value
@@ -37,8 +38,8 @@ export async function sendWelcomeEmail(
   preferencesToken: string,
 ) {
   try {
-    const unsubscribeUrl = `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/unsubscribe?token=${unsubscribeToken}`;
-    const preferencesUrl = `${process.env.NEXT_PUBLIC_SITE_URL || process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"}/newsletter/preferences?token=${preferencesToken}`;
+    const unsubscribeUrl = `${getSiteUrl()}/unsubscribe?token=${unsubscribeToken}`;
+    const preferencesUrl = `${getSiteUrl()}/newsletter/preferences?token=${preferencesToken}`;
 
     const subscriber = await db.newsletterSubscriber.findUnique({
       where: { email },

@@ -72,6 +72,12 @@ variable "acm_certificate_arn" {
   default     = ""
 }
 
+variable "site_url" {
+  description = "Publicly-reachable URL of the staging site, injected into the ECS task as NEXT_PUBLIC_SITE_URL. Defaults to empty — set this in terraform.tfvars once you have a staging domain, otherwise outbound emails (if any) will throw at email-send time."
+  type        = string
+  default     = ""
+}
+
 variable "image_tag" {
   description = "Docker image tag to deploy"
   type        = string
