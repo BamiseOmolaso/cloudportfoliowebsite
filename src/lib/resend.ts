@@ -31,6 +31,34 @@ function getResend(): Resend {
 // Get domain from environment variable, fallback for backward compatibility
 const DOMAIN = process.env.RESEND_DOMAIN || "oluwabamiseomolaso.com.ng";
 
+// Resend SDK methods like `domains.get(id)` and `domains.verify(id)` require
+// the domain's UUID, not its name. We list once on first need, find our
+// domain by name, then cache the ID. The cache lives for the lifetime of the
+// node process (per ECS task) — the ID only changes if someone manually
+// deletes and recreates the domain in Resend, in which case a task restart
+// will re-resolve it.
+let cachedDomainId: string | null = null;
+
+async function getDomainIdByName(name: string): Promise<string | null> {
+  if (cachedDomainId) return cachedDomainId;
+  try {
+    const { data, error } = await getResend().domains.list();
+    if (error || !data) {
+      console.error("Failed to list Resend domains:", error);
+      return null;
+    }
+    const found = data.data.find(
+      (d: { id: string; name: string }) => d.name === name,
+    );
+    if (!found) return null;
+    cachedDomainId = found.id;
+    return cachedDomainId;
+  } catch (err) {
+    console.error("Exception listing Resend domains:", err);
+    return null;
+  }
+}
+
 export async function sendWelcomeEmail(
   email: string,
   name: string,
@@ -217,42 +245,47 @@ export async function sendAdminNotification(email: string, name?: string) {
 
 export async function setupEmailAuthentication() {
   try {
-    // Get domain authentication status
-    const { data: domainStatus, error: statusError } =
-      await getResend().domains.get(DOMAIN);
+    // Existing-domain check: look up by name -> id, then fetch status by id.
+    const domainId = await getDomainIdByName(DOMAIN);
 
-    if (statusError) {
-      console.error("Error getting domain status:", statusError);
-      return null;
-    }
-
-    if (!domainStatus) {
-      // Domain not authenticated, let's set it up
-      const { data: domain, error: setupError } =
-        await getResend().domains.create({
-          name: DOMAIN,
-          region: "us-east-1",
-        });
-
-      if (setupError) {
-        console.error("Error setting up domain:", setupError);
+    if (domainId) {
+      const { data: domainStatus, error: statusError } =
+        await getResend().domains.get(domainId);
+      if (statusError) {
+        console.error("Error getting domain status:", statusError);
         return null;
       }
-
-      if (!domain) {
-        console.error("Invalid domain setup response:", domain);
+      if (!domainStatus) {
+        console.error("Empty domain status response");
         return null;
       }
-
       return {
-        status: domain.status,
-        records: domain.records,
+        status: domainStatus.status,
+        records: domainStatus.records,
       };
     }
 
+    // Domain not yet registered with Resend — create it.
+    const { data: domain, error: setupError } =
+      await getResend().domains.create({
+        name: DOMAIN,
+        region: "us-east-1",
+      });
+
+    if (setupError) {
+      console.error("Error setting up domain:", setupError);
+      return null;
+    }
+    if (!domain) {
+      console.error("Invalid domain setup response:", domain);
+      return null;
+    }
+
+    // Cache the freshly-created domain ID so subsequent calls don't re-list.
+    cachedDomainId = domain.id;
     return {
-      status: domainStatus.status,
-      records: domainStatus.records,
+      status: domain.status,
+      records: domain.records,
     };
   } catch (error) {
     console.error("Error in email authentication setup:", error);
@@ -262,7 +295,13 @@ export async function setupEmailAuthentication() {
 
 export async function verifyEmailAuthentication() {
   try {
-    const { data: domain, error } = await getResend().domains.verify(DOMAIN);
+    const domainId = await getDomainIdByName(DOMAIN);
+    if (!domainId) {
+      console.error(`Domain ${DOMAIN} not registered with Resend`);
+      return false;
+    }
+
+    const { data: domain, error } = await getResend().domains.verify(domainId);
 
     if (error) {
       console.error("Error verifying domain:", error);
@@ -274,7 +313,6 @@ export async function verifyEmailAuthentication() {
       return false;
     }
 
-    // The domain verification response should have a success property
     return true;
   } catch (error) {
     console.error("Error in email authentication verification:", error);
@@ -284,7 +322,13 @@ export async function verifyEmailAuthentication() {
 
 export async function getEmailAuthenticationStatus() {
   try {
-    const { data: domain, error } = await getResend().domains.get(DOMAIN);
+    const domainId = await getDomainIdByName(DOMAIN);
+    if (!domainId) {
+      console.error(`Domain ${DOMAIN} not registered with Resend`);
+      return null;
+    }
+
+    const { data: domain, error } = await getResend().domains.get(domainId);
 
     if (error) {
       console.error("Error getting domain status:", error);
