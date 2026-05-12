@@ -60,6 +60,18 @@ variable "db_credentials_secret_name" {
   default     = "portfolio/dev/db-credentials"
 }
 
+variable "admin_cidr_blocks" {
+  description = "List of CIDR blocks allowed to reach RDS on 5432 for direct laptop / admin access. Leave [] (default) to require ECS Exec or a bastion. Set to [\"<your-home-ip>/32\"] in terraform.tfvars when you need direct psql access — pairs with publicly_accessible=true on the RDS instance, a deliberate cost trade-off that avoids NAT/VPN/bastion charges."
+  type        = list(string)
+  default     = []
+}
+
+variable "acm_certificate_arn" {
+  description = "Optional ARN of an ACM certificate to attach to a HTTPS:443 listener on the ALB. When set, an HTTPS listener is created and the HTTP:80 listener becomes a permanent redirect to HTTPS. When empty (default), the ALB continues to serve plain HTTP on port 80. Request the certificate out-of-band (`aws acm request-certificate --domain-name <yourdomain> --validation-method DNS`), validate it, then drop the ARN here once status = ISSUED."
+  type        = string
+  default     = ""
+}
+
 variable "image_tag" {
   description = "Docker image tag to deploy"
   type        = string

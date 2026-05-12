@@ -253,5 +253,20 @@ For security concerns:
 
 ---
 
-**Last Updated:** May 11, 2026
+---
+
+## Infrastructure Posture: Deliberate Cost Trade-offs
+
+This is a personal-portfolio AWS stack optimised for cost (~$1-2/mo paused, ~$200-250/mo running). A few infrastructure defaults look like security gaps on a typical enterprise checklist but are kept this way on purpose to avoid recurring AWS charges:
+
+- **RDS `publicly_accessible = true`** with a `var.admin_cidr_blocks` ingress (default `[]`, closed). Set to your home `IP/32` in `terraform.tfvars` when you need direct laptop access. Closing this entirely would require NAT (~$32/mo), a bastion EC2, or AWS Client VPN.
+- **ECS Fargate tasks in public subnets with `assign_public_ip = true`.** Avoids the NAT gateway charge. Tasks have public IPs but are gated by an SG that only allows ingress from the ALB SG (port 3000 from `0.0.0.0/0` was removed in the hardening pass).
+- **ALB HTTP-only by default.** HTTPS is opt-in via `var.acm_certificate_arn` — see `terraform/README.md` for the ACM cert request + DNS validation flow. When set, the ALB adds an HTTPS:443 listener (TLS 1.3 policy) and the HTTP listener becomes a 301 redirect.
+- **Single-AZ RDS on dev/staging** — Multi-AZ would double the per-environment RDS cost.
+
+These are conscious operator decisions, not oversights. Items still tracked as real backlog (not cost-driven) — wildcard IAM on the OIDC roles, missing CloudWatch alarms, `image_tag_mutability = MUTABLE` — are listed in `terraform/README.md` under "Real backlog (not cost-driven)".
+
+---
+
+**Last Updated:** May 12, 2026
 

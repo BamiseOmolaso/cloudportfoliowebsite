@@ -37,8 +37,9 @@ module "networking" {
 module "security" {
   source = "../../modules/security"
 
-  vpc_id      = module.networking.vpc_id
-  environment = local.environment
+  vpc_id            = module.networking.vpc_id
+  environment       = local.environment
+  admin_cidr_blocks = var.admin_cidr_blocks
 }
 
 # RDS PostgreSQL
@@ -103,12 +104,43 @@ resource "aws_lb_target_group" "app" {
   }
 }
 
-# ALB Listener HTTP - Only create if not paused
+# ALB Listener HTTP - Only create if not paused.
+# When acm_certificate_arn is set, HTTP becomes a permanent redirect to HTTPS.
 resource "aws_lb_listener" "http" {
   count             = var.paused_mode ? 0 : 1
   load_balancer_arn = aws_lb.main[0].arn
   port              = "80"
   protocol          = "HTTP"
+
+  dynamic "default_action" {
+    for_each = var.acm_certificate_arn != "" ? [1] : []
+    content {
+      type = "redirect"
+      redirect {
+        port        = "443"
+        protocol    = "HTTPS"
+        status_code = "HTTP_301"
+      }
+    }
+  }
+
+  dynamic "default_action" {
+    for_each = var.acm_certificate_arn == "" ? [1] : []
+    content {
+      type             = "forward"
+      target_group_arn = aws_lb_target_group.app[0].arn
+    }
+  }
+}
+
+# ALB Listener HTTPS - only created when acm_certificate_arn is supplied
+resource "aws_lb_listener" "https" {
+  count             = var.paused_mode || var.acm_certificate_arn == "" ? 0 : 1
+  load_balancer_arn = aws_lb.main[0].arn
+  port              = "443"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
+  certificate_arn   = var.acm_certificate_arn
 
   default_action {
     type             = "forward"
