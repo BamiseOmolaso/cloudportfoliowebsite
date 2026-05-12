@@ -28,9 +28,9 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Bamise Omolaso - Full Stack Developer & Cloud Engineer",
+  title: "Dr. Bamise Omolaso — Cloud & DevSecOps Engineer",
   description:
-    "Personal portfolio website of Bamise Omolaso, showcasing projects, blog posts, and professional experience.",
+    "Medical doctor turned cloud & DevSecOps engineer. Building production systems on AWS — in public. Projects, write-ups, and the cloudportfoliowebsite architecture.",
   icons: {
     icon: [
       {
