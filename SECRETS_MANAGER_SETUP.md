@@ -4,10 +4,15 @@ This guide shows you how to set up all required secrets in AWS Secrets Manager f
 
 ## 🔐 Secrets Overview
 
-Your application needs secrets in two places:
+Your application needs **two secrets per environment**. The rds module reads the password from the DB-credentials secret (resolved by name via `var.db_credentials_secret_name`) and the ECS task reads runtime config from the app-secrets secret. The hardcoded prod-ARN that previously caused all environments to read the production password has been removed, so dev and staging now require their own DB-credentials secret before `terraform apply`.
 
-1. **Database Credentials** - Already created by Terraform (`omolasowebportfolio/db/credentials`)
-2. **Application Secrets** - You need to create this (`portfolio/prod/app-secrets`)
+| Environment | DB credentials secret                | App secrets secret              |
+|-------------|---------------------------------------|---------------------------------|
+| dev         | `portfolio/dev/db-credentials`        | `portfolio/dev/app-secrets`     |
+| staging     | `portfolio/staging/db-credentials`    | `portfolio/staging/app-secrets` |
+| prod        | `omolasowebportfolio/db/credentials`  | `portfolio/prod/app-secrets`    |
+
+The DB-credentials secret must contain at least `{"username": "...", "password": "..."}`. The rds module reads the password from this secret and writes back the full connection details (host, port, url) after the RDS instance is created.
 
 ## 📋 Required Secrets
 
