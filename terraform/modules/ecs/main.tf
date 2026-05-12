@@ -208,13 +208,15 @@ resource "aws_ecs_task_definition" "app" {
         }
       }
 
-      healthCheck = {
-        command     = ["CMD-SHELL", "curl -f http://localhost:3000/api/health || exit 1"]
-        interval    = 30
-        timeout     = 5
-        retries     = 3
-        startPeriod = 60
-      }
+      # Container-level healthCheck removed. The ALB target group already
+      # polls /api/health every 30s from outside the container; the inner
+      # CMD-SHELL check was redundant and the alpine base image lacks the
+      # standard tools (curl) needed to run it. wget --spider was tried as
+      # a replacement but BusyBox wget's behavior with --spider on alpine
+      # didn't satisfy ECS's healthy/unhealthy logic, causing the service
+      # to cycle every task. Re-introduce only if the ALB check proves
+      # insufficient and after verifying the chosen tool exists in the
+      # runner stage of the Dockerfile.
     }
   ])
 
