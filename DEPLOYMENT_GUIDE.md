@@ -178,6 +178,8 @@ Environment is **required** — the scripts no longer default to `prod` to preve
 
 Environment is **required** here too — no implicit default.
 
+> ⚠️ **Before resuming after a long pause:** verify the Redis Cloud free-tier instance still exists. Redis Cloud reclaims inactive DBs and the dead hostname will make `/api/auth/login` and other rate-limited endpoints hang until the ALB returns 504 (with HTML, which then breaks any client-side `response.json()`). Run the pre-resume DNS check in [`REDIS_SETUP.md`](REDIS_SETUP.md#️-pause--resume-gotcha-free-tier-instances-get-reclaimed) and re-provision if needed before bringing infrastructure back up.
+
 ```bash
 # Resume production
 ./scripts/resume.sh prod us-east-1
