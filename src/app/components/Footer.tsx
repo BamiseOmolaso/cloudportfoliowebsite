@@ -112,7 +112,7 @@ const Footer = () => {
               </span>
             </Link>
             <p className="text-gray-400 text-sm">
-              Full Stack Developer & Cloud Engineer
+              Medical doctor → Cloud &amp; DevSecOps engineer
             </p>
             <div className="flex space-x-4">
               {socialLinks.map((social) => (
