@@ -126,8 +126,10 @@ To save costs when not actively using the application:
 
 ### Pause Infrastructure
 
+Environment is **required** — the scripts no longer default to `prod` to prevent accidental destruction of production resources.
+
 ```bash
-# Pause production (saves ~$200/month)
+# Pause production (saves ~$200/month) — will prompt for "pause-prod" confirmation
 ./scripts/pause.sh prod us-east-1
 
 # Pause staging
@@ -135,6 +137,9 @@ To save costs when not actively using the application:
 
 # Pause development
 ./scripts/pause.sh dev us-east-1
+
+# Non-interactive prod pause (e.g. from a scheduled CI job)
+./scripts/pause.sh prod us-east-1 --yes
 ```
 
 **What happens:**
@@ -143,9 +148,13 @@ To save costs when not actively using the application:
 - RDS database stopped
 - Auto-scaling disabled
 
+**Safety guard:** Pausing `prod` requires typing `pause-prod` at an interactive prompt (or passing `--yes`). Other environments pause without a prompt.
+
 **Cost when paused:** ~$1-2/month (just storage/secrets)
 
 ### Resume Infrastructure
+
+Environment is **required** here too — no implicit default.
 
 ```bash
 # Resume production

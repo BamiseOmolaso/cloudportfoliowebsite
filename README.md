@@ -364,14 +364,17 @@ See `DEPLOYMENT_GUIDE.md` and `terraform/README.md` for detailed instructions.
 
 ### Infrastructure Cost Management
 
-To save costs when not actively using the application, use the pause/resume scripts:
+To save costs when not actively using the application, use the pause/resume scripts. Environment is required — the scripts no longer default to `prod`, and pausing `prod` prompts for a typed confirmation (`pause-prod`) unless invoked with `--yes`.
 
 ```bash
 # Pause infrastructure (stops expensive resources)
-./scripts/pause.sh prod us-east-1
+./scripts/pause.sh prod us-east-1            # interactive — will prompt for confirmation
+./scripts/pause.sh dev us-east-1
+./scripts/pause.sh prod us-east-1 --yes      # non-interactive (for scheduled CI runs)
 
 # Resume infrastructure (restarts all resources)
 ./scripts/resume.sh prod us-east-1
+./scripts/resume.sh dev us-east-1
 ```
 
 **When Paused:**
@@ -419,9 +422,9 @@ npx prisma generate  # Generate Prisma Client
 npx prisma migrate   # Run migrations
 npx prisma studio    # Open Prisma Studio
 
-# Infrastructure Management
-./scripts/pause.sh [env] [region]   # Pause infrastructure (save costs)
-./scripts/resume.sh [env] [region]  # Resume infrastructure
+# Infrastructure Management — env is required; prod pause requires confirmation
+./scripts/pause.sh <dev|staging|prod> [region] [--yes]   # Pause infrastructure (save costs)
+./scripts/resume.sh <dev|staging|prod> [region]          # Resume infrastructure
 ```
 
 ## Contributing
