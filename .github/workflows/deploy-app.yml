@@ -352,8 +352,14 @@ jobs:
             .containerDefinitions[0].image = $img
             | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
           ')
-          NEW_ARN=$(echo "$NEW" | aws ecs register-task-definition --region "$AWS_REGION" \
-            --cli-input-json file:///dev/stdin \
+          # aws CLI's --cli-input-json doesn't reliably consume a shell pipe
+          # via file:///dev/stdin (it reproduces "Invalid JSON received" even
+          # when stdin contains valid JSON). Use an explicit tempfile.
+          TMP_TD=$(mktemp)
+          trap 'rm -f "$TMP_TD"' EXIT
+          printf '%s' "$NEW" > "$TMP_TD"
+          NEW_ARN=$(aws ecs register-task-definition --region "$AWS_REGION" \
+            --cli-input-json "file://$TMP_TD" \
             --query 'taskDefinition.taskDefinitionArn' --output text)
           echo "Registered: $NEW_ARN"
           echo "task_def_arn=$NEW_ARN" >> "$GITHUB_OUTPUT"
@@ -523,8 +529,14 @@ jobs:
             .containerDefinitions[0].image = $img
             | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
           ')
-          NEW_ARN=$(echo "$NEW" | aws ecs register-task-definition --region "$AWS_REGION" \
-            --cli-input-json file:///dev/stdin \
+          # aws CLI's --cli-input-json doesn't reliably consume a shell pipe
+          # via file:///dev/stdin (it reproduces "Invalid JSON received" even
+          # when stdin contains valid JSON). Use an explicit tempfile.
+          TMP_TD=$(mktemp)
+          trap 'rm -f "$TMP_TD"' EXIT
+          printf '%s' "$NEW" > "$TMP_TD"
+          NEW_ARN=$(aws ecs register-task-definition --region "$AWS_REGION" \
+            --cli-input-json "file://$TMP_TD" \
             --query 'taskDefinition.taskDefinitionArn' --output text)
           echo "Registered: $NEW_ARN"
           echo "task_def_arn=$NEW_ARN" >> "$GITHUB_OUTPUT"
@@ -694,8 +706,14 @@ jobs:
             .containerDefinitions[0].image = $img
             | del(.taskDefinitionArn, .revision, .status, .requiresAttributes, .compatibilities, .registeredAt, .registeredBy)
           ')
-          NEW_ARN=$(echo "$NEW" | aws ecs register-task-definition --region "$AWS_REGION" \
-            --cli-input-json file:///dev/stdin \
+          # aws CLI's --cli-input-json doesn't reliably consume a shell pipe
+          # via file:///dev/stdin (it reproduces "Invalid JSON received" even
+          # when stdin contains valid JSON). Use an explicit tempfile.
+          TMP_TD=$(mktemp)
+          trap 'rm -f "$TMP_TD"' EXIT
+          printf '%s' "$NEW" > "$TMP_TD"
+          NEW_ARN=$(aws ecs register-task-definition --region "$AWS_REGION" \
+            --cli-input-json "file://$TMP_TD" \
             --query 'taskDefinition.taskDefinitionArn' --output text)
           echo "Registered: $NEW_ARN"
           echo "task_def_arn=$NEW_ARN" >> "$GITHUB_OUTPUT"
