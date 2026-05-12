@@ -756,8 +756,12 @@ jobs:
           MAX_RETRIES=30
           RETRY_COUNT=0
           
+          # -L follows the 301 the HTTP:80 listener now issues to HTTPS:443.
+          # -k skips TLS verification because the ACM cert is for the custom
+          # domain (portfolio.oluwabamiseomolaso.com.ng), not the ALB DNS name
+          # we hit here — name mismatch is expected, not a real failure.
           while [ $RETRY_COUNT -lt $MAX_RETRIES ]; do
-            HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" "http://$ALB_DNS/api/health" || echo "000")
+            HTTP_CODE=$(curl -sk -L -o /dev/null -w "%{http_code}" "http://$ALB_DNS/api/health" || echo "000")
             if [ "$HTTP_CODE" = "200" ]; then
               echo "✅ Health check passed"
               exit 0
