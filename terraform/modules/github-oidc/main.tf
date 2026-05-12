@@ -24,8 +24,17 @@ resource "aws_iam_role" "terraform_role" {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
+          # Restrict OIDC subject to the protected branches we deploy from
+          # plus pull_request runs (which use the base-repo subject claim, so
+          # forks cannot match). Previously this was `repo:<repo>:*` which
+          # would have matched any ref including arbitrary feature branches.
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:*"
+            "token.actions.githubusercontent.com:sub" = [
+              "repo:${var.github_repo}:ref:refs/heads/main",
+              "repo:${var.github_repo}:ref:refs/heads/staging",
+              "repo:${var.github_repo}:ref:refs/heads/develop",
+              "repo:${var.github_repo}:pull_request",
+            ]
           }
         }
       }
@@ -93,8 +102,17 @@ resource "aws_iam_role" "deploy_role" {
           StringEquals = {
             "token.actions.githubusercontent.com:aud" = "sts.amazonaws.com"
           }
+          # Restrict OIDC subject to the protected branches we deploy from
+          # plus pull_request runs (which use the base-repo subject claim, so
+          # forks cannot match). Previously this was `repo:<repo>:*` which
+          # would have matched any ref including arbitrary feature branches.
           StringLike = {
-            "token.actions.githubusercontent.com:sub" = "repo:${var.github_repo}:*"
+            "token.actions.githubusercontent.com:sub" = [
+              "repo:${var.github_repo}:ref:refs/heads/main",
+              "repo:${var.github_repo}:ref:refs/heads/staging",
+              "repo:${var.github_repo}:ref:refs/heads/develop",
+              "repo:${var.github_repo}:pull_request",
+            ]
           }
         }
       }

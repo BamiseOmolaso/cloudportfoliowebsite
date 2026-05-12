@@ -5,9 +5,9 @@ variable "aws_region" {
 }
 
 variable "vpc_cidr" {
-  description = "VPC CIDR block"
+  description = "VPC CIDR block. Must be at least /16 because the networking module derives subnets via cidrsubnet(vpc_cidr, 8, idx) which requires 8 host bits to spare."
   type        = string
-  default     = "10.0.1.0/24" # Different CIDR per environment
+  default     = "10.1.0.0/16" # Distinct from prod (10.0.0.0/16) and staging (10.2.0.0/16)
 }
 
 variable "availability_zones" {
@@ -52,6 +52,12 @@ variable "rds_allocated_storage" {
   description = "RDS allocated storage in GB"
   type        = number
   default     = 20
+}
+
+variable "db_credentials_secret_name" {
+  description = "AWS Secrets Manager name for the dev database credentials. Operator must create this secret out-of-band before apply (the rds module reads the password from it)."
+  type        = string
+  default     = "portfolio/dev/db-credentials"
 }
 
 variable "image_tag" {
