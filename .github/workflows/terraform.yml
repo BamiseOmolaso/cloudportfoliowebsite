@@ -83,12 +83,16 @@ jobs:
           echo "Changed files in triggering commit:"
           echo "$CHANGED"
 
-          if echo "$CHANGED" | grep -E '^(terraform/|\.github/workflows/terraform\.yml$)' >/dev/null; then
+          # Only real terraform/ files trigger a plan/apply. This workflow's
+          # own YAML is intentionally excluded — a workflow YAML change
+          # produces no terraform diff. To smoke-test changes to this file,
+          # use workflow_dispatch.
+          if echo "$CHANGED" | grep -E '^terraform/' >/dev/null; then
             echo "has_terraform_changes=true" >> "$GITHUB_OUTPUT"
-            echo "✅ Terraform-relevant files changed; running."
+            echo "✅ Terraform files changed; running."
           else
             echo "has_terraform_changes=false" >> "$GITHUB_OUTPUT"
-            echo "⏭️  No terraform/ or terraform workflow changes; short-circuiting."
+            echo "⏭️  No terraform/ changes; short-circuiting."
           fi
 
   # ============================================
