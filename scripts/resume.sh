@@ -126,8 +126,36 @@ echo "✅ Infrastructure resumed successfully!"
 echo ""
 
 if [ "$ALB_DNS" != "N/A" ] && [ "$ALB_DNS" != "N/A - Infrastructure is paused" ]; then
-  echo "🌐 Application URL: http://$ALB_DNS"
+  echo "🌐 New ALB DNS: $ALB_DNS"
+  echo "   Direct URL:  http://$ALB_DNS"
   echo ""
+
+  # DNS reminder for prod. Pausing destroys the ALB and resuming creates a
+  # brand-new one with a different DNS name, so the CNAME at the DNS
+  # provider has to be re-pointed by hand every resume. Try to compare the
+  # custom-domain CNAME against the new ALB DNS so the user can see at a
+  # glance whether the update is still pending.
+  if [ "$ENV" = "prod" ]; then
+    PROD_DOMAIN="portfolio.oluwabamiseomolaso.com.ng"
+    echo "🔗 DNS — manual step required:"
+    echo "   Update the CNAME for $PROD_DOMAIN at your DNS provider"
+    echo "   to point at: $ALB_DNS"
+    echo ""
+    if command -v dig >/dev/null 2>&1; then
+      CURRENT_CNAME=$(dig +short CNAME "$PROD_DOMAIN" 2>/dev/null | sed 's/\.$//' | head -n1)
+      if [ -z "$CURRENT_CNAME" ]; then
+        echo "   ℹ️  Could not resolve current CNAME for $PROD_DOMAIN."
+        echo "      DNS may not be configured yet, or your resolver is offline."
+      elif [ "$CURRENT_CNAME" = "$ALB_DNS" ]; then
+        echo "   ✅ CNAME already points to the new ALB. Nothing to do."
+      else
+        echo "   ⚠️  CNAME currently points to: $CURRENT_CNAME"
+        echo "      That ALB no longer exists — the site will be unreachable on"
+        echo "      $PROD_DOMAIN until you update the record. (DNS caches up to TTL.)"
+      fi
+      echo ""
+    fi
+  fi
 fi
 
 echo "📊 Checking service status..."
