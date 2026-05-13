@@ -31,22 +31,81 @@ env:
 
 jobs:
   # ============================================
-  # Build & Push Docker Image
+  # Detect app changes
   # ============================================
-  
-  build-and-push:
-    name: Build & Push Docker Image
+  # `workflow_run` does not accept a `paths:` filter, so every push to main
+  # used to trigger a full Docker build + ECS redeploy even when the merge
+  # only touched docs, scripts, or terraform/. This job diffs the
+  # triggering commit and short-circuits build-and-push (and therefore all
+  # downstream deploy jobs) when no app-relevant files changed.
+  # workflow_dispatch is an operator-initiated request and always proceeds.
+  detect-changes:
+    name: Detect app changes
     runs-on: ubuntu-latest
-    # Only run if CI passed (when triggered by workflow_run) or manual dispatch.
-    # The workflow_run guard requires the upstream run to come from the SAME repository
-    # (not a fork) and to have been triggered by a push, so a malicious fork-push cannot
-    # cause a downstream deploy with our secrets.
     if: |
       github.event_name == 'workflow_dispatch' ||
       (github.event_name == 'workflow_run' &&
        github.event.workflow_run.conclusion == 'success' &&
        github.event.workflow_run.event == 'push' &&
        github.event.workflow_run.head_repository.full_name == github.repository)
+    outputs:
+      has_app_changes: ${{ steps.check.outputs.has_app_changes }}
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout (workflow_run only)
+        if: github.event_name == 'workflow_run'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Determine if app-relevant files changed
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" != "workflow_run" ]; then
+            echo "has_app_changes=true" >> "$GITHUB_OUTPUT"
+            echo "✅ Event '${{ github.event_name }}' is operator-initiated; running."
+            exit 0
+          fi
+
+          CHANGED=$(git diff --name-only HEAD~1 HEAD || true)
+          echo "Changed files in triggering commit:"
+          echo "$CHANGED"
+
+          # Files that affect the built/running container or this workflow itself.
+          # Anything outside this list (terraform/, scripts/, docs, .claude/, etc.)
+          # has no effect on what ECS runs and shouldn't trigger a redeploy.
+          PATTERN='^(src/|prisma/|public/|Dockerfile$|\.dockerignore$|package\.json$|package-lock\.json$|next\.config\.|tsconfig\.json$|tailwind\.config\.|postcss\.config\.|middleware\.(t|j)s$|\.github/workflows/deploy-app\.yml$)'
+
+          if echo "$CHANGED" | grep -E "$PATTERN" >/dev/null; then
+            echo "has_app_changes=true" >> "$GITHUB_OUTPUT"
+            echo "✅ App-relevant files changed; running."
+          else
+            echo "has_app_changes=false" >> "$GITHUB_OUTPUT"
+            echo "⏭️  No app-relevant files changed; short-circuiting."
+          fi
+
+  # ============================================
+  # Build & Push Docker Image
+  # ============================================
+
+  build-and-push:
+    name: Build & Push Docker Image
+    runs-on: ubuntu-latest
+    needs: [detect-changes]
+    # Only run if CI passed (when triggered by workflow_run) or manual dispatch.
+    # The workflow_run guard requires the upstream run to come from the SAME repository
+    # (not a fork) and to have been triggered by a push, so a malicious fork-push cannot
+    # cause a downstream deploy with our secrets.
+    if: |
+      needs.detect-changes.outputs.has_app_changes == 'true' &&
+      (github.event_name == 'workflow_dispatch' ||
+       (github.event_name == 'workflow_run' &&
+        github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
     permissions:
       contents: read
       id-token: write
