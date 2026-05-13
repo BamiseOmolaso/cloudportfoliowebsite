@@ -74,10 +74,13 @@ jobs:
           echo "Changed files in triggering commit:"
           echo "$CHANGED"
 
-          # Files that affect the built/running container or this workflow itself.
-          # Anything outside this list (terraform/, scripts/, docs, .claude/, etc.)
+          # Files that affect the built/running container. Anything outside
+          # this list (terraform/, scripts/, docs, .claude/, .github/, etc.)
           # has no effect on what ECS runs and shouldn't trigger a redeploy.
-          PATTERN='^(src/|prisma/|public/|Dockerfile$|\.dockerignore$|package\.json$|package-lock\.json$|next\.config\.|tsconfig\.json$|tailwind\.config\.|postcss\.config\.|middleware\.(t|j)s$|\.github/workflows/deploy-app\.yml$)'
+          # Note: this workflow's own YAML is intentionally NOT here — a
+          # workflow YAML change produces a byte-identical deployment
+          # outcome. To smoke-test changes to this file, use workflow_dispatch.
+          PATTERN='^(src/|prisma/|public/|Dockerfile$|\.dockerignore$|package\.json$|package-lock\.json$|next\.config\.|tsconfig\.json$|tailwind\.config\.|postcss\.config\.|middleware\.(t|j)s$)'
 
           if echo "$CHANGED" | grep -E "$PATTERN" >/dev/null; then
             echo "has_app_changes=true" >> "$GITHUB_OUTPUT"
