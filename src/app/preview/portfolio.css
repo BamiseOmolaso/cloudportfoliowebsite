@@ -1,0 +1,1012 @@
+/* Portfolio redesign — styles ported from docs/redesign/reference/portfolio-design-v2.html.
+   EVERY selector is scoped under `.pf` so none of this can leak into the rest
+   of the site (blog, projects, admin). Hex tokens only: the 3D scene reads them.
+   Concept: blueprint grid, violet structure, teal for traffic in flight,
+   amber for anything paused. */
+
+.pf {
+  --bg: #0c0c16;
+  --surface: #141424;
+  --surface-2: #1b1b31;
+  --ink: #ecebf7;
+  --ink-2: #9d9cb8;
+  --line: #2b2b47;
+  --accent: #9b7bff;
+  --accent-2: #4fd1c5;
+  --warn: #f2b04c;
+  --bad: #ff6b7a;
+  --accent-ink: #0c0c16;
+  --font-display: var(--pf-font-display), "Segoe UI", system-ui, sans-serif;
+  --font-body: var(--pf-font-body), system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: var(--pf-font-mono), ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 8px;
+  color-scheme: dark;
+
+  position: relative;
+  min-height: 100vh;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.6;
+  padding-inline: 1rem;
+  padding-block: 0 3rem;
+  -webkit-font-smoothing: antialiased;
+}
+@media (prefers-color-scheme: light) {
+  .pf:not([data-theme="dark"]) {
+    --bg: #f5f4fa;
+    --surface: #ffffff;
+    --surface-2: #eceaf6;
+    --ink: #17152b;
+    --ink-2: #5a5875;
+    --line: #d5d2e6;
+    --accent: #5b3dd6;
+    --accent-2: #0e8f84;
+    --warn: #a8620a;
+    --bad: #c4283c;
+    --accent-ink: #ffffff;
+    color-scheme: light;
+  }
+}
+.pf[data-theme="light"] {
+  --bg: #f5f4fa;
+  --surface: #ffffff;
+  --surface-2: #eceaf6;
+  --ink: #17152b;
+  --ink-2: #5a5875;
+  --line: #d5d2e6;
+  --accent: #5b3dd6;
+  --accent-2: #0e8f84;
+  --warn: #a8620a;
+  --bad: #c4283c;
+  --accent-ink: #ffffff;
+  color-scheme: light;
+}
+
+.pf *,
+.pf *::before,
+.pf *::after {
+  box-sizing: border-box;
+}
+.pf a {
+  color: inherit;
+}
+.pf p {
+  margin: 0;
+}
+.pf h1,
+.pf h2,
+.pf h3 {
+  font-family: var(--font-display);
+  margin: 0;
+  line-height: 1.05;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.pf :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 3px;
+}
+.pf .wrap {
+  max-width: 70rem;
+  margin-inline: auto;
+}
+.pf .label {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+
+/* header */
+.pf .bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 30;
+  padding-top: env(safe-area-inset-top, 0px);
+  background: color-mix(in srgb, var(--bg) 70%, transparent);
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent);
+}
+.pf .bar-in {
+  max-width: 70rem;
+  margin-inline: auto;
+  padding: 0.65rem 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.pf .brand {
+  font-family: var(--font-display);
+  font-weight: 800;
+  text-decoration: none;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  letter-spacing: -0.02em;
+}
+.pf .mark {
+  width: 1.9rem;
+  height: 1.9rem;
+  border-radius: 6px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  font-weight: 500;
+}
+.pf nav {
+  display: flex;
+  align-items: center;
+  gap: 1.4rem;
+}
+.pf nav a.link {
+  text-decoration: none;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+.pf nav a.link:hover {
+  color: var(--ink);
+}
+.pf .icon-btn {
+  width: 2.1rem;
+  height: 2.1rem;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: 50%;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+}
+.pf .icon-btn:hover {
+  border-color: var(--accent);
+}
+@media (max-width: 42rem) {
+  .pf nav a.link {
+    display: none;
+  }
+}
+
+/* story: sticky 3D stage */
+.pf .runway {
+  position: relative;
+  height: calc(6 * 92svh);
+  margin-inline: -1rem;
+}
+.pf .stage {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  background:
+    radial-gradient(60rem 36rem at 78% 30%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%),
+    linear-gradient(color-mix(in srgb, var(--line) 38%, transparent) 1px, transparent 1px) 0 0 / 3.2rem 3.2rem,
+    linear-gradient(90deg, color-mix(in srgb, var(--line) 38%, transparent) 1px, transparent 1px) 0 0 / 3.2rem 3.2rem,
+    var(--bg);
+  -webkit-mask-image: linear-gradient(transparent 0, #000 5rem);
+  mask-image: linear-gradient(transparent 0, #000 5rem);
+}
+.pf .gl {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: pan-y;
+}
+.pf .tags {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.pf .tag {
+  position: absolute;
+  left: 0;
+  top: 0;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  white-space: nowrap;
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  opacity: 0;
+  transition: opacity 0.35s;
+  will-change: transform;
+}
+.pf .tag.on {
+  opacity: 1;
+}
+.pf .tag.paused {
+  border-color: var(--warn);
+  color: var(--warn);
+}
+.pf .cards {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  padding: 1rem;
+  padding-bottom: calc(1.4rem + env(safe-area-inset-bottom, 0px));
+  display: grid;
+  pointer-events: none;
+}
+@media (min-width: 58rem) {
+  .pf .cards {
+    top: 0;
+    align-content: center;
+    padding-left: max(1.5rem, calc((100vw - 70rem) / 2));
+    padding-bottom: 0;
+    padding-top: 3rem;
+  }
+}
+.pf .card {
+  grid-area: 1 / 1;
+  max-width: 29rem;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(14px);
+  transition:
+    opacity 0.5s,
+    transform 0.5s,
+    visibility 0s 0.5s;
+  background: color-mix(in srgb, var(--bg) 78%, transparent);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.2rem 1.25rem;
+  align-self: end;
+}
+@media (min-width: 58rem) {
+  .pf .card {
+    align-self: center;
+    padding: 1.6rem;
+  }
+}
+.pf .card.on {
+  opacity: 1;
+  visibility: visible;
+  transform: none;
+  pointer-events: auto;
+  transition:
+    opacity 0.5s,
+    transform 0.5s;
+}
+.pf .card.hero {
+  background: transparent;
+  backdrop-filter: none;
+  border-color: transparent;
+  padding-inline: 0;
+  max-width: 36rem;
+}
+@media (max-width: 57.99rem) {
+  .pf .card.hero {
+    background: color-mix(in srgb, var(--bg) 70%, transparent);
+    backdrop-filter: blur(8px);
+    padding-inline: 1.1rem;
+    border-color: var(--line);
+  }
+}
+.pf .card .label {
+  color: var(--accent);
+}
+.pf .card h2 {
+  font-size: clamp(1.45rem, 3.2vw, 2.05rem);
+  font-weight: 800;
+  margin-block: 0.45rem 0.7rem;
+}
+.pf .card h1 {
+  font-size: clamp(2.2rem, 6.5vw, 4rem);
+  font-weight: 800;
+  margin-block: 0.7rem 1rem;
+}
+.pf .card h1 em {
+  font-style: normal;
+  color: var(--accent);
+}
+.pf .card p {
+  color: var(--ink-2);
+  font-size: 0.97rem;
+}
+.pf .card .why {
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.9rem;
+}
+.pf .card .why b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.pf .ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+}
+.pf .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.05rem;
+  border-radius: var(--radius);
+  font-weight: 500;
+  text-decoration: none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  font-size: 0.92rem;
+  cursor: pointer;
+  font-family: inherit;
+  color: var(--ink);
+}
+.pf .btn:hover {
+  border-color: var(--accent);
+}
+.pf .btn.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-color: var(--accent);
+}
+.pf .btn.primary:hover {
+  filter: brightness(1.08);
+}
+.pf .btn:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.pf .costrow {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  margin-top: 0.9rem;
+}
+.pf .cost {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 2.4rem;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+  transition: color 0.3s;
+}
+.pf .cost.paused {
+  color: var(--warn);
+}
+.pf .cost small {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--ink-2);
+  letter-spacing: 0;
+}
+.pf .rail {
+  position: absolute;
+  right: max(1rem, calc((100vw - 70rem) / 2));
+  top: 50%;
+  transform: translateY(-50%);
+  display: none;
+  flex-direction: column;
+  gap: 0.7rem;
+  align-items: flex-end;
+}
+@media (min-width: 58rem) {
+  .pf .rail {
+    display: flex;
+  }
+}
+.pf .rail span {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--ink-2);
+  opacity: 0.55;
+  transition:
+    opacity 0.3s,
+    color 0.3s;
+}
+.pf .rail span i {
+  width: 1.4rem;
+  height: 2px;
+  background: currentColor;
+  display: block;
+  transition: width 0.3s;
+}
+.pf .rail span.on {
+  opacity: 1;
+  color: var(--accent);
+}
+.pf .rail span.on i {
+  width: 2.4rem;
+}
+.pf .hint {
+  position: absolute;
+  left: 50%;
+  bottom: 1rem;
+  transform: translateX(-50%);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--ink-2);
+  display: none;
+  transition: opacity 0.4s;
+}
+@media (min-width: 58rem) {
+  .pf .hint {
+    display: block;
+  }
+}
+.pf .hint.off {
+  opacity: 0;
+}
+.pf .no-gl .tags {
+  display: none;
+}
+
+/* scroll reveal: always readable at rest */
+@supports (animation-timeline: view()) {
+  .pf .rise {
+    animation: pf-rise linear both;
+    animation-timeline: view();
+    animation-range: entry 0% entry 45%;
+  }
+}
+@keyframes pf-rise {
+  from {
+    opacity: 0.3;
+    transform: translateY(22px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* sections */
+.pf section.block {
+  padding-block: 4.5rem;
+}
+.pf .sec-head {
+  display: grid;
+  gap: 0.6rem;
+  margin-bottom: 2.2rem;
+}
+.pf .sec-head h2 {
+  font-size: clamp(1.9rem, 4.6vw, 3rem);
+  font-weight: 800;
+  max-width: 38rem;
+}
+.pf .sec-head p {
+  color: var(--ink-2);
+  max-width: 40rem;
+}
+
+.pf .stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--line);
+  gap: 1px;
+}
+.pf .stat {
+  background: var(--surface);
+  padding: 1.3rem 1.2rem;
+  display: grid;
+  gap: 0.3rem;
+}
+.pf .stat b {
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 4vw, 2.7rem);
+  font-weight: 800;
+  letter-spacing: -0.03em;
+  color: var(--accent);
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+.pf .stat span {
+  font-size: 0.86rem;
+  color: var(--ink-2);
+}
+
+/* pipeline */
+.pf .pipe {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.2rem;
+  display: grid;
+  gap: 1.2rem;
+}
+.pf .pipe-ctl {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem 1.2rem;
+  align-items: center;
+  justify-content: space-between;
+}
+.pf .tog {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.9rem;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.pf .tog input {
+  accent-color: var(--bad);
+  width: 1.05rem;
+  height: 1.05rem;
+}
+.pf .stages {
+  display: grid;
+  gap: 0.6rem;
+  grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr));
+}
+.pf .st {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.8rem 0.85rem 1rem;
+  background: var(--bg);
+  display: grid;
+  gap: 0.25rem;
+  overflow: hidden;
+  transition:
+    border-color 0.3s,
+    background 0.3s;
+  min-width: 0;
+}
+.pf .st .n {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--ink-2);
+}
+.pf .st strong {
+  font-weight: 600;
+  font-size: 0.93rem;
+  line-height: 1.25;
+}
+.pf .st .s {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--ink-2);
+}
+.pf .st::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 100%;
+  background: var(--line);
+}
+.pf .st i {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  height: 3px;
+  width: 0;
+  background: var(--accent);
+  z-index: 1;
+}
+.pf .st.run {
+  border-color: var(--accent);
+}
+.pf .st.run i {
+  width: 100%;
+  transition: width 0.9s linear;
+}
+.pf .st.pass {
+  border-color: color-mix(in srgb, var(--accent-2) 60%, var(--line));
+}
+.pf .st.pass i {
+  width: 100%;
+  background: var(--accent-2);
+}
+.pf .st.pass .s {
+  color: var(--accent-2);
+}
+.pf .st.fail {
+  border-color: var(--bad);
+  background: color-mix(in srgb, var(--bad) 10%, var(--bg));
+}
+.pf .st.fail i {
+  width: 100%;
+  background: var(--bad);
+}
+.pf .st.fail .s {
+  color: var(--bad);
+}
+.pf .st.skip {
+  opacity: 0.45;
+}
+.pf .pipe-note {
+  font-size: 0.92rem;
+  color: var(--ink-2);
+  min-height: 3rem;
+}
+.pf .pipe-note b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* patterns */
+.pf .patterns {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+}
+.pf .pat {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  overflow: hidden;
+  min-width: 0;
+}
+.pf .pat svg,
+.pf .pat .viz {
+  display: block;
+  width: 100%;
+  height: 9.5rem;
+  background: color-mix(in srgb, var(--bg) 60%, var(--surface));
+  border-bottom: 1px solid var(--line);
+}
+.pf .pat .viz {
+  padding: 1rem;
+  display: grid;
+  align-content: center;
+  gap: 0.5rem;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+}
+.pf .pat .body {
+  padding: 1.1rem 1.2rem 1.3rem;
+  display: grid;
+  gap: 0.5rem;
+  align-content: start;
+}
+.pf .pat h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.pf .pat p {
+  color: var(--ink-2);
+  font-size: 0.92rem;
+}
+.pf .pat .used {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  color: var(--accent);
+}
+.pf .s-box {
+  fill: var(--surface-2);
+  stroke: var(--line);
+  stroke-width: 1;
+}
+.pf .s-hot {
+  fill: color-mix(in srgb, var(--accent) 16%, var(--surface-2));
+  stroke: var(--accent);
+  stroke-width: 1;
+}
+.pf .s-ln {
+  stroke: var(--line);
+  stroke-width: 1.4;
+  fill: none;
+}
+.pf .s-ac {
+  stroke: var(--accent);
+  stroke-width: 1.4;
+  fill: none;
+}
+.pf .s-tx {
+  fill: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 9px;
+}
+.pf .s-tx.w {
+  fill: var(--ink);
+}
+.pf .s-dot {
+  fill: var(--accent-2);
+}
+.pf .s-bad {
+  fill: none;
+  stroke: var(--bad);
+  stroke-width: 1.6;
+}
+.pf .pol {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.5rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--bg);
+  min-width: 0;
+}
+.pf .pol code {
+  overflow-wrap: anywhere;
+}
+.pf .pol.ok {
+  border-color: color-mix(in srgb, var(--accent-2) 60%, var(--line));
+}
+.pf .pol.no code {
+  color: var(--ink-2);
+  text-decoration: line-through;
+  text-decoration-color: var(--bad);
+}
+.pf .pol .tick {
+  color: var(--accent-2);
+  font-weight: 600;
+}
+.pf .pol.no .tick {
+  color: var(--bad);
+}
+@keyframes pf-flow {
+  from {
+    stroke-dashoffset: 18;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+.pf .flow {
+  stroke-dasharray: 5 4;
+  animation: pf-flow 1.2s linear infinite;
+}
+@keyframes pf-blink {
+  0%,
+  100% {
+    opacity: 0.35;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+.pf .blink {
+  animation: pf-blink 2.4s ease-in-out infinite;
+}
+
+/* record */
+.pf .cols {
+  display: grid;
+  gap: 2.5rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 56rem) {
+  .pf .cols {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 4rem;
+  }
+}
+.pf .sub {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.15rem;
+  margin-bottom: 1rem;
+  letter-spacing: -0.015em;
+}
+.pf .tl {
+  display: grid;
+}
+.pf .tl-i {
+  display: grid;
+  grid-template-columns: 8.5rem minmax(0, 1fr);
+  gap: 1rem;
+  padding-block: 1.1rem;
+  border-top: 1px solid var(--line);
+}
+.pf .tl-i:last-child {
+  border-bottom: 1px solid var(--line);
+}
+@media (max-width: 34rem) {
+  .pf .tl-i {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.3rem;
+  }
+}
+.pf .tl-i .when {
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--accent);
+  padding-top: 0.2rem;
+}
+.pf .tl-i h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.pf .tl-i .org {
+  color: var(--ink-2);
+  font-size: 0.9rem;
+  margin-bottom: 0.4rem;
+}
+.pf .tl-i p.d {
+  color: var(--ink-2);
+  font-size: 0.93rem;
+}
+.pf .item {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding-block: 0.8rem;
+  border-top: 1px solid var(--line);
+  align-items: baseline;
+}
+.pf .item:last-child {
+  border-bottom: 1px solid var(--line);
+}
+.pf .item .yr {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  color: var(--accent);
+  white-space: nowrap;
+}
+.pf .chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 1.2rem;
+}
+.pf .chip {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  border: 1px solid var(--line);
+  border-radius: 99px;
+  padding: 0.18rem 0.65rem;
+  color: var(--ink-2);
+  background: var(--surface);
+}
+
+.pf .map {
+  display: grid;
+  gap: 1px;
+  background: var(--line);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+}
+.pf .map-r {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 2rem minmax(0, 1.4fr);
+  gap: 0.5rem;
+  align-items: center;
+  background: var(--surface);
+  padding: 1rem 1.2rem;
+}
+.pf .map-r .a {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.05rem;
+}
+.pf .map-r .ar {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  text-align: center;
+}
+.pf .map-r .b {
+  color: var(--ink-2);
+  font-size: 0.93rem;
+}
+@media (max-width: 34rem) {
+  .pf .map-r {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.15rem;
+  }
+  .pf .map-r .ar {
+    display: none;
+  }
+}
+
+.pf .writing {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+}
+.pf .wcard {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.3rem;
+  display: grid;
+  gap: 0.5rem;
+  text-decoration: none;
+  align-content: start;
+}
+.pf .wcard:hover {
+  border-color: var(--accent);
+}
+.pf .wcard h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.pf .wcard p {
+  color: var(--ink-2);
+  font-size: 0.92rem;
+}
+.pf .wcard .go {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+
+.pf .contact {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  padding: clamp(1.5rem, 5vw, 3.2rem);
+  display: grid;
+  gap: 1.4rem;
+  background:
+    radial-gradient(40rem 20rem at 90% 0%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 70%),
+    var(--surface);
+}
+.pf .contact h2 {
+  font-size: clamp(2rem, 6vw, 3.6rem);
+  font-weight: 800;
+  max-width: 36rem;
+}
+.pf .contact p {
+  color: var(--ink-2);
+  max-width: 36rem;
+}
+.pf .mail {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+.pf .mail code {
+  font-family: var(--font-mono);
+  font-size: 1.02rem;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  padding: 0.55rem 0.8rem;
+  border-radius: var(--radius);
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.pf .links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+.pf footer {
+  padding-top: 1.6rem;
+  font-size: 0.82rem;
+  color: var(--ink-2);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pf *,
+  .pf *::before,
+  .pf *::after {
+    transition-duration: 0s !important;
+    animation: none !important;
+    scroll-behavior: auto !important;
+  }
+}

@@ -8,9 +8,12 @@ import {
 // so the strict Content-Security-Policy (font-src 'self') keeps working —
 // no request goes to Google when a visitor loads the page.
 
+// Variable font with the optical-size axis: large headings automatically get
+// the tighter display cut the design was drawn with (static weights don't).
 export const display = Bricolage_Grotesque({
   subsets: ["latin"],
-  weight: ["600", "800"],
+  weight: "variable",
+  axes: ["opsz"],
   display: "swap",
   variable: "--pf-font-display",
 });

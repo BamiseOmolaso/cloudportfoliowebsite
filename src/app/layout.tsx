@@ -4,8 +4,7 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
+import SiteChrome from "@/components/layout/SiteChrome";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import CookieConsent from "@/components/CookieConsent";
 
@@ -63,9 +62,7 @@ export default function RootLayout({
         className={`${inter.variable} ${inter.className} bg-gray-950 text-white`}
       >
         <ErrorBoundary>
-          <Navbar />
-          <main className="min-h-screen pt-16">{children}</main>
-          <Footer />
+          <SiteChrome>{children}</SiteChrome>
           <CookieConsent />
         </ErrorBoundary>
       </body>

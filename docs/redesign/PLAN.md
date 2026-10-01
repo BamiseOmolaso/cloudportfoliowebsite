@@ -37,9 +37,11 @@ Reference design: [reference/portfolio-design-v2.html](./reference/portfolio-des
 - [x] **1. Setup** — worktree, plan, reference design saved.
 - [x] **2. Dependencies** — `three` 0.186 (+ types) via npm; the three fonts via
   `next/font` (served from this site; 0 requests to Google). Keep the strict CSP: nothing loads from a CDN.
-- [ ] **3. Page shell** — `/preview` route; `SiteChrome` gate so this page
+- [x] **3. Page shell** — `/preview` route; `SiteChrome` gate so this page
   hides the old top bar / footer / `pt-16`; design tokens + CSS scoped
-  under `.pf` (no leakage into other pages); theme toggle.
+  under `.pf` (no leakage into other pages); theme toggle (follows the
+  system, remembers a choice). Bricolage uses the optical-size axis so the
+  headline matches the reference.
 - [ ] **4. Content file** — `src/content/portfolio.ts` with all copy,
   stats, patterns, record, timeline.
 - [ ] **5. 3D scene** — `StackScene` client component (dynamic import,
@@ -64,3 +66,14 @@ npm run dev -- -p 3200        # then open http://localhost:3200/preview
 
 No `.env` is needed: with no database the blog/projects calls return
 empty lists and the page still renders.
+
+## Looking at it without a browser window
+
+`docs/redesign/shot.mjs` drives headless Chrome (macOS path) and saves a
+screenshot — light or dark, any width, any scroll position, WebGL included:
+
+```sh
+node docs/redesign/shot.mjs http://localhost:3200/preview out.png            # light, 1280x800
+node docs/redesign/shot.mjs http://localhost:3200/preview out.png --dark --w=390 --h=844   # dark, phone
+node docs/redesign/shot.mjs http://localhost:3200/preview out.png --scroll=1400            # scrolled
+```
