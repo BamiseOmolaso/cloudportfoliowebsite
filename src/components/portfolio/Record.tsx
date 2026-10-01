@@ -3,7 +3,6 @@ import {
   clinical,
   experience,
   record,
-  skills,
   writing,
 } from "@/content/portfolio";
 
@@ -39,13 +38,6 @@ export function Record() {
                 <span>{c.name}</span>
                 <span className="yr">{c.year}</span>
               </div>
-            ))}
-          </div>
-          <div className="chips">
-            {skills.map((s) => (
-              <span className="chip" key={s}>
-                {s}
-              </span>
             ))}
           </div>
         </div>

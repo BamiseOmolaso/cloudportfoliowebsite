@@ -1680,6 +1680,352 @@
   margin-right: 0.5rem;
 }
 
+/* the stack: three rows that scroll sideways */
+.pf .sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+.pf .legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.6rem;
+  margin: -0.8rem 0 1.6rem;
+  font-size: 0.82rem;
+  color: var(--ink-2);
+}
+.pf .legend .dot,
+.pf .skill .dot {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 50%;
+  margin-right: 0.5rem;
+  vertical-align: middle;
+}
+.pf .dot.working {
+  background: var(--accent-2);
+}
+.pf .dot.learning {
+  border: 1.5px solid var(--ink-2);
+  background: transparent;
+}
+.pf .skill.working .dot {
+  background: var(--accent-2);
+}
+.pf .skill.learning .dot {
+  border: 1.5px solid var(--ink-2);
+  background: transparent;
+}
+.pf .stack {
+  display: grid;
+  gap: 1.5rem;
+  /* minmax(0, ...) lets the column shrink below the rows' full scroll width */
+  grid-template-columns: minmax(0, 1fr);
+}
+.pf .stack-row {
+  min-width: 0;
+}
+.pf .stack-label {
+  display: block;
+  margin-bottom: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+.pf .marquee {
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+  mask-image: linear-gradient(90deg, transparent, #000 7%, #000 93%, transparent);
+}
+.pf .track {
+  display: flex;
+  width: max-content;
+  animation: pf-marquee var(--dur, 40s) linear infinite;
+}
+.pf .marquee.rev .track {
+  animation-direction: reverse;
+}
+.pf .marquee:hover .track {
+  animation-play-state: paused;
+}
+/* each copy carries its own trailing gap, so the loop point is seamless */
+.pf .copy {
+  display: flex;
+  gap: 0.7rem;
+  margin: 0;
+  padding: 0 0.7rem 0 0;
+  list-style: none;
+}
+@keyframes pf-marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.pf .skill {
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  padding: 0.55rem 1rem;
+  border-radius: 99px;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--accent-2) 40%, var(--line));
+  color: var(--ink);
+}
+.pf .skill.learning {
+  border: 1px dashed color-mix(in srgb, var(--ink-2) 55%, var(--line));
+  color: var(--ink-2);
+}
+
+/* YouTube */
+.pf .videos {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 17rem), 1fr));
+  margin-bottom: 1.6rem;
+}
+.pf .video {
+  display: grid;
+  gap: 0.8rem;
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  overflow: hidden;
+  align-content: start;
+}
+.pf .video:hover {
+  border-color: var(--accent);
+}
+.pf .thumb {
+  position: relative;
+  display: block;
+  aspect-ratio: 16 / 9;
+  background: var(--surface-2);
+}
+.pf .thumb img {
+  object-fit: cover;
+}
+.pf .play {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 3.2rem;
+  height: 3.2rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-style: normal;
+  font-size: 1rem;
+  padding-left: 0.2rem;
+  background: color-mix(in srgb, #000 62%, transparent);
+  color: #fff;
+  border: 1.5px solid color-mix(in srgb, #fff 55%, transparent);
+  transition: background 0.2s;
+}
+.pf .video:hover .play {
+  background: var(--accent);
+}
+.pf .vt {
+  padding: 0 1.1rem 1.1rem;
+  font-weight: 600;
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+/* testimonials */
+.pf .quotes {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+}
+.pf .quote {
+  margin: 0;
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.5rem 1.3rem 1.3rem;
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+.pf .quote blockquote {
+  margin: 0;
+  font-size: 1.02rem;
+  line-height: 1.6;
+}
+.pf .quote figcaption {
+  display: grid;
+  gap: 0.15rem;
+  font-size: 0.88rem;
+  color: var(--ink-2);
+}
+.pf .quote figcaption b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.pf .quote .proj-tag {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--accent);
+}
+.pf .quote .ph {
+  position: absolute;
+  top: -0.7rem;
+  left: 1.1rem;
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.15rem 0.6rem;
+  border-radius: 99px;
+  background: var(--warn);
+  color: var(--accent-ink);
+}
+
+/* live posts and projects from the database */
+.pf .posts {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+}
+.pf .post {
+  display: grid;
+  gap: 0.55rem;
+  align-content: start;
+  text-decoration: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.3rem;
+}
+.pf .post:hover {
+  border-color: var(--accent);
+}
+.pf .post h3 {
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.pf .post p {
+  color: var(--ink-2);
+  font-size: 0.92rem;
+}
+.pf .post .go {
+  color: var(--accent);
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+}
+.pf .more {
+  margin-top: 1.2rem;
+  font-size: 0.92rem;
+}
+.pf .more a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.pf .more a:hover {
+  text-decoration: underline;
+}
+.pf .more-projects {
+  margin-top: 2.4rem;
+}
+
+/* newsletter and footer */
+.pf .site-foot {
+  margin-top: 3rem;
+  padding-top: 2.2rem;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 2rem;
+}
+.pf .foot-grid {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 52rem) {
+  .pf .foot-grid {
+    grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+    gap: 4rem;
+  }
+}
+.pf .news h3 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.4rem;
+}
+.pf .news p {
+  color: var(--ink-2);
+  font-size: 0.92rem;
+  max-width: 32rem;
+}
+.pf .news-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1rem;
+  max-width: 32rem;
+}
+.pf .news input {
+  flex: 1 1 14rem;
+  min-width: 0;
+  padding: 0.65rem 0.9rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.95rem;
+}
+.pf .news input::placeholder {
+  color: var(--ink-2);
+  opacity: 0.7;
+}
+.pf .news-msg {
+  min-height: 1.4rem;
+  margin-top: 0.6rem;
+  font-size: 0.86rem;
+}
+.pf .news-msg a {
+  color: var(--accent);
+}
+.pf .site-foot nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem 1.4rem;
+  align-content: start;
+}
+.pf .site-foot nav a {
+  color: var(--ink-2);
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+.pf .site-foot nav a:hover {
+  color: var(--ink);
+}
+.pf .foot-base {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: var(--ink-2);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pf *,
   .pf *::before,
@@ -1687,5 +2033,22 @@
     transition-duration: 0s !important;
     animation: none !important;
     scroll-behavior: auto !important;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pf .marquee {
+    -webkit-mask-image: none;
+    mask-image: none;
+    overflow: visible;
+  }
+  .pf .track {
+    width: auto;
+  }
+  .pf .copy {
+    flex-wrap: wrap;
+    padding: 0;
+  }
+  .pf .copy[aria-hidden="true"] {
+    display: none;
   }
 }

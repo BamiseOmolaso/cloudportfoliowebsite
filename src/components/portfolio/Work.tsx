@@ -1,4 +1,5 @@
 import { projects, work } from "@/content/portfolio";
+import { LiveProjects } from "./LiveFeeds";
 
 /** Selected work: production systems, open projects and labs. */
 export default function Work() {
@@ -44,6 +45,7 @@ export default function Work() {
           </article>
         ))}
       </div>
+      <LiveProjects />
     </section>
   );
 }

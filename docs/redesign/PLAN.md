@@ -107,8 +107,20 @@ least privilege. Also decide whether the security scans should block
   **Left out on purpose** (owner to decide): MivarMart (lives under another
   GitHub account), the inherited PHP/WordPress app, the Python/Go exercise
   folders, the wedding site.
-- [ ] **8. Live data** — keep the latest posts/projects from the database
-  (`/api/blog`, `/api/projects`) in "Building in public"; graceful empty state.
+- [x] **8. Live data + what the redesign had dropped** — an audit of the
+  old site and CV found omissions, now restored: a full **YouTube section**
+  (real thumbnails, Subscribe), the **newsletter** sign-up (+ site links in a
+  footer, since the header hides them on phones), **About** in the header,
+  **latest posts** and **more projects** from the database (they appear on
+  their own; nothing shows without a database), and the **stack** as three
+  sideways-scrolling rows in learning order (solid = used in projects,
+  dashed = learning). **Testimonials** are placeholders that never render
+  in production until a real one is added.
+  Findings: the old page's three hard-coded video titles did not match the
+  videos (checked against YouTube's oEmbed data) — now the real titles.
+  Skill levels were set from evidence in the repos; Ansible, GitLab, GitOps,
+  Kubernetes, Azure and GCP are marked "learning" until a project uses them.
+  Bug caught by the overflow check: the scroller widened the page on phones.
 - [ ] **9. Quality pass** — mobile widths, keyboard/focus, reduced motion,
   contrast in both themes, `npm run build`, lint, existing tests.
 - [ ] **10. Go live** — swap `/` to the new page, remove `/preview`, open a PR.

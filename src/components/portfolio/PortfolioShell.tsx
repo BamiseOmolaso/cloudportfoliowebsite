@@ -52,26 +52,26 @@ export default function PortfolioShell({
             Bamise Omolaso
           </a>
           <nav aria-label="Primary">
-            <a className="link" href="#proof">
-              Results
-            </a>
             <a className="link" href="#work">
               Work
+            </a>
+            <a className="link" href="#stack">
+              Stack
             </a>
             <a className="link" href="#pipeline">
               Pipeline
             </a>
-            <a className="link" href="#patterns">
-              Patterns
-            </a>
-            <a className="link" href="#record">
-              Record
+            <a className="link" href="#youtube">
+              YouTube
             </a>
             <Link className="link" href="/blog">
               Blog
             </Link>
             <Link className="link" href="/projects">
               Projects
+            </Link>
+            <Link className="link" href="/about">
+              About
             </Link>
             <a className="link" href="#contact">
               Contact

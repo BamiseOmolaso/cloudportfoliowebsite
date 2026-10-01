@@ -93,6 +93,34 @@ export interface Incident {
   lesson: string;
 }
 
+/** "working" = used in a real project (see the repos); "learning" = hands-on practice so far. */
+export type SkillLevel = "working" | "learning";
+
+export interface Skill {
+  name: string;
+  level: SkillLevel;
+}
+
+export interface SkillRow {
+  label: string;
+  items: Skill[];
+}
+
+export interface Video {
+  title: string;
+  /** YouTube video id (11 characters). */
+  id: string;
+}
+
+export interface Testimonial {
+  quote: string;
+  name: string;
+  role: string;
+  project?: string;
+  /** Stand-in text. Never shown in a production build. */
+  placeholder?: boolean;
+}
+
 export interface Experience {
   when: string;
   title: string;
@@ -352,21 +380,6 @@ export const certifications: Certification[] = [
   { name: "Google Data Analytics Professional", year: "2023" },
 ];
 
-export const skills: string[] = [
-  "Python",
-  "TypeScript",
-  "SQL",
-  "Bash",
-  "Terraform",
-  "Docker",
-  "GitHub Actions",
-  "Next.js",
-  "Prisma",
-  "PostgreSQL",
-  "Redis",
-  "Power BI",
-];
-
 export const clinical = {
   label: "Why a doctor",
   title: "Clinical habits that carry straight into operations.",
@@ -400,13 +413,6 @@ export const writing = {
       body: "One layer a day: database, hosting, access, secrets, infrastructure as code, CI/CD, and the 12-commit autoprefixer saga.",
       cta: "Read the series →",
       href: profile.links.linkedin,
-    },
-    {
-      kind: "YouTube · Bamise Teaches Cloud",
-      title: "AWS tutorials for people who ship",
-      body: "S3 and CloudFront deployments, custom domains and distribution setup, walked through end to end.",
-      cta: "Watch the channel →",
-      href: profile.links.youtube,
     },
     {
       kind: "GitHub · Architecture guide",
@@ -641,3 +647,160 @@ export const incidents = {
     },
   ] as Incident[],
 };
+
+/* ------------------------------------------------------------------ */
+/* Step 8: skills, YouTube, live posts, testimonials, newsletter        */
+/* ------------------------------------------------------------------ */
+
+export const skillsSection = {
+  label: "The stack",
+  title: "From the command line up to the cloud.",
+  intro:
+    "In the order I learned them: Linux first, then code, then everything that ships it.",
+  legend: {
+    working: "Used in my projects",
+    learning: "Learning, hands-on so far",
+  },
+};
+
+/**
+ * Three rows that scroll sideways, read left to right and top to bottom as a
+ * learning path. Levels are set from evidence in the repositories; change one
+ * line here if a skill has moved from "learning" to "working".
+ */
+export const skillRows: SkillRow[] = [
+  {
+    label: "01 · Foundations",
+    items: [
+      { name: "Linux", level: "working" },
+      { name: "Bash", level: "working" },
+      { name: "Python", level: "working" },
+      { name: "Go", level: "working" },
+      { name: "TypeScript", level: "working" },
+      { name: "SQL", level: "working" },
+      { name: "HCL", level: "working" },
+      { name: "Git", level: "working" },
+    ],
+  },
+  {
+    label: "02 · Build and ship",
+    items: [
+      { name: "GitHub", level: "working" },
+      { name: "GitHub Actions", level: "working" },
+      { name: "GitLab", level: "learning" },
+      { name: "GitOps", level: "learning" },
+      { name: "Terraform", level: "working" },
+      { name: "Ansible", level: "learning" },
+      { name: "Docker", level: "working" },
+      { name: "Docker Compose", level: "working" },
+      { name: "Nginx", level: "working" },
+      { name: "Trivy", level: "working" },
+    ],
+  },
+  {
+    label: "03 · Run it in the cloud",
+    items: [
+      { name: "Kubernetes", level: "learning" },
+      { name: "Helm", level: "learning" },
+      { name: "Argo CD", level: "learning" },
+      { name: "AWS", level: "working" },
+      { name: "Azure", level: "learning" },
+      { name: "GCP", level: "learning" },
+      { name: "ECS Fargate", level: "working" },
+      { name: "Lambda", level: "working" },
+      { name: "PostgreSQL", level: "working" },
+      { name: "Redis", level: "working" },
+      { name: "Power BI", level: "working" },
+      { name: "scikit-learn", level: "working" },
+    ],
+  },
+];
+
+export const youtube = {
+  label: "YouTube",
+  title: "Bamise Teaches Cloud",
+  body: "Step-by-step AWS tutorials for people who ship: hosting a WordPress site on an EC2 server, a static website on S3, and recordings from the NextWork Lagos community.",
+  channel: profile.links.youtube,
+  subscribe: "Subscribe to the channel",
+  all: "All videos →",
+  videos: [
+    {
+      title: "How to host a WordPress site on an Amazon EC2 server",
+      id: "E23fKTyiSgM",
+    },
+    { title: "How to host a static website on Amazon S3", id: "yBJlQmUttwQ" },
+    {
+      title: "NextWork Lagos community meetup, December 2024",
+      id: "6y595Svv5l4",
+    },
+  ] as Video[],
+};
+
+export const livePosts = {
+  label: "From the blog",
+  title: "Latest write-ups.",
+  all: "All posts →",
+};
+
+export const liveProjects = {
+  title: "More from the project log",
+  all: "All projects →",
+};
+
+export const testimonialsSection = {
+  label: "Kind words",
+  title: "What people I've worked with say.",
+};
+
+export const testimonials: Testimonial[] = [
+  {
+    placeholder: true,
+    quote:
+      "Placeholder: replace this with a real quote from a past client or colleague. Two or three sentences about the result they got work best.",
+    name: "Client name",
+    role: "Role, Company",
+    project: "Project or engagement",
+  },
+  {
+    placeholder: true,
+    quote:
+      "Placeholder: a second quote, ideally about a different strength, such as communication, reliability or how clearly things were explained.",
+    name: "Client name",
+    role: "Role, Company",
+    project: "Project or engagement",
+  },
+  {
+    placeholder: true,
+    quote:
+      "Placeholder: a third quote. Real names and companies only, and ask permission before publishing.",
+    name: "Client name",
+    role: "Role, Company",
+    project: "Project or engagement",
+  },
+];
+
+/**
+ * What the page may show. Placeholder quotes never reach production: until at
+ * least one real testimonial exists, the whole section stays hidden there.
+ */
+export function visibleTestimonials(production: boolean): Testimonial[] {
+  return testimonials.filter((t) => !t.placeholder || !production);
+}
+
+export const newsletter = {
+  title: "New write-ups, by email.",
+  body: "Occasional posts on cloud, DevSecOps and what broke in production. No spam, and you can leave any time.",
+  placeholder: "you@example.com",
+  button: "Subscribe",
+  success: "Thank you for subscribing!",
+  captcha: "One more step: please subscribe on the newsletter page.",
+  captchaLink: "Open the newsletter page →",
+};
+
+export const footerLinks: Link[] = [
+  { label: "Blog", href: "/blog" },
+  { label: "Projects", href: "/projects" },
+  { label: "About", href: "/about" },
+  { label: "Newsletter", href: "/newsletter" },
+  { label: "Privacy policy", href: "/privacy-policy" },
+];

@@ -58,10 +58,6 @@ export default function Contact() {
           ))}
         </div>
       </div>
-      <footer>
-        <span>{profile.fullName}</span>
-        <span>{profile.location}</span>
-      </footer>
     </section>
   );
 }
