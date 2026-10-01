@@ -78,6 +78,13 @@ least privilege.
   a thin progress bar, and a bobbing "Scroll" cue. All of them just scroll
   the page, so scroll position stays the single source of truth. Tested by
   clicking through the whole tour (hero button, every Next, Back, rail).
+  **Background:** the blueprint grid is gone. Layered gradient blend (violet
+  and indigo behind the diagram, a hint of teal low-left), a darker shade
+  behind the text, fine film grain (data-URI SVG; allowed by the CSP) and a
+  bottom fade so the hero meets the page colour without a seam. **Dark is
+  now the default** (matches the blog/projects pages); the toggle switches
+  to light and remembers the choice. To screenshot light mode:
+  `--init="localStorage.setItem('pf-theme','light')"`.
 - [ ] **6. Sections** — results, interactive pipeline, pattern cards,
   record, "why a doctor", writing, contact. **The "Least-privilege IAM"
   pattern card must be reworded** (see findings below).

@@ -20,8 +20,9 @@ export default function PortfolioShell({
   className: string;
   children: React.ReactNode;
 }) {
-  // null = follow the system setting.
-  const [theme, setTheme] = useState<Theme | null>(null);
+  // Dark by default (it matches the rest of the site); the toggle switches
+  // to light and the choice is remembered.
+  const [theme, setTheme] = useState<Theme>("dark");
 
   useEffect(() => {
     try {
@@ -33,11 +34,7 @@ export default function PortfolioShell({
   }, []);
 
   const toggleTheme = () => {
-    const systemIsLight = window.matchMedia(
-      "(prefers-color-scheme: light)",
-    ).matches;
-    const current: Theme = theme ?? (systemIsLight ? "light" : "dark");
-    const next: Theme = current === "dark" ? "light" : "dark";
+    const next: Theme = theme === "dark" ? "light" : "dark";
     setTheme(next);
     try {
       window.localStorage.setItem(STORAGE_KEY, next);
@@ -47,7 +44,7 @@ export default function PortfolioShell({
   };
 
   return (
-    <div id="top" className={`pf ${className}`} data-theme={theme ?? undefined}>
+    <div id="top" className={`pf ${className}`} data-theme={theme}>
       <header className="bar">
         <div className="bar-in">
           <a className="brand" href="#top">
