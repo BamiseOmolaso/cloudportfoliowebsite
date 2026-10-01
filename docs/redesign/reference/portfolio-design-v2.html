@@ -1,0 +1,803 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#faf9f5;color:#141413}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Bamise Omolaso Portfolio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Hanken+Grotesk:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+/* Layout concept: the page opens inside a 3D exploded view of the author's own AWS stack. Scrolling walks one request
+   from the browser down through edge, app and data tiers, then through security and cost. Blueprint grid, violet structure,
+   teal for traffic in flight, amber for anything paused. Hex tokens only, because the 3D scene reads them. */
+:root {
+  --bg: #0C0C16;
+  --surface: #141424;
+  --surface-2: #1B1B31;
+  --ink: #ECEBF7;
+  --ink-2: #9D9CB8;
+  --line: #2B2B47;
+  --accent: #9B7BFF;
+  --accent-2: #4FD1C5;
+  --warn: #F2B04C;
+  --bad: #FF6B7A;
+  --accent-ink: #0C0C16;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Hanken Grotesk", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --radius: 8px;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #F5F4FA; --surface: #FFFFFF; --surface-2: #ECEAF6; --ink: #17152B; --ink-2: #5A5875; --line: #D5D2E6;
+    --accent: #5B3DD6; --accent-2: #0E8F84; --warn: #A8620A; --bad: #C4283C; --accent-ink: #FFFFFF; color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #F5F4FA; --surface: #FFFFFF; --surface-2: #ECEAF6; --ink: #17152B; --ink-2: #5A5875; --line: #D5D2E6;
+  --accent: #5B3DD6; --accent-2: #0E8F84; --warn: #A8620A; --bad: #C4283C; --accent-ink: #FFFFFF; color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 1rem; line-height: 1.6;
+  padding-inline: 1rem; padding-block: 0 3rem; -webkit-font-smoothing: antialiased;
+}
+a { color: inherit; }
+p { margin: 0; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; line-height: 1.05; letter-spacing: -0.025em; text-wrap: balance; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px; }
+.wrap { max-width: 70rem; margin-inline: auto; }
+.label { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-2); }
+.bleed { margin-inline: -1rem; padding-inline: 1rem; }
+
+/* header */
+.bar { position: fixed; top: 0; left: 0; right: 0; z-index: 30; padding-top: env(safe-area-inset-top, 0px);
+  background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+.bar-in { max-width: 70rem; margin-inline: auto; padding: 0.65rem 1rem; display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
+.brand { font-family: var(--font-display); font-weight: 800; text-decoration: none; display: flex; align-items: center; gap: 0.6rem; letter-spacing: -0.02em; }
+.mark { width: 1.9rem; height: 1.9rem; border-radius: 6px; background: var(--accent); color: var(--accent-ink); display: grid; place-items: center; font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500; }
+nav { display: flex; align-items: center; gap: 1.4rem; }
+nav a.link { text-decoration: none; font-size: 0.9rem; color: var(--ink-2); }
+nav a.link:hover { color: var(--ink); }
+.icon-btn { width: 2.1rem; height: 2.1rem; border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 50%; cursor: pointer; display: grid; place-items: center; }
+.icon-btn:hover { border-color: var(--accent); }
+@media (max-width: 42rem) { nav a.link { display: none; } }
+
+/* story: sticky 3D stage */
+.runway { position: relative; height: calc(6 * 92svh); margin-inline: -1rem; }
+.stage { position: sticky; top: 0; height: 100svh; overflow: hidden;
+  background:
+    radial-gradient(60rem 36rem at 78% 30%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%),
+    linear-gradient(color-mix(in srgb, var(--line) 38%, transparent) 1px, transparent 1px) 0 0 / 3.2rem 3.2rem,
+    linear-gradient(90deg, color-mix(in srgb, var(--line) 38%, transparent) 1px, transparent 1px) 0 0 / 3.2rem 3.2rem,
+    var(--bg);
+  -webkit-mask-image: linear-gradient(transparent 0, #000 5rem); mask-image: linear-gradient(transparent 0, #000 5rem); }
+#gl { position: absolute; inset: 0; width: 100%; height: 100%; display: block; touch-action: pan-y; }
+.tags { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.tag { position: absolute; left: 0; top: 0; font-family: var(--font-mono); font-size: 0.7rem; white-space: nowrap; padding: 0.15rem 0.45rem; border-radius: 4px;
+  background: color-mix(in srgb, var(--bg) 82%, transparent); border: 1px solid var(--line); color: var(--ink); opacity: 0; transition: opacity .35s; will-change: transform; }
+.tag.on { opacity: 1; }
+.tag.paused { border-color: var(--warn); color: var(--warn); }
+.cards { position: absolute; left: 0; right: 0; bottom: 0; padding: 1rem; padding-bottom: calc(1.4rem + env(safe-area-inset-bottom, 0px)); display: grid; pointer-events: none; }
+@media (min-width: 58rem) { .cards { top: 0; align-content: center; padding-left: max(1.5rem, calc((100vw - 70rem) / 2)); padding-bottom: 0; padding-top: 3rem; } }
+.card { grid-area: 1 / 1; max-width: 29rem; opacity: 0; visibility: hidden; transform: translateY(14px); transition: opacity .5s, transform .5s, visibility 0s .5s;
+  background: color-mix(in srgb, var(--bg) 78%, transparent); backdrop-filter: blur(10px); border: 1px solid var(--line); border-radius: 12px; padding: 1.2rem 1.25rem; align-self: end; }
+@media (min-width: 58rem) { .card { align-self: center; padding: 1.6rem; } }
+.card.on { opacity: 1; visibility: visible; transform: none; pointer-events: auto; transition: opacity .5s, transform .5s; }
+.card.hero { background: transparent; backdrop-filter: none; border-color: transparent; padding-inline: 0; max-width: 36rem; }
+@media (max-width: 57.99rem) { .card.hero { background: color-mix(in srgb, var(--bg) 70%, transparent); backdrop-filter: blur(8px); padding-inline: 1.1rem; border-color: var(--line); } }
+.card .label { color: var(--accent); }
+.card h2 { font-size: clamp(1.45rem, 3.2vw, 2.05rem); font-weight: 800; margin-block: 0.45rem 0.7rem; }
+.card h1 { font-size: clamp(2.2rem, 6.5vw, 4rem); font-weight: 800; margin-block: 0.7rem 1rem; }
+.card h1 em { font-style: normal; color: var(--accent); }
+.card p { color: var(--ink-2); font-size: 0.97rem; }
+.card .why { margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid var(--line); font-size: 0.9rem; }
+.card .why b { color: var(--ink); font-weight: 600; }
+.ctas { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-top: 1.2rem; }
+.btn { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.05rem; border-radius: var(--radius); font-weight: 500; text-decoration: none; border: 1px solid var(--line); background: var(--surface); font-size: 0.92rem; cursor: pointer; font-family: inherit; color: var(--ink); }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn.primary:hover { filter: brightness(1.08); }
+.costrow { display: flex; align-items: baseline; flex-wrap: wrap; gap: 0.4rem 0.9rem; margin-top: 0.9rem; }
+.cost { font-family: var(--font-display); font-weight: 800; font-size: 2.4rem; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; transition: color .3s; }
+.cost.paused { color: var(--warn); }
+.cost small { font-family: var(--font-body); font-size: 0.9rem; font-weight: 400; color: var(--ink-2); letter-spacing: 0; }
+.rail { position: absolute; right: max(1rem, calc((100vw - 70rem) / 2)); top: 50%; transform: translateY(-50%); display: none; flex-direction: column; gap: 0.7rem; align-items: flex-end; }
+@media (min-width: 58rem) { .rail { display: flex; } }
+.rail span { display: flex; align-items: center; gap: 0.6rem; font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-2); opacity: .55; transition: opacity .3s, color .3s; }
+.rail span i { width: 1.4rem; height: 2px; background: currentColor; display: block; transition: width .3s; }
+.rail span.on { opacity: 1; color: var(--accent); }
+.rail span.on i { width: 2.4rem; }
+.hint { position: absolute; left: 50%; bottom: 1rem; transform: translateX(-50%); font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-2); display: none; transition: opacity .4s; }
+@media (min-width: 58rem) { .hint { display: block; } }
+.hint.off { opacity: 0; }
+.no-gl .tags { display: none; }
+
+/* scroll reveal: always readable at rest */
+@supports (animation-timeline: view()) {
+  .rise { animation: rise linear both; animation-timeline: view(); animation-range: entry 0% entry 45%; }
+}
+@keyframes rise { from { opacity: .3; transform: translateY(22px); } to { opacity: 1; transform: none; } }
+
+/* sections */
+section.block { padding-block: 4.5rem; }
+.sec-head { display: grid; gap: 0.6rem; margin-bottom: 2.2rem; }
+.sec-head h2 { font-size: clamp(1.9rem, 4.6vw, 3rem); font-weight: 800; max-width: 38rem; }
+.sec-head p { color: var(--ink-2); max-width: 40rem; }
+
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr)); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--line); gap: 1px; }
+.stat { background: var(--surface); padding: 1.3rem 1.2rem; display: grid; gap: 0.3rem; }
+.stat b { font-family: var(--font-display); font-size: clamp(1.9rem, 4vw, 2.7rem); font-weight: 800; letter-spacing: -0.03em; color: var(--accent); font-variant-numeric: tabular-nums; line-height: 1; }
+.stat span { font-size: 0.86rem; color: var(--ink-2); }
+
+/* pipeline */
+.pipe { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 1.2rem; display: grid; gap: 1.2rem; }
+.pipe-ctl { display: flex; flex-wrap: wrap; gap: 0.7rem 1.2rem; align-items: center; justify-content: space-between; }
+.tog { display: inline-flex; align-items: center; gap: 0.6rem; font-size: 0.9rem; color: var(--ink-2); cursor: pointer; }
+.tog input { accent-color: var(--bad); width: 1.05rem; height: 1.05rem; }
+.stages { display: grid; gap: 0.6rem; grid-template-columns: repeat(auto-fit, minmax(9.5rem, 1fr)); }
+.st { position: relative; border: 1px solid var(--line); border-radius: var(--radius); padding: 0.8rem 0.85rem 1rem; background: var(--bg); display: grid; gap: 0.25rem; overflow: hidden; transition: border-color .3s, background .3s; min-width: 0; }
+.st .n { font-family: var(--font-mono); font-size: 0.68rem; color: var(--ink-2); }
+.st strong { font-weight: 600; font-size: 0.93rem; line-height: 1.25; }
+.st .s { font-family: var(--font-mono); font-size: 0.7rem; color: var(--ink-2); }
+.st::after { content: ""; position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: var(--line); }
+.st i { position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--accent); z-index: 1; }
+.st.run { border-color: var(--accent); } .st.run i { width: 100%; transition: width .9s linear; }
+.st.pass { border-color: color-mix(in srgb, var(--accent-2) 60%, var(--line)); } .st.pass i { width: 100%; background: var(--accent-2); }
+.st.pass .s { color: var(--accent-2); }
+.st.fail { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 10%, var(--bg)); } .st.fail i { width: 100%; background: var(--bad); } .st.fail .s { color: var(--bad); }
+.st.skip { opacity: .45; }
+.pipe-note { font-size: 0.92rem; color: var(--ink-2); min-height: 3rem; }
+.pipe-note b { color: var(--ink); font-weight: 600; }
+
+/* patterns */
+.patterns { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr)); }
+.pat { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; display: grid; grid-template-rows: auto 1fr; overflow: hidden; min-width: 0; }
+.pat svg, .pat .viz { display: block; width: 100%; height: 9.5rem; background: color-mix(in srgb, var(--bg) 60%, var(--surface)); border-bottom: 1px solid var(--line); }
+.pat .viz { padding: 1rem; display: grid; align-content: center; gap: 0.5rem; font-family: var(--font-mono); font-size: 0.78rem; }
+.pat .body { padding: 1.1rem 1.2rem 1.3rem; display: grid; gap: 0.5rem; align-content: start; }
+.pat h3 { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.015em; }
+.pat p { color: var(--ink-2); font-size: 0.92rem; }
+.pat .used { font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent); }
+.s-box { fill: var(--surface-2); stroke: var(--line); stroke-width: 1; }
+.s-hot { fill: color-mix(in srgb, var(--accent) 16%, var(--surface-2)); stroke: var(--accent); stroke-width: 1; }
+.s-ln { stroke: var(--line); stroke-width: 1.4; fill: none; }
+.s-ac { stroke: var(--accent); stroke-width: 1.4; fill: none; }
+.s-tx { fill: var(--ink-2); font-family: var(--font-mono); font-size: 9px; }
+.s-tx.w { fill: var(--ink); }
+.s-dot { fill: var(--accent-2); }
+.s-bad { fill: none; stroke: var(--bad); stroke-width: 1.6; }
+.pol { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; padding: 0.5rem 0.7rem; border: 1px solid var(--line); border-radius: 6px; background: var(--bg); min-width: 0; }
+.pol code { overflow-wrap: anywhere; }
+.pol.ok { border-color: color-mix(in srgb, var(--accent-2) 60%, var(--line)); }
+.pol.no code { color: var(--ink-2); text-decoration: line-through; text-decoration-color: var(--bad); }
+.pol .tick { color: var(--accent-2); font-weight: 600; } .pol.no .tick { color: var(--bad); }
+@keyframes flow { from { stroke-dashoffset: 18; } to { stroke-dashoffset: 0; } }
+.flow { stroke-dasharray: 5 4; animation: flow 1.2s linear infinite; }
+@keyframes blink { 0%, 100% { opacity: .35; } 50% { opacity: 1; } }
+.blink { animation: blink 2.4s ease-in-out infinite; }
+
+/* record */
+.cols { display: grid; gap: 2.5rem; grid-template-columns: minmax(0, 1fr); }
+@media (min-width: 56rem) { .cols { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4rem; } }
+.sub { font-family: var(--font-display); font-weight: 600; font-size: 1.15rem; margin-bottom: 1rem; letter-spacing: -0.015em; }
+.tl { display: grid; }
+.tl-i { display: grid; grid-template-columns: 8.5rem minmax(0, 1fr); gap: 1rem; padding-block: 1.1rem; border-top: 1px solid var(--line); }
+.tl-i:last-child { border-bottom: 1px solid var(--line); }
+@media (max-width: 34rem) { .tl-i { grid-template-columns: minmax(0, 1fr); gap: 0.3rem; } }
+.tl-i .when { font-family: var(--font-mono); font-size: 0.76rem; color: var(--accent); padding-top: 0.2rem; }
+.tl-i h3 { font-size: 1.1rem; font-weight: 600; letter-spacing: -0.01em; }
+.tl-i .org { color: var(--ink-2); font-size: 0.9rem; margin-bottom: 0.4rem; }
+.tl-i p.d { color: var(--ink-2); font-size: 0.93rem; }
+.item { display: flex; justify-content: space-between; gap: 1rem; padding-block: 0.8rem; border-top: 1px solid var(--line); align-items: baseline; }
+.item:last-child { border-bottom: 1px solid var(--line); }
+.item .yr { font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent); white-space: nowrap; }
+.chips { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 1.2rem; }
+.chip { font-family: var(--font-mono); font-size: 0.72rem; border: 1px solid var(--line); border-radius: 99px; padding: 0.18rem 0.65rem; color: var(--ink-2); background: var(--surface); }
+
+.map { display: grid; gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.map-r { display: grid; grid-template-columns: minmax(0, 1fr) 2rem minmax(0, 1.4fr); gap: 0.5rem; align-items: center; background: var(--surface); padding: 1rem 1.2rem; }
+.map-r .a { font-family: var(--font-display); font-weight: 600; font-size: 1.05rem; }
+.map-r .ar { color: var(--accent); font-family: var(--font-mono); text-align: center; }
+.map-r .b { color: var(--ink-2); font-size: 0.93rem; }
+@media (max-width: 34rem) { .map-r { grid-template-columns: minmax(0, 1fr); gap: 0.15rem; } .map-r .ar { display: none; } }
+
+.writing { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr)); }
+.wcard { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 1.3rem; display: grid; gap: 0.5rem; text-decoration: none; align-content: start; }
+.wcard:hover { border-color: var(--accent); }
+.wcard h3 { font-size: 1.15rem; font-weight: 600; letter-spacing: -0.01em; }
+.wcard p { color: var(--ink-2); font-size: 0.92rem; }
+.wcard .go { color: var(--accent); font-family: var(--font-mono); font-size: 0.75rem; }
+
+.contact { position: relative; overflow: hidden; border: 1px solid var(--line); border-radius: 16px; padding: clamp(1.5rem, 5vw, 3.2rem); display: grid; gap: 1.4rem;
+  background: radial-gradient(40rem 20rem at 90% 0%, color-mix(in srgb, var(--accent) 24%, transparent), transparent 70%), var(--surface); }
+.contact h2 { font-size: clamp(2rem, 6vw, 3.6rem); font-weight: 800; max-width: 36rem; }
+.contact p { color: var(--ink-2); max-width: 36rem; }
+.mail { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; }
+.mail code { font-family: var(--font-mono); font-size: 1.02rem; background: var(--bg); border: 1px solid var(--line); padding: 0.55rem 0.8rem; border-radius: var(--radius); overflow-wrap: anywhere; user-select: all; }
+.links { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+footer { padding-top: 1.6rem; font-size: 0.82rem; color: var(--ink-2); display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.5rem; }
+
+@media (prefers-reduced-motion: reduce) {
+  * { transition-duration: 0s !important; animation: none !important; scroll-behavior: auto !important; }
+}
+</style>
+
+<header class="bar">
+  <div class="bar-in">
+    <a class="brand" href="#top"><span class="mark">OO</span>Bamise Omolaso</a>
+    <nav aria-label="Primary">
+      <a class="link" href="#proof">Results</a>
+      <a class="link" href="#pipeline">Pipeline</a>
+      <a class="link" href="#patterns">Patterns</a>
+      <a class="link" href="#record">Record</a>
+      <a class="link" href="#contact">Contact</a>
+      <button class="icon-btn" id="theme" type="button" aria-label="Switch colour theme" title="Switch colour theme">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </nav>
+  </div>
+</header>
+
+<main id="top">
+  <div class="runway" id="runway">
+    <div class="stage" id="stage">
+      <canvas id="gl" aria-label="3D exploded view of the AWS architecture behind this site"></canvas>
+      <div class="tags" id="tags"></div>
+
+      <div class="cards" id="cards">
+        <div class="card hero on" data-step="0">
+          <span class="label">Cloud and DevSecOps engineer · former medical doctor</span>
+          <h1>Cloud systems that are <em>secure,</em> repeatable and cheap to run.</h1>
+          <p>Dr. Bamise Omolaso. This is the real infrastructure behind this site, in 3D. Scroll to follow one request through it.</p>
+          <div class="ctas">
+            <a class="btn primary" href="#contact">Work with me</a>
+            <a class="btn" href="https://portfolio.oluwabamiseomolaso.com.ng/cv/Oluwabamise%20Omolaso_CV_2025.pdf" target="_blank" rel="noopener noreferrer">View CV</a>
+          </div>
+        </div>
+        <div class="card" data-step="1">
+          <span class="label">Step 1 of 5 · Edge</span>
+          <h2>Every visit starts at the front door.</h2>
+          <p>Route 53 resolves the domain, ACM supplies the TLS certificate, and the Application Load Balancer ends HTTPS and spreads traffic across healthy containers.</p>
+          <p class="why"><b>Why it matters.</b> Visitors never reach a container directly, and an unhealthy one is taken out of rotation automatically.</p>
+        </div>
+        <div class="card" data-step="2">
+          <span class="label">Step 2 of 5 · Application</span>
+          <h2>Stateless containers do the work.</h2>
+          <p>A Next.js image is built in CI, stored in ECR and run on ECS Fargate. There are no servers to patch, and any task can be replaced at any moment.</p>
+          <p class="why"><b>Why it matters.</b> Nothing important lives in the container, so deploys roll forward and a bad release rolls back to the previous revision.</p>
+        </div>
+        <div class="card" data-step="3">
+          <span class="label">Step 3 of 5 · Data</span>
+          <h2>State lives in exactly one place.</h2>
+          <p>PostgreSQL on RDS holds the content, reached through Prisma. Redis handles rate limiting. Credentials arrive from Secrets Manager when the container starts.</p>
+          <p class="why"><b>Why it matters.</b> Only this tier keeps state, so everything above it can be thrown away and rebuilt.</p>
+        </div>
+        <div class="card" data-step="4">
+          <span class="label">Step 4 of 5 · Security</span>
+          <h2>Access is narrow and short-lived.</h2>
+          <p>Everything sits inside a VPC. IAM roles name specific resources instead of wildcards, and GitHub Actions reaches AWS through OIDC, so there are no long-lived keys to leak.</p>
+          <p class="why"><b>Why it matters.</b> A mistake or a compromised pipeline can only touch what it was explicitly allowed to touch.</p>
+        </div>
+        <div class="card" data-step="5">
+          <span class="label">Step 5 of 5 · Cost</span>
+          <h2>Idle should be nearly free.</h2>
+          <p>A pause and resume mechanism stops the parts that cost money. Terraform keeps the definition of everything else, so the full stack returns with one command.</p>
+          <div class="costrow">
+            <span class="cost" id="cost">~$250<small> / month running</small></span>
+            <button class="btn" type="button" id="pause-btn" aria-pressed="false">Resume environment</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="rail" id="rail" aria-hidden="true">
+        <span class="on"><b style="font-weight:400">Intro</b><i></i></span>
+        <span><b style="font-weight:400">Edge</b><i></i></span>
+        <span><b style="font-weight:400">App</b><i></i></span>
+        <span><b style="font-weight:400">Data</b><i></i></span>
+        <span><b style="font-weight:400">Security</b><i></i></span>
+        <span><b style="font-weight:400">Cost</b><i></i></span>
+      </div>
+      <div class="hint" id="hint">Scroll ↓ · move the cursor to tilt the scene</div>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <section class="block rise" id="proof">
+      <div class="sec-head">
+        <span class="label">Results</span>
+        <h2>The numbers behind the work.</h2>
+      </div>
+      <div class="stats">
+        <div class="stat"><b data-to="15" data-pre="~" data-suf="%">~15%</b><span>better customer retention from predictive models at AMDARI</span></div>
+        <div class="stat"><b data-to="20" data-pre="~" data-suf="%">~20%</b><span>revenue lift from targeted marketing built on segmentation</span></div>
+        <div class="stat"><b data-to="1" data-pre="~$" data-suf="/mo">~$1/mo</b><span>idle cost of this site, down from about $250</span></div>
+        <div class="stat"><b data-to="3" data-pre="" data-suf="">3</b><span>environments (dev, staging, prod) from one Terraform codebase</span></div>
+        <div class="stat"><b data-to="4" data-pre="" data-suf="">4</b><span>certifications, including AWS Solutions Architect Associate</span></div>
+      </div>
+    </section>
+
+    <section class="block rise" id="pipeline">
+      <div class="sec-head">
+        <span class="label">Delivery</span>
+        <h2>From commit to production, with a gate that works.</h2>
+        <p>Run the pipeline. Then break a test and see what happens: nothing ships, and production keeps serving the last good version.</p>
+      </div>
+      <div class="pipe">
+        <div class="pipe-ctl">
+          <button class="btn primary" type="button" id="run">Run pipeline</button>
+          <label class="tog" for="brk"><input type="checkbox" id="brk"> Break a test</label>
+        </div>
+        <div class="stages" id="stages">
+          <div class="st pass"><span class="n">01</span><strong>Push to branch</strong><span class="s">passed</span><i></i></div>
+          <div class="st pass"><span class="n">02</span><strong>Lint and type-check</strong><span class="s">passed</span><i></i></div>
+          <div class="st pass"><span class="n">03</span><strong>Run tests</strong><span class="s">passed</span><i></i></div>
+          <div class="st pass"><span class="n">04</span><strong>Build container image</strong><span class="s">passed</span><i></i></div>
+          <div class="st pass"><span class="n">05</span><strong>Assume AWS role via OIDC</strong><span class="s">passed</span><i></i></div>
+          <div class="st pass"><span class="n">06</span><strong>Rolling deploy to ECS</strong><span class="s">passed</span><i></i></div>
+        </div>
+        <p class="pipe-note" id="pipe-note" aria-live="polite"><b>Last run passed.</b> New tasks pass their health checks before the old ones stop, so visitors never see a gap.</p>
+      </div>
+    </section>
+
+    <section class="block" id="patterns">
+      <div class="sec-head rise">
+        <span class="label">Patterns I use</span>
+        <h2>Infrastructure patterns, drawn the way I think about them.</h2>
+        <p>Each one is something running in this site's stack.</p>
+      </div>
+      <div class="patterns">
+        <article class="pat rise">
+          <svg viewBox="0 0 240 150" role="img" aria-label="Three tiers with a request moving down through them">
+            <rect class="s-box" x="50" y="14" width="140" height="30" rx="5"/><text class="s-tx w" x="120" y="33" text-anchor="middle">Edge · ALB</text>
+            <rect class="s-hot" x="50" y="60" width="140" height="30" rx="5"/><text class="s-tx w" x="120" y="79" text-anchor="middle">App · Fargate</text>
+            <rect class="s-box" x="50" y="106" width="140" height="30" rx="5"/><text class="s-tx w" x="120" y="125" text-anchor="middle">Data · RDS</text>
+            <path class="s-ac flow" d="M120 44 V60 M120 90 V106"/>
+            <circle class="s-dot" r="3.5" cx="120" cy="14"><animate attributeName="cy" values="14;136;14" keyTimes="0;.5;1" dur="3.6s" repeatCount="indefinite"/></circle>
+          </svg>
+          <div class="body"><h3>Three-tier separation</h3><p>Edge, application and data are separate layers with one job each. Only the data tier holds state.</p><span class="used">Used in: this site, end to end</span></div>
+        </article>
+
+        <article class="pat rise">
+          <div class="viz" role="img" aria-label="A narrow IAM statement is allowed, a wildcard is denied">
+            <div class="pol ok"><code>"Resource": "arn:aws:ecr:…:repo/site"</code><span class="tick">allow</span></div>
+            <div class="pol no"><code>"Resource": "*"</code><span class="tick">never</span></div>
+            <div class="pol ok blink"><code>"Action": ["ecr:PutImage", …]</code><span class="tick">allow</span></div>
+          </div>
+          <div class="body"><h3>Least-privilege IAM</h3><p>Roles list the exact actions and the exact resources. A wildcard resource is a review failure, not a shortcut.</p><span class="used">Used in: pipeline and task roles</span></div>
+        </article>
+
+        <article class="pat rise">
+          <svg viewBox="0 0 240 150" role="img" aria-label="GitHub Actions exchanges a token for short-lived AWS credentials">
+            <rect class="s-box" x="8" y="55" width="62" height="40" rx="5"/><text class="s-tx w" x="39" y="72" text-anchor="middle">GitHub</text><text class="s-tx" x="39" y="84" text-anchor="middle">Actions</text>
+            <rect class="s-hot" x="89" y="55" width="62" height="40" rx="5"/><text class="s-tx w" x="120" y="72" text-anchor="middle">AWS STS</text><text class="s-tx" x="120" y="84" text-anchor="middle">trust policy</text>
+            <rect class="s-box" x="170" y="55" width="62" height="40" rx="5"/><text class="s-tx w" x="201" y="72" text-anchor="middle">IAM role</text><text class="s-tx" x="201" y="84" text-anchor="middle">scoped</text>
+            <path class="s-ac flow" d="M70 75 H89 M151 75 H170"/>
+            <text class="s-tx" x="79" y="48" text-anchor="middle">OIDC token</text><text class="s-tx" x="160" y="48" text-anchor="middle">temp creds</text>
+            <circle class="s-dot" r="3.5" cy="75"><animate attributeName="cx" values="70;201" dur="2.6s" repeatCount="indefinite"/></circle>
+            <text class="s-tx" x="120" y="128" text-anchor="middle">no stored access keys</text>
+          </svg>
+          <div class="body"><h3>OIDC federation</h3><p>The pipeline proves who it is with a signed token and gets short-lived credentials. There is no key to rotate or leak.</p><span class="used">Used in: GitHub Actions to AWS</span></div>
+        </article>
+
+        <article class="pat rise">
+          <svg viewBox="0 0 240 150" role="img" aria-label="One Terraform module creates dev, staging and production">
+            <rect class="s-hot" x="10" y="52" width="62" height="46" rx="5"/><text class="s-tx w" x="41" y="73" text-anchor="middle">Terraform</text><text class="s-tx" x="41" y="86" text-anchor="middle">one module</text>
+            <path class="s-ac flow" d="M72 75 C100 75 100 28 130 28 M72 75 H130 M72 75 C100 75 100 122 130 122"/>
+            <rect class="s-box" x="130" y="12" width="100" height="32" rx="5"/><text class="s-tx w" x="180" y="32" text-anchor="middle">dev · auto-deploy</text>
+            <rect class="s-box" x="130" y="59" width="100" height="32" rx="5"/><text class="s-tx w" x="180" y="79" text-anchor="middle">staging · approval</text>
+            <rect class="s-box" x="130" y="106" width="100" height="32" rx="5"/><text class="s-tx w" x="180" y="126" text-anchor="middle">prod · approval</text>
+          </svg>
+          <div class="body"><h3>One module, three environments</h3><p>Dev, staging and production come from the same code, so they differ only by variables. Staging and production wait for approval.</p><span class="used">Used in: Terraform workflows</span></div>
+        </article>
+
+        <article class="pat rise">
+          <svg viewBox="0 0 240 150" role="img" aria-label="Secrets flow from Secrets Manager into the running task and never into git">
+            <rect class="s-hot" x="10" y="30" width="78" height="40" rx="5"/><text class="s-tx w" x="49" y="48" text-anchor="middle">Secrets</text><text class="s-tx" x="49" y="60" text-anchor="middle">Manager</text>
+            <rect class="s-box" x="152" y="30" width="78" height="40" rx="5"/><text class="s-tx w" x="191" y="48" text-anchor="middle">ECS task</text><text class="s-tx" x="191" y="60" text-anchor="middle">at start-up</text>
+            <path class="s-ac flow" d="M88 50 H152"/>
+            <circle class="s-dot" r="3.5" cy="50"><animate attributeName="cx" values="88;152" dur="2.2s" repeatCount="indefinite"/></circle>
+            <rect class="s-box" x="76" y="96" width="88" height="34" rx="5"/><text class="s-tx" x="120" y="117" text-anchor="middle">git repository</text>
+            <path class="s-bad" d="M70 90 L170 136"/>
+          </svg>
+          <div class="body"><h3>Secrets at runtime</h3><p>Database URLs and API keys are fetched when a container starts. They never appear in the repository or the image.</p><span class="used">Used in: ECS task definition</span></div>
+        </article>
+
+        <article class="pat rise">
+          <svg viewBox="0 0 240 150" role="img" aria-label="Requests pass a rate limit, validation and sanitising before reaching the handler">
+            <path class="s-ln" d="M10 75 H230"/>
+            <rect class="s-box" x="30" y="55" width="46" height="40" rx="5"/><text class="s-tx w" x="53" y="79" text-anchor="middle">Rate</text>
+            <rect class="s-box" x="97" y="55" width="46" height="40" rx="5"/><text class="s-tx w" x="120" y="79" text-anchor="middle">Zod</text>
+            <rect class="s-hot" x="164" y="55" width="52" height="40" rx="5"/><text class="s-tx w" x="190" y="79" text-anchor="middle">Handler</text>
+            <circle class="s-dot" r="3.5" cy="75"><animate attributeName="cx" values="10;190;190" keyTimes="0;.8;1" dur="3.2s" repeatCount="indefinite"/></circle>
+            <circle r="3.5" cy="75" fill="var(--bad)"><animate attributeName="cx" values="10;53" dur="3.2s" begin="1.6s" repeatCount="indefinite"/><animate attributeName="opacity" values="1;1;0" keyTimes="0;.9;1" dur="3.2s" begin="1.6s" repeatCount="indefinite"/></circle>
+            <text class="s-tx" x="120" y="128" text-anchor="middle">Redis limits · Zod validates · DOMPurify cleans</text>
+          </svg>
+          <div class="body"><h3>Defence at the door</h3><p>Abusive traffic is stopped by rate limits and reCAPTCHA. What gets through is validated and sanitised before any handler sees it.</p><span class="used">Used in: contact and newsletter APIs</span></div>
+        </article>
+      </div>
+    </section>
+
+    <section class="block" id="record">
+      <div class="sec-head rise"><span class="label">Record</span><h2>Where I've worked and what I hold.</h2></div>
+      <div class="cols rise">
+        <div>
+          <p class="sub">Experience</p>
+          <div class="tl">
+            <div class="tl-i"><span class="when">Jan 2025 to now</span><div><h3>Data Science Consultant</h3><p class="org">AMDARI · Alberta, Canada</p><p class="d">Predictive models and segmentation pipelines that improved retention by about 15% and lifted revenue about 20%. Dashboards turn cohort and conversion data into decisions.</p></div></div>
+            <div class="tl-i"><span class="when">Dec 2024 to now</span><div><h3>Cloud Community Lead</h3><p class="org">NextWork</p><p class="d">AWS demos, mentoring and workshops on ECS, networking and IAM, including the failure modes the official docs skip. Maintains project guides for the community.</p></div></div>
+            <div class="tl-i"><span class="when">2014 to 2021</span><div><h3>Doctor of Medicine (MBChB)</h3><p class="org">Obafemi Awolowo University, Ile-Ife</p><p class="d">Clinical training that shaped how I treat state, evidence and reproducibility.</p></div></div>
+          </div>
+        </div>
+        <div>
+          <p class="sub">Certifications</p>
+          <div>
+            <div class="item"><span>AWS Certified Solutions Architect, Associate</span><span class="yr">2025</span></div>
+            <div class="item"><span>ALX Cloud Computing Professional</span><span class="yr">2025</span></div>
+            <div class="item"><span>AWS Certified Cloud Practitioner</span><span class="yr">2024</span></div>
+            <div class="item"><span>Google Data Analytics Professional</span><span class="yr">2023</span></div>
+          </div>
+          <div class="chips">
+            <span class="chip">Python</span><span class="chip">TypeScript</span><span class="chip">SQL</span><span class="chip">Bash</span><span class="chip">Terraform</span><span class="chip">Docker</span><span class="chip">GitHub Actions</span><span class="chip">Next.js</span><span class="chip">Prisma</span><span class="chip">PostgreSQL</span><span class="chip">Redis</span><span class="chip">Power BI</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="block" id="clinical">
+      <div class="sec-head rise"><span class="label">Why a doctor</span><h2>Clinical habits that carry straight into operations.</h2></div>
+      <div class="map rise">
+        <div class="map-r"><span class="a">Triage</span><span class="ar">→</span><span class="b">Alert severity, escalation paths and knowing what to fix first.</span></div>
+        <div class="map-r"><span class="a">The patient chart</span><span class="ar">→</span><span class="b">Terraform state and runbooks: the written record of what the system is and what was done to it.</span></div>
+        <div class="map-r"><span class="a">Handover</span><span class="ar">→</span><span class="b">Pull requests and change logs that let the next person pick up without guessing.</span></div>
+        <div class="map-r"><span class="a">Differential diagnosis</span><span class="ar">→</span><span class="b">Root-cause analysis: rule things out in order instead of restarting the service and hoping.</span></div>
+      </div>
+    </section>
+
+    <section class="block" id="writing">
+      <div class="sec-head rise"><span class="label">Building in public</span><h2>I write up the build, including the bugs.</h2></div>
+      <div class="writing rise">
+        <a class="wcard" href="https://www.linkedin.com/in/dr-bamise-omolaso/" target="_blank" rel="noopener noreferrer"><span class="label">LinkedIn · 10-day series</span><h3>Building a production-grade site like a cloud engineer</h3><p>One layer a day: database, hosting, access, secrets, infrastructure as code, CI/CD, and the 12-commit autoprefixer saga.</p><span class="go">Read the series →</span></a>
+        <a class="wcard" href="https://www.youtube.com/@bamiseteachescloud/videos" target="_blank" rel="noopener noreferrer"><span class="label">YouTube · Bamise Teaches Cloud</span><h3>AWS tutorials for people who ship</h3><p>S3 and CloudFront deployments, custom domains and distribution setup, walked through end to end.</p><span class="go">Watch the channel →</span></a>
+        <a class="wcard" href="https://github.com/BamiseOmolaso/cloudportfoliowebsite/blob/main/ARCHITECTURE_GUIDE.md" target="_blank" rel="noopener noreferrer"><span class="label">GitHub · Architecture guide</span><h3>The full design of this stack</h3><p>Every tier, every trade-off, and the Terraform behind it, written down in the repository.</p><span class="go">Read the guide →</span></a>
+      </div>
+    </section>
+
+    <section class="block" id="contact" style="padding-bottom:1rem">
+      <div class="contact rise">
+        <span class="label">Contact</span>
+        <h2>Need someone who builds it right and can explain why?</h2>
+        <p>Open to cloud engineering and DevSecOps roles, and to client work on security-conscious systems or healthcare data science.</p>
+        <div class="mail">
+          <code id="email">davidbams3@gmail.com</code>
+          <button class="btn primary" type="button" id="copy">Copy email</button>
+        </div>
+        <div class="links">
+          <a class="btn" href="https://www.linkedin.com/in/dr-bamise-omolaso/" target="_blank" rel="noopener noreferrer">LinkedIn</a>
+          <a class="btn" href="https://github.com/BamiseOmolaso" target="_blank" rel="noopener noreferrer">GitHub</a>
+          <a class="btn" href="https://x.com/devsecops_dr" target="_blank" rel="noopener noreferrer">X</a>
+          <a class="btn" href="https://www.youtube.com/@bamiseteachescloud/videos" target="_blank" rel="noopener noreferrer">YouTube</a>
+        </div>
+      </div>
+      <footer><span>Dr. Oluwabamise David Omolaso</span><span>Alberta, Canada · Ile-Ife, Nigeria</span></footer>
+    </section>
+  </div>
+</main>
+
+<script>
+(function () {
+  var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var root = document.documentElement;
+  var runway = document.getElementById('runway');
+  var cards = [].slice.call(document.querySelectorAll('.card'));
+  var railItems = [].slice.call(document.querySelectorAll('#rail span'));
+  var hint = document.getElementById('hint');
+  var costEl = document.getElementById('cost'), pauseBtn = document.getElementById('pause-btn');
+  var N = 6, state = { step: 0, userPaused: null };
+  function isPaused() { return state.userPaused !== null ? state.userPaused : state.step === 5; }
+
+  function clamp(v, a, b) { return Math.max(a, Math.min(b, v)); }
+  function readStep() {
+    var r = runway.getBoundingClientRect();
+    var total = Math.max(1, r.height - window.innerHeight);
+    var p = clamp(-r.top / total, 0, 1);
+    var s = Math.min(N - 1, Math.floor(p * N));
+    if (s !== state.step) { state.step = s; state.userPaused = null; renderCards(); }
+    hint.classList.toggle('off', p > 0.02);
+  }
+  function renderCards() {
+    cards.forEach(function (c, i) { c.classList.toggle('on', i === state.step); });
+    railItems.forEach(function (c, i) { c.classList.toggle('on', i === state.step); });
+    renderCost();
+  }
+  function renderCost() {
+    var p = isPaused();
+    costEl.classList.toggle('paused', p);
+    costEl.innerHTML = (p ? '~$1' : '~$250') + '<small> / month ' + (p ? 'paused' : 'running') + '</small>';
+    pauseBtn.textContent = p ? 'Resume environment' : 'Pause environment';
+    pauseBtn.setAttribute('aria-pressed', String(p));
+  }
+  pauseBtn.addEventListener('click', function () { state.userPaused = !isPaused(); renderCost(); });
+  window.addEventListener('scroll', readStep, { passive: true });
+  window.addEventListener('resize', readStep);
+  readStep(); renderCards();
+
+  /* ---------- theme ---------- */
+  document.getElementById('theme').addEventListener('click', function () {
+    var dark = root.getAttribute('data-theme') === 'dark' ||
+      (!root.getAttribute('data-theme') && !window.matchMedia('(prefers-color-scheme: light)').matches);
+    root.setAttribute('data-theme', dark ? 'light' : 'dark');
+  });
+
+  /* ---------- copy ---------- */
+  var copy = document.getElementById('copy'), email = document.getElementById('email');
+  copy.addEventListener('click', function () {
+    var done = function () { copy.textContent = 'Copied'; setTimeout(function () { copy.textContent = 'Copy email'; }, 1800); };
+    var fallback = function () {
+      var r = document.createRange(); r.selectNodeContents(email);
+      var s = window.getSelection(); s.removeAllRanges(); s.addRange(r);
+      copy.textContent = 'Press Ctrl+C';
+    };
+    try { navigator.clipboard.writeText(email.textContent).then(done, fallback); } catch (e) { fallback(); }
+  });
+
+  /* ---------- count-up stats ---------- */
+  var statEls = [].slice.call(document.querySelectorAll('.stat b'));
+  if ('IntersectionObserver' in window && !reduce) {
+    var so = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (!e.isIntersecting) return; so.unobserve(e.target);
+        var el = e.target, to = +el.dataset.to, pre = el.dataset.pre || '', suf = el.dataset.suf || '', t0 = performance.now();
+        (function tick(t) {
+          var k = clamp((t - t0) / 1100, 0, 1), v = Math.round(to * (1 - Math.pow(1 - k, 3)));
+          el.textContent = pre + v + suf;
+          if (k < 1) requestAnimationFrame(tick);
+        })(t0);
+      });
+    }, { threshold: 0.6 });
+    statEls.forEach(function (el) { so.observe(el); });
+  }
+
+  /* ---------- pipeline ---------- */
+  var stEls = [].slice.call(document.querySelectorAll('#stages .st'));
+  var runBtn = document.getElementById('run'), brk = document.getElementById('brk'), note = document.getElementById('pipe-note');
+  var timers = [];
+  function setSt(i, cls, txt) { stEls[i].className = 'st ' + cls; stEls[i].querySelector('.s').textContent = txt; }
+  function runPipe() {
+    timers.forEach(clearTimeout); timers = [];
+    var fail = brk.checked ? 2 : -1, step = reduce ? 0 : 950;
+    stEls.forEach(function (_, i) { setSt(i, '', 'queued'); });
+    note.innerHTML = '<b>Running.</b> Each stage must pass before the next one starts.';
+    runBtn.disabled = true;
+    function go(i) {
+      if (i >= stEls.length) { finish(false); return; }
+      setSt(i, 'run', 'running');
+      timers.push(setTimeout(function () {
+        if (i === fail) {
+          setSt(i, 'fail', 'failed');
+          for (var j = i + 1; j < stEls.length; j++) setSt(j, 'skip', 'skipped');
+          finish(true); return;
+        }
+        setSt(i, 'pass', 'passed'); go(i + 1);
+      }, step));
+    }
+    function finish(failed) {
+      runBtn.disabled = false;
+      note.innerHTML = failed
+        ? '<b>Pipeline stopped at the tests.</b> The image is never built and AWS is never touched, so production keeps serving the last good version.'
+        : '<b>Run passed.</b> New tasks pass their health checks before the old ones stop, so visitors never see a gap.';
+    }
+    go(0);
+  }
+  runBtn.addEventListener('click', runPipe);
+  if ('IntersectionObserver' in window && !reduce) {
+    var po = new IntersectionObserver(function (es) { if (es[0].isIntersecting) { po.disconnect(); runPipe(); } }, { threshold: 0.5 });
+    po.observe(document.getElementById('stages'));
+  }
+
+  /* ---------- 3D scene ---------- */
+  var canvas = document.getElementById('gl'), tagsEl = document.getElementById('tags');
+  var renderer;
+  try { if (!window.THREE) throw 0; renderer = new THREE.WebGLRenderer({ canvas: canvas, antialias: true, alpha: true }); }
+  catch (e) { document.getElementById('stage').classList.add('no-gl'); return; }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+
+  var scene = new THREE.Scene();
+  var camera = new THREE.PerspectiveCamera(36, 1, 0.1, 100);
+  var world = new THREE.Group(); scene.add(world);
+
+  var C = {};
+  function readColors() {
+    var cs = getComputedStyle(root);
+    ['accent', 'accent-2', 'line', 'ink-2', 'warn', 'bg'].forEach(function (k) { C[k] = new THREE.Color(cs.getPropertyValue('--' + k).trim() || '#888888'); });
+  }
+  readColors();
+  new MutationObserver(readColors).observe(root, { attributes: true, attributeFilter: ['data-theme'] });
+  window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', readColors);
+
+  var tiers = ['edge', 'app', 'data'];
+  var layers = {};
+  tiers.forEach(function (t, i) {
+    var g = new THREE.Group(); world.add(g);
+    var plateGeo = new THREE.BoxGeometry(7.4, 0.08, 4.4);
+    var fill = new THREE.Mesh(plateGeo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.06, depthWrite: false }));
+    var edges = new THREE.LineSegments(new THREE.EdgesGeometry(plateGeo), new THREE.LineBasicMaterial({ transparent: true }));
+    g.add(fill, edges);
+    layers[t] = { g: g, i: i, fill: fill, edges: edges };
+  });
+
+  var nodes = [];
+  function addNode(name, tier, x, z, w, h, d, o) {
+    o = o || {};
+    var geo = new THREE.BoxGeometry(w, h, d);
+    var fill = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.2, depthWrite: false }));
+    var edges = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ transparent: true }));
+    var g = new THREE.Group(); g.add(fill, edges); g.position.set(x, 0.04 + h / 2, z);
+    layers[tier].g.add(g);
+    var n = { name: name, tier: tier, g: g, fill: fill, edges: edges, h: h, compute: !!o.compute, pt: o.pt || '', tag: null, anchor: new THREE.Vector3() };
+    var tg = document.createElement('div'); tg.className = 'tag'; tg.textContent = name; tagsEl.appendChild(tg); n.tag = tg;
+    nodes.push(n); return n;
+  }
+  var r53 = addNode('Route 53', 'edge', -2.4, 0.2, 0.9, 0.4, 0.9);
+  var acm = addNode('ACM', 'edge', -0.4, -1.2, 0.7, 0.3, 0.7);
+  var alb = addNode('ALB', 'edge', 1.9, 0.1, 1.5, 0.5, 1.5, { compute: true, pt: 'removed' });
+  var ecr = addNode('ECR', 'app', -2.5, -1.2, 0.8, 0.3, 0.8);
+  var tA = addNode('ECS Fargate', 'app', 0.4, -0.9, 1.3, 0.55, 1.1, { compute: true, pt: 'scaled to 0' });
+  var tB = addNode('task', 'app', 0.4, 1.0, 1.3, 0.55, 1.1, { compute: true, pt: 'scaled to 0' });
+  var rds = addNode('RDS PostgreSQL', 'data', -0.9, 0, 1.5, 0.7, 1.5, { compute: true, pt: 'stopped' });
+  var rds2 = null;
+  var redis = addNode('Redis', 'data', 1.9, -1.1, 0.9, 0.4, 0.9);
+  var sec = addNode('Secrets Manager', 'data', 1.9, 1.0, 0.9, 0.4, 0.9);
+  tB.tag.style.display = 'none';
+
+  /* browser */
+  var cg = new THREE.OctahedronGeometry(0.42);
+  var client = { g: new THREE.Group(), fill: new THREE.Mesh(cg, new THREE.MeshBasicMaterial({ transparent: true, opacity: 0.25, depthWrite: false })), edges: new THREE.LineSegments(new THREE.EdgesGeometry(cg), new THREE.LineBasicMaterial({ transparent: true })) };
+  client.g.add(client.fill, client.edges); world.add(client.g);
+
+  /* VPC cage */
+  var cage = new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ transparent: true }));
+  world.add(cage);
+  var vpcTag = document.createElement('div'); vpcTag.className = 'tag'; vpcTag.textContent = 'VPC · private network'; tagsEl.appendChild(vpcTag);
+
+  /* connections */
+  var pairs = [[client, r53], [r53, alb], [alb, tA], [alb, tB], [tA, rds], [tB, rds], [tA, redis], [tA, sec], [ecr, tA]];
+  var linePos = new Float32Array(pairs.length * 6);
+  var lineGeo = new THREE.BufferGeometry(); lineGeo.setAttribute('position', new THREE.BufferAttribute(linePos, 3));
+  var links = new THREE.LineSegments(lineGeo, new THREE.LineBasicMaterial({ transparent: true, opacity: 0.4 }));
+  links.frustumCulled = false; world.add(links);
+
+  /* packets */
+  var packets = [];
+  for (var k = 0; k < 7; k++) {
+    var pm = new THREE.Mesh(new THREE.SphereGeometry(0.075, 12, 12), new THREE.MeshBasicMaterial({ transparent: true }));
+    world.add(pm); packets.push({ m: pm, off: k / 7, task: k % 2 ? tB : tA });
+  }
+
+  var tmp = new THREE.Vector3(), tmp2 = new THREE.Vector3();
+  function wpos(o, out) { (o.g || o).getWorldPosition(out); return out; }
+
+  var cam = { az: 0.65, el: 0.3, dist: 15, ty: 0, spread: 1.15, ox: 0, oy: 0 };
+  var targets = [
+    { az: 0.65, el: 0.30, dist: 15.5, ty: 0, spread: 1.15, focus: null },
+    { az: 0.40, el: 0.22, dist: 13, ty: 0.85, spread: 1.9, focus: 'edge' },
+    { az: 0.15, el: 0.26, dist: 13, ty: 0, spread: 1.9, focus: 'app' },
+    { az: -0.35, el: 0.28, dist: 13, ty: -0.85, spread: 1.9, focus: 'data' },
+    { az: 0.95, el: 0.5, dist: 17, ty: 0, spread: 1.5, focus: 'vpc' },
+    { az: 0.0, el: 0.62, dist: 15.5, ty: 0, spread: 0.85, focus: 'pause' }
+  ];
+  var mouse = { x: 0, y: 0, sx: 0, sy: 0 };
+  document.getElementById('stage').addEventListener('pointermove', function (e) {
+    var r = this.getBoundingClientRect();
+    mouse.x = ((e.clientX - r.left) / r.width) * 2 - 1; mouse.y = ((e.clientY - r.top) / r.height) * 2 - 1;
+  });
+
+  function level(tier, focus) {
+    if (focus === null) return 0.6;
+    if (focus === 'vpc') return 0.42;
+    if (focus === 'pause') return 0.7;
+    return tier === focus ? 1 : 0.2;
+  }
+  function paint(mat, color, opacity, rate) {
+    mat.color.lerp(color, rate); mat.opacity += (opacity - mat.opacity) * rate;
+  }
+
+  var W = 1, H = 1, visible = true, tick = 0;
+  function resize() {
+    var r = canvas.getBoundingClientRect(); W = Math.max(1, r.width); H = Math.max(1, r.height);
+    renderer.setSize(W, H, false); camera.aspect = W / H; camera.updateProjectionMatrix();
+  }
+  window.addEventListener('resize', resize); resize();
+  if ('IntersectionObserver' in window) new IntersectionObserver(function (es) { visible = es[0].isIntersecting; }, { threshold: 0 }).observe(runway);
+
+  var tmpCol = new THREE.Color();
+  function frame(now) {
+    requestAnimationFrame(frame);
+    if (!visible) return;
+    var t = now / 1000, s = targets[state.step], f = s.focus, paused = isPaused();
+    var wide = W / H > 1.1 && window.innerWidth >= 928, rate = reduce ? 1 : 0.07;
+    var fit = W / H < 1.1 ? Math.min(2.8, 1.15 / (W / H)) : 1;
+
+    cam.az += (s.az - cam.az) * rate; cam.el += (s.el - cam.el) * rate;
+    cam.dist += (s.dist * fit - cam.dist) * rate; cam.ty += (s.ty - cam.ty) * rate; cam.spread += (s.spread - cam.spread) * rate;
+    var tox = wide ? (state.step === 0 ? 3.9 : 2.8) : 0, toy = wide ? 0 : 1.25;
+    cam.ox += (tox - cam.ox) * rate; cam.oy += (toy - cam.oy) * rate;
+    mouse.sx += (mouse.x - mouse.sx) * 0.05; mouse.sy += (mouse.y - mouse.sy) * 0.05;
+    var drift = reduce ? 0 : Math.sin(t * 0.25) * 0.05;
+    var az = cam.az + drift + (reduce ? 0 : mouse.sx * 0.12), el = cam.el + (reduce ? 0 : mouse.sy * -0.05);
+    world.position.set(cam.ox, cam.oy, 0);
+    camera.position.set(cam.dist * Math.cos(el) * Math.sin(az), cam.dist * Math.sin(el) + cam.ty, cam.dist * Math.cos(el) * Math.cos(az));
+    camera.lookAt(0, cam.ty, 0);
+
+    layers.edge.g.position.y = cam.spread; layers.app.g.position.y = 0; layers.data.g.position.y = -cam.spread;
+    client.g.position.set(-5.4, cam.spread + 0.9 + Math.sin(t * 1.2) * 0.06, 0.3); client.g.rotation.y = t * 0.6;
+    var cageH = 2 * cam.spread + 1.9;
+    cage.scale.set(8.4, cageH, 5.4); cage.position.y = 0.2;
+    world.updateMatrixWorld(true);
+
+    tiers.forEach(function (name) {
+      var L = layers[name], lv = level(name, f);
+      paint(L.edges.material, tmpCol.copy(C.line).lerp(C.accent, lv), 0.3 + 0.7 * lv, rate);
+      paint(L.fill.material, tmpCol.copy(C.accent), 0.02 + 0.08 * lv, rate);
+    });
+    nodes.forEach(function (n) {
+      var lv = level(n.tier, f), amber = paused && n.compute;
+      var col = amber ? C.warn : tmpCol.copy(C.line).lerp(C.accent, lv);
+      paint(n.edges.material, col, amber ? 0.9 : 0.3 + 0.7 * lv, rate);
+      paint(n.fill.material, amber ? C.warn : C.accent, amber ? 0.1 : 0.04 + 0.3 * lv, rate);
+    });
+    paint(client.edges.material, tmpCol.copy(C['accent-2']), 0.9, rate); paint(client.fill.material, C['accent-2'], 0.25, rate);
+    paint(cage.material, tmpCol.copy(C.line).lerp(C.accent, f === 'vpc' ? 1 : 0.1), f === 'vpc' ? 1 : 0.28, rate);
+    links.material.color.copy(C.accent); links.material.opacity += ((f === 'vpc' ? 0.2 : paused ? 0.15 : 0.45) - links.material.opacity) * rate;
+
+    pairs.forEach(function (p, i) {
+      wpos(p[0], tmp); wpos(p[1], tmp2);
+      tmp.sub(world.position); tmp2.sub(world.position);
+      linePos[i * 6] = tmp.x; linePos[i * 6 + 1] = tmp.y; linePos[i * 6 + 2] = tmp.z;
+      linePos[i * 6 + 3] = tmp2.x; linePos[i * 6 + 4] = tmp2.y; linePos[i * 6 + 5] = tmp2.z;
+    });
+    lineGeo.attributes.position.needsUpdate = true;
+
+    /* packets travel browser -> route53 -> alb -> task -> rds, then back */
+    packets.forEach(function (pk) {
+      var m = pk.m.material;
+      var want = (paused || reduce) ? 0 : 1; m.opacity += (want - m.opacity) * 0.08; m.color.copy(C['accent-2']);
+      pk.m.visible = m.opacity > 0.02;
+      if (!pk.m.visible) return;
+      var path = [client, r53, alb, pk.task, rds, pk.task, alb, client], pts = [], len = [0], total = 0, i;
+      for (i = 0; i < path.length; i++) { pts.push(wpos(path[i], new THREE.Vector3())); if (i) { total += pts[i].distanceTo(pts[i - 1]); len.push(total); } }
+      var u = ((t * 0.07 + pk.off) % 1) * total;
+      for (i = 1; i < len.length; i++) if (u <= len[i]) break;
+      i = Math.min(i, len.length - 1);
+      var k2 = (u - len[i - 1]) / Math.max(0.0001, len[i] - len[i - 1]);
+      pk.m.position.lerpVectors(pts[i - 1], pts[i], k2).sub(world.position);
+    });
+
+    renderer.render(scene, camera);
+
+    /* labels */
+    var show = function (n) {
+      if (f === null) return false;
+      if (f === 'vpc') return false;
+      if (f === 'pause') return n.compute || n.name === 'Secrets Manager' ? n.name !== 'task' : false;
+      return n.tier === f && n.name !== 'task';
+    };
+    nodes.forEach(function (n) {
+      if (n.name === 'task') return;
+      wpos(n, tmp); tmp.y += n.h / 2 + 0.28; tmp.project(camera);
+      var x = (tmp.x * 0.5 + 0.5) * W, y = (-tmp.y * 0.5 + 0.5) * H, on = show(n);
+      var txt = (paused && n.pt && f === 'pause') ? n.name + ' · ' + n.pt : n.name;
+      if (n.tag.textContent !== txt) n.tag.textContent = txt;
+      n.tag.classList.toggle('on', on); n.tag.classList.toggle('paused', paused && !!n.pt && f === 'pause');
+      n.tag.style.transform = 'translate(' + Math.round(x) + 'px,' + Math.round(y) + 'px) translate(-50%,-100%)';
+    });
+    tmp.set(-4.2, cage.position.y + cageH / 2, 2.7).add(world.position); tmp.project(camera);
+    vpcTag.classList.toggle('on', f === 'vpc');
+    vpcTag.style.transform = 'translate(' + Math.round((tmp.x * 0.5 + 0.5) * W) + 'px,' + Math.round((-tmp.y * 0.5 + 0.5) * H) + 'px) translate(-50%,-100%)';
+  }
+  requestAnimationFrame(frame);
+})();
+</script>
+
+</body></html>
