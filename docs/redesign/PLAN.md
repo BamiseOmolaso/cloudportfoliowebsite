@@ -46,10 +46,15 @@ Reference design: [reference/portfolio-design-v2.html](./reference/portfolio-des
   (typed). `src/__tests__/content/portfolio-content.test.ts` enforces the
   content rules (no wedding site, no addresses/paths/secrets, one idle-cost
   figure, https links only); mutation-checked.
-- [ ] **5. 3D scene** — `StackScene` client component (dynamic import,
-  `ssr: false`), three from npm; reduced-motion and no-WebGL fallbacks.
-- [ ] **6. Story + sections** — scroll cards, results, interactive
-  pipeline, pattern cards, record, "why a doctor", contact.
+- [x] **5. 3D scene + story** — `StackScene` (three from npm, cleans up on
+  unmount, reduced-motion and no-WebGL fallbacks) and `StackStory` (scroll
+  runway, cards, rail, pause/resume cost toggle). Checked against the
+  reference at every step, light and dark, desktop and phone.
+  *Polish list for step 9:* on a phone, amber labels overlap a little at
+  the cost step; the header hides its links on narrow screens (needs a menu
+  or footer links to Blog/Projects).
+- [ ] **6. Sections** — results, interactive pipeline, pattern cards,
+  record, "why a doctor", writing, contact.
 - [ ] **7. New content** — second stack (VPS), Terraform timeline, backups,
   hardening, incident method; apply the content rules above.
 - [ ] **8. Live data** — keep the latest posts/projects from the database
@@ -77,5 +82,14 @@ screenshot — light or dark, any width, any scroll position, WebGL included:
 ```sh
 node docs/redesign/shot.mjs http://localhost:3200/preview out.png            # light, 1280x800
 node docs/redesign/shot.mjs http://localhost:3200/preview out.png --dark --w=390 --h=844   # dark, phone
-node docs/redesign/shot.mjs http://localhost:3200/preview out.png --scroll=1400            # scrolled
+node docs/redesign/shot.mjs http://localhost:3200/preview out.png --scroll=1400 --settle=5000   # scrolled (wait for the camera)
+node docs/redesign/shot.mjs <url> out.png --after="document.title"    # run JS after scrolling; prints the result
+node docs/redesign/shot.mjs <url> out.png --init="HTMLCanvasElement.prototype.getContext=()=>null"   # simulate no WebGL
+```
+
+It also prints any browser console errors. Scroll positions for the story
+at 1280x800 (runway = 6 x 92svh): hero 0 · edge 904 · app 1507 · data 2109 ·
+security 2712 · cost 3314.
+
+```sh
 ```

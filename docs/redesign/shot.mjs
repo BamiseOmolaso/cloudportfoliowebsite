@@ -1,6 +1,6 @@
 // Headless-Chrome screenshot tool (Chrome DevTools Protocol, no dependencies).
 //   node shot.mjs <url> <out.png> [--w=1280] [--h=800] [--dark] [--scroll=Y]
-//        [--wait=2500] [--eval="js to run before the shot"] [--keep-cookie]
+//        [--wait=2500] [--settle=1800] [--eval="js before scrolling"] [--after="js after scrolling"] [--init="js before the page loads"] [--keep-cookie]
 // WebGL works through SwiftShader (software), so the 3D scene renders.
 import { spawn } from "node:child_process";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
@@ -76,6 +76,14 @@ try {
     send("Runtime.evaluate", { expression, awaitPromise: true, returnByValue: true });
 
   await send("Page.enable");
+  await send("Runtime.enable");
+  await send("Log.enable");
+  const problems = [];
+  listeners.push((d) => {
+    if (d.method === "Runtime.exceptionThrown") problems.push("exception: " + (d.params.exceptionDetails.exception?.description || d.params.exceptionDetails.text).split("\n")[0]);
+    if (d.method === "Runtime.consoleAPICalled" && d.params.type === "error") problems.push("console.error: " + d.params.args.map((a) => a.value ?? a.description ?? "").join(" ").slice(0, 200));
+    if (d.method === "Log.entryAdded" && d.params.entry.level === "error") problems.push("log: " + d.params.entry.text.slice(0, 160) + " " + (d.params.entry.url || ""));
+  });
   await send("Emulation.setDeviceMetricsOverride", {
     width: W,
     height: H,
@@ -86,6 +94,7 @@ try {
     features: [{ name: "prefers-color-scheme", value: opt.dark ? "dark" : "light" }],
   });
 
+  if (opt.init) await send("Page.addScriptToEvaluateOnNewDocument", { source: opt.init });
   const loaded = new Promise((res) => listeners.push((d) => d.method === "Page.loadEventFired" && res()));
   await send("Page.navigate", { url });
   await Promise.race([loaded, sleep(30000)]);
@@ -104,10 +113,16 @@ try {
   }
   if (opt.scroll) {
     await evaluate(`window.scrollTo(0, ${+opt.scroll})`);
-    await sleep(1800);
+    await sleep(+opt.settle || 1800);
+  }
+  if (opt.after) {
+    const r = await evaluate(opt.after);
+    if (r.result?.result?.value !== undefined) console.log("after →", JSON.stringify(r.result.result.value));
+    if (r.result?.exceptionDetails) console.log("after error:", r.result.exceptionDetails.text);
   }
   const shot = await send("Page.captureScreenshot", { format: "png" });
   writeFileSync(out, Buffer.from(shot.result.data, "base64"));
+  console.log(problems.length ? `console problems (${problems.length}):\n  ` + [...new Set(problems)].join("\n  ") : "no console errors");
   console.log(`saved ${out} (${W}x${H}${opt.dark ? ", dark" : ""})`);
   ws.close();
 } finally {
