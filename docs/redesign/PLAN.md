@@ -35,8 +35,8 @@ Reference design: [reference/portfolio-design-v2.html](./reference/portfolio-des
 ## Steps
 
 - [x] **1. Setup** — worktree, plan, reference design saved.
-- [ ] **2. Dependencies** — `three` (+ types) via npm; the three fonts via
-  `next/font`. Keep the strict CSP: nothing loads from a CDN.
+- [x] **2. Dependencies** — `three` 0.186 (+ types) via npm; the three fonts via
+  `next/font` (served from this site; 0 requests to Google). Keep the strict CSP: nothing loads from a CDN.
 - [ ] **3. Page shell** — `/preview` route; `SiteChrome` gate so this page
   hides the old top bar / footer / `pt-16`; design tokens + CSS scoped
   under `.pf` (no leakage into other pages); theme toggle.
