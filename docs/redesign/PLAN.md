@@ -42,8 +42,10 @@ Reference design: [reference/portfolio-design-v2.html](./reference/portfolio-des
   under `.pf` (no leakage into other pages); theme toggle (follows the
   system, remembers a choice). Bricolage uses the optical-size axis so the
   headline matches the reference.
-- [ ] **4. Content file** — `src/content/portfolio.ts` with all copy,
-  stats, patterns, record, timeline.
+- [x] **4. Content file** — `src/content/portfolio.ts` holds all copy
+  (typed). `src/__tests__/content/portfolio-content.test.ts` enforces the
+  content rules (no wedding site, no addresses/paths/secrets, one idle-cost
+  figure, https links only); mutation-checked.
 - [ ] **5. 3D scene** — `StackScene` client component (dynamic import,
   `ssr: false`), three from npm; reduced-motion and no-WebGL fallbacks.
 - [ ] **6. Story + sections** — scroll cards, results, interactive
