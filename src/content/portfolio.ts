@@ -101,7 +101,7 @@ export const hero = {
   headlineEmphasis: "secure,",
   headlineEnd: " repeatable and cheap to run.",
   intro:
-    "Dr. Bamise Omolaso. This is the real infrastructure behind this site, in 3D. Scroll to follow one request through it.",
+    "Dr. Bamise Omolaso. This is the real infrastructure behind this site, drawn the way I'd document it. Scroll to follow one request through it.",
   primaryCta: "Work with me",
   secondaryCta: "View CV",
 } as const;
@@ -112,29 +112,29 @@ export const story: StoryStep[] = [
     label: "Step 1 of 5 · Edge",
     rail: "Edge",
     title: "Every visit starts at the front door.",
-    body: "Route 53 resolves the domain, ACM supplies the TLS certificate, and the Application Load Balancer ends HTTPS and spreads traffic across healthy containers.",
+    body: "A DNS record points the domain at the load balancer. ACM supplies the TLS certificate, and the Application Load Balancer ends HTTPS, redirects plain HTTP, and spreads traffic across healthy containers.",
     why: "Visitors never reach a container directly, and an unhealthy one is taken out of rotation automatically.",
   },
   {
     label: "Step 2 of 5 · Application",
     rail: "App",
     title: "Stateless containers do the work.",
-    body: "A Next.js image is built in CI, stored in ECR and run on ECS Fargate. There are no servers to patch, and any task can be replaced at any moment.",
+    body: "A Next.js image is built in CI, stored in ECR and run on ECS Fargate across two availability zones. There are no servers to patch, and auto scaling adds tasks, up to four, when CPU or memory runs hot.",
     why: "Nothing important lives in the container, so deploys roll forward and a bad release rolls back to the previous revision.",
   },
   {
     label: "Step 3 of 5 · Data",
     rail: "Data",
     title: "State lives in exactly one place.",
-    body: "PostgreSQL on RDS holds the content, reached through Prisma. Redis handles rate limiting. Credentials arrive from Secrets Manager when the container starts.",
+    body: "PostgreSQL on RDS holds the content, reached through Prisma, with encrypted storage and seven days of backups. Redis Cloud handles rate limiting. Credentials are injected from Secrets Manager when the container starts.",
     why: "Only this tier keeps state, so everything above it can be thrown away and rebuilt.",
   },
   {
     label: "Step 4 of 5 · Security",
     rail: "Security",
     title: "Access is narrow and short-lived.",
-    body: "Everything sits inside a VPC. IAM roles name specific resources instead of wildcards, and GitHub Actions reaches AWS through OIDC, so there are no long-lived keys to leak.",
-    why: "A mistake or a compromised pipeline can only touch what it was explicitly allowed to touch.",
+    body: "Three security groups form a chain: the internet can reach only the load balancer, the load balancer is the only way in to the app, and the database firewall allows the app and nothing else by default. GitHub Actions deploys through OIDC, so there are no long-lived AWS keys to leak.",
+    why: "Each hop is allowed only from the one before it, and the pipeline proves who it is with a short-lived token tied to this repository.",
   },
   {
     label: "Step 5 of 5 · Cost",

@@ -32,6 +32,23 @@ Reference design: [reference/portfolio-design-v2.html](./reference/portfolio-des
 - More content is coming — keep it in **one data file**
   (`src/content/portfolio.ts`) so adding a project is a small edit.
 
+## Accuracy findings (checked against the repo's Terraform and docs)
+
+The original design made claims the code doesn't back up. The diagram and
+story copy now say only what is true:
+
+| Design said | Reality | Now |
+|---|---|---|
+| Route 53 resolves the domain | DNS is a CNAME at a DNS provider; no Route 53 in Terraform | "DNS record · CNAME" |
+| (implied) private network tier | **Public subnets only**, two AZs, internet gateway, no NAT, no private subnets; tasks have public IPs | Drawn that way |
+| Redis in the stack | **Redis Cloud**, outside AWS | Dashed, outside the AWS box |
+| "IAM roles name specific resources instead of wildcards" | The **task** role is scoped to its two secrets, but the **GitHub OIDC role** has `Resource = "*"` in 5 places and broad grants (`iam:*`, `ec2:*`, …) | Claim removed. Story now covers the security-group chain and OIDC trust (limited to this repo's branches) |
+| "A compromised pipeline can only touch what it was allowed to" | Not true given the broad role | Reworded |
+
+Follow-up (separate from the redesign): tighten the OIDC role policies in
+`terraform/modules/github-oidc/main.tf`, then the page can honestly claim
+least privilege.
+
 ## Steps
 
 - [x] **1. Setup** — worktree, plan, reference design saved.
@@ -46,15 +63,17 @@ Reference design: [reference/portfolio-design-v2.html](./reference/portfolio-des
   (typed). `src/__tests__/content/portfolio-content.test.ts` enforces the
   content rules (no wedding site, no addresses/paths/secrets, one idle-cost
   figure, https links only); mutation-checked.
-- [x] **5. 3D scene + story** — `StackScene` (three from npm, cleans up on
-  unmount, reduced-motion and no-WebGL fallbacks) and `StackStory` (scroll
-  runway, cards, rail, pause/resume cost toggle). Checked against the
-  reference at every step, light and dark, desktop and phone.
-  *Polish list for step 9:* on a phone, amber labels overlap a little at
-  the cost step; the header hides its links on narrow screens (needs a menu
-  or footer links to Blog/Projects).
+- [x] **5. Scroll story with an architecture diagram** — first built as a
+  3D scene (tag `redesign-step-5` keeps it), then replaced at the owner's
+  request by a flat AWS-style diagram: `src/content/architecture.ts` (data)
+  + `ArchitectureDiagram` (SVG renderer, a "camera" that zooms to each
+  step's region, request packets along real paths, paused state) +
+  `StackStory` (scroll runway, cards, rail, pause/resume). Renders on the
+  server too; no WebGL, no `three`. Tests guard the data and the content
+  rules (17 passing). Checked in light/dark, desktop and phone.
 - [ ] **6. Sections** — results, interactive pipeline, pattern cards,
-  record, "why a doctor", writing, contact.
+  record, "why a doctor", writing, contact. **The "Least-privilege IAM"
+  pattern card must be reworded** (see findings below).
 - [ ] **7. New content** — second stack (VPS), Terraform timeline, backups,
   hardening, incident method; apply the content rules above.
 - [ ] **8. Live data** — keep the latest posts/projects from the database

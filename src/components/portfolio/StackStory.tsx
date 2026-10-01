@@ -1,37 +1,28 @@
 "use client";
 
-import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
+import { awsStack } from "@/content/architecture";
 import { cost, hero, profile, story } from "@/content/portfolio";
-import type { SceneState } from "./StackScene";
-
-// three.js is heavy and needs the browser, so it loads only on the client.
-const StackScene = dynamic(() => import("./StackScene"), { ssr: false });
+import ArchitectureDiagram from "./ArchitectureDiagram";
 
 /** The hero plus one step per story card. */
 const STEPS = story.length + 1;
 
 /**
  * The scroll story: a tall "runway" with a sticky stage. As the visitor
- * scrolls, the active step changes, the 3D scene moves to that step and the
- * matching card fades in.
+ * scrolls, the active step changes, the architecture diagram zooms to that
+ * step's part of the stack and the matching card fades in.
  */
 export default function StackStory() {
   const runwayRef = useRef<HTMLDivElement>(null);
-  const stateRef = useRef<SceneState>({ step: 0, paused: false });
   const lastStep = useRef(0);
 
   const [step, setStep] = useState(0);
   // null = follow the step (paused on the last one); true/false = the visitor chose.
   const [userPaused, setUserPaused] = useState<boolean | null>(null);
   const [hintOff, setHintOff] = useState(false);
-  const [noGl, setNoGl] = useState(false);
 
   const paused = userPaused ?? step === STEPS - 1;
-
-  useEffect(() => {
-    stateRef.current = { step, paused };
-  }, [step, paused]);
 
   useEffect(() => {
     const read = () => {
@@ -63,8 +54,8 @@ export default function StackStory() {
       ref={runwayRef}
       style={{ height: `calc(${STEPS} * 92svh)` }}
     >
-      <div className={`stage${noGl ? " no-gl" : ""}`}>
-        <StackScene stateRef={stateRef} onUnsupported={() => setNoGl(true)} />
+      <div className="stage">
+        <ArchitectureDiagram diagram={awsStack} step={step} paused={paused} />
 
         <div className="cards">
           <div className={`card hero${step === 0 ? " on" : ""}`}>
@@ -133,7 +124,7 @@ export default function StackStory() {
           ))}
         </div>
         <div className={`hint${hintOff ? " off" : ""}`}>
-          Scroll ↓ · move the cursor to tilt the scene
+          Scroll ↓ to follow one request through the stack
         </div>
       </div>
     </div>

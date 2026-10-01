@@ -195,43 +195,6 @@
   -webkit-mask-image: linear-gradient(transparent 0, #000 5rem);
   mask-image: linear-gradient(transparent 0, #000 5rem);
 }
-.pf .gl {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  display: block;
-  touch-action: pan-y;
-}
-.pf .tags {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-.pf .tag {
-  position: absolute;
-  left: 0;
-  top: 0;
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  white-space: nowrap;
-  padding: 0.15rem 0.45rem;
-  border-radius: 4px;
-  background: color-mix(in srgb, var(--bg) 82%, transparent);
-  border: 1px solid var(--line);
-  color: var(--ink);
-  opacity: 0;
-  transition: opacity 0.35s;
-  will-change: transform;
-}
-.pf .tag.on {
-  opacity: 1;
-}
-.pf .tag.paused {
-  border-color: var(--warn);
-  color: var(--warn);
-}
 .pf .cards {
   position: absolute;
   left: 0;
@@ -451,8 +414,225 @@
 .pf .hint.off {
   opacity: 0;
 }
-.pf .no-gl .tags {
+
+/* architecture diagram */
+.pf .diagram {
+  position: absolute;
+  top: 3.6rem;
+  left: 0;
+  right: 0;
+  height: 46svh;
+  overflow: hidden;
+}
+@media (min-width: 58rem) {
+  .pf .card.hero {
+    max-width: 32rem;
+  }
+  .pf .diagram {
+    top: 4.2rem;
+    bottom: 2.6rem;
+    height: auto;
+    left: calc(max(1.5rem, (100vw - 70rem) / 2) + 31rem);
+    right: calc(max(1rem, (100vw - 70rem) / 2) + 5.5rem);
+  }
+}
+.pf .dg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  /* soft edges: zoomed-in views fade out instead of being cut off */
+  -webkit-mask-image:
+    linear-gradient(to right, transparent, #000 9%, #000 91%, transparent),
+    linear-gradient(to bottom, transparent, #000 7%, #000 93%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image:
+    linear-gradient(to right, transparent, #000 9%, #000 91%, transparent),
+    linear-gradient(to bottom, transparent, #000 7%, #000 93%, transparent);
+  mask-composite: intersect;
+}
+.pf .dg-camera {
+  transform-origin: 0 0;
+}
+.pf .dg text {
+  font-family: var(--font-body);
+  text-anchor: middle;
+  /* a halo in the page colour keeps text legible where a line passes behind it */
+  paint-order: stroke;
+  stroke: var(--bg);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+}
+.pf .dg .dg-label {
+  font-size: 13px;
+  font-weight: 600;
+  fill: var(--ink);
+}
+.pf .dg .dg-sub {
+  font-size: 11px;
+  fill: var(--ink-2);
+}
+.pf .dg .dg-state {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  fill: var(--warn);
+}
+.pf .dg-small .dg-sub,
+.pf .dg-small .dg-state,
+.pf .dg-tiny .dg-sub,
+.pf .dg-tiny .dg-state,
+.pf .dg-tiny .dg-label {
   display: none;
+}
+.pf .dg-node,
+.pf .dg-group,
+.pf .dg-edge {
+  transition:
+    opacity 0.5s,
+    filter 0.5s;
+}
+.pf .dg-node.dim,
+.pf .dg-group.dim,
+.pf .dg-edge.dim {
+  opacity: 0.18;
+}
+.pf .dg-group.hidden {
+  opacity: 0;
+}
+.pf .dg-node .tile {
+  stroke: color-mix(in srgb, #fff 22%, transparent);
+  stroke-width: 1;
+  transition: opacity 0.5s;
+}
+.pf .dg-node .glyph {
+  fill: none;
+  stroke: #fff;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.pf .dg-node .ring {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.pf .dg-node.hot .ring {
+  opacity: 0.9;
+}
+.pf .dg-node .ext {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+.pf .dg-node.paused .tile {
+  opacity: 0.5;
+  filter: saturate(0.3);
+}
+.pf .dg-node.paused .ring {
+  stroke: var(--warn);
+  opacity: 1;
+}
+.pf .dg-group .box {
+  fill: none;
+  stroke-width: 1.5;
+}
+.pf .dg-group .gl-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-anchor: start;
+  fill: var(--ink);
+}
+.pf .dg-group .gl-sub {
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+  text-anchor: start;
+  fill: var(--ink-2);
+}
+.pf .dg-group .gl-end {
+  text-anchor: end;
+  stroke-width: 3px;
+}
+.pf .dg-group.cloud .box {
+  stroke: color-mix(in srgb, var(--ink-2) 65%, transparent);
+  fill: color-mix(in srgb, var(--surface) 55%, transparent);
+}
+.pf .dg-group.vpc .box {
+  stroke: #7aa116;
+  fill: color-mix(in srgb, #7aa116 5%, transparent);
+}
+.pf .dg-group.vpc .gl-title {
+  fill: #7aa116;
+}
+.pf .dg-group.subnet .box {
+  stroke: #7aa116;
+  stroke-dasharray: 5 4;
+  fill: color-mix(in srgb, #7aa116 10%, transparent);
+}
+.pf .dg-group.service .box {
+  stroke: #ed7100;
+  stroke-dasharray: 5 4;
+}
+.pf .dg-group.service .gl-title {
+  fill: #ed7100;
+}
+.pf .dg-group.sg .box {
+  stroke: #dd344c;
+  stroke-dasharray: 3 3;
+  stroke-width: 1.8;
+  fill: color-mix(in srgb, #dd344c 6%, transparent);
+}
+.pf .dg-group.sg .gl-title {
+  fill: #dd344c;
+}
+.pf .dg-group .gl-title,
+.pf .dg-group .gl-sub {
+  stroke-width: 3px;
+}
+.pf .dg-edge {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-opacity: 0.6;
+  stroke-width: 1.6;
+  stroke-linejoin: round;
+  transition:
+    opacity 0.5s,
+    stroke 0.4s;
+}
+.pf .dg-edge.dashed {
+  stroke-dasharray: 5 4;
+}
+.pf .dg-edge.hot {
+  stroke: var(--accent);
+  stroke-opacity: 1;
+}
+.pf .dg-edge.paused {
+  opacity: 0.22;
+  stroke-dasharray: 3 5;
+}
+.pf .dg .arrow {
+  fill: var(--ink-2);
+  fill-opacity: 0.8;
+}
+.pf .dg .arrow.hot {
+  fill: var(--accent);
+  fill-opacity: 1;
+}
+.pf .dg-packet {
+  fill: var(--accent-2);
+}
+.pf .dg-port {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  fill: #dd344c;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+.pf .dg-port.on {
+  opacity: 1;
 }
 
 /* scroll reveal: always readable at rest */
