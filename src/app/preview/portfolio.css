@@ -369,7 +369,13 @@
     display: flex;
   }
 }
-.pf .rail span {
+.pf .rail button {
+  appearance: none;
+  background: none;
+  border: 0;
+  padding: 0.2rem 0;
+  cursor: pointer;
+  text-align: right;
   display: flex;
   align-items: center;
   gap: 0.6rem;
@@ -381,39 +387,22 @@
     opacity 0.3s,
     color 0.3s;
 }
-.pf .rail span i {
+.pf .rail button i {
   width: 1.4rem;
   height: 2px;
   background: currentColor;
   display: block;
   transition: width 0.3s;
 }
-.pf .rail span.on {
+.pf .rail button.on {
   opacity: 1;
   color: var(--accent);
 }
-.pf .rail span.on i {
+.pf .rail button.on i {
   width: 2.4rem;
 }
-.pf .hint {
-  position: absolute;
-  left: 50%;
-  bottom: 1rem;
-  transform: translateX(-50%);
-  font-family: var(--font-mono);
-  font-size: 0.7rem;
-  color: var(--ink-2);
-  display: none;
-  transition: opacity 0.4s;
-}
 @media (min-width: 58rem) {
-  .pf .hint {
-    display: block;
   }
-}
-.pf .hint.off {
-  opacity: 0;
-}
 
 /* architecture diagram */
 .pf .diagram {
@@ -633,6 +622,203 @@
 }
 .pf .dg-port.on {
   opacity: 1;
+}
+
+/* the tour: controls that make "there is a sequence to follow" obvious */
+.pf .tour {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  margin-top: 1.1rem;
+  padding: 0.5rem 0.55rem 0.5rem 1.05rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, var(--line));
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--ink);
+  font: inherit;
+  font-size: 0.93rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+.pf .tour:hover {
+  background: color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.pf .tour i {
+  font-style: normal;
+  display: inline-grid;
+  place-items: center;
+  width: 1.7rem;
+  height: 1.7rem;
+  border-radius: 50%;
+  background: var(--accent);
+  color: var(--accent-ink);
+  animation: pf-bob 1.6s ease-in-out infinite;
+}
+@keyframes pf-bob {
+  0%,
+  100% {
+    transform: translateY(-2px);
+  }
+  50% {
+    transform: translateY(3px);
+  }
+}
+.pf .scroll-cue {
+  position: absolute;
+  left: 50%;
+  bottom: 0.9rem;
+  transform: translateX(-50%);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.1rem;
+  background: none;
+  border: 0;
+  padding: 0.3rem 0.8rem;
+  color: var(--ink-2);
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: opacity 0.4s;
+}
+@media (min-width: 58rem) {
+  .pf .scroll-cue {
+    display: flex;
+  }
+}
+.pf .scroll-cue svg {
+  animation: pf-bob 1.6s ease-in-out infinite;
+}
+.pf .scroll-cue.off {
+  opacity: 0;
+  pointer-events: none;
+}
+.pf .step-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  margin-top: 1.1rem;
+  padding-top: 0.9rem;
+  border-top: 1px solid var(--line);
+}
+.pf .nav-btn {
+  appearance: none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink);
+  border-radius: var(--radius);
+  padding: 0.45rem 0.8rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.pf .nav-btn:hover {
+  border-color: var(--accent);
+}
+.pf .nav-btn.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-ink);
+}
+.pf .dots {
+  display: flex;
+  gap: 0.35rem;
+  align-items: center;
+}
+.pf .dots button {
+  appearance: none;
+  border: 0;
+  padding: 0;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-radius: 99px;
+  background: var(--line);
+  cursor: pointer;
+  transition:
+    width 0.3s,
+    background 0.3s;
+}
+.pf .dots button.on {
+  width: 1.3rem;
+  background: var(--accent);
+}
+@media (min-width: 58rem) {
+  /* the rail on the right does this job on wide screens */
+  .pf .step-nav .dots {
+    display: none;
+  }
+}
+@media (max-width: 30rem) {
+  .pf .nav-btn {
+    padding: 0.45rem 0.6rem;
+  }
+}
+.pf .progress {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 3px;
+  background: color-mix(in srgb, var(--line) 70%, transparent);
+}
+.pf .progress i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: 0 50%;
+  transform: scaleX(var(--p, 0));
+}
+
+/* numbered tour stops on the diagram */
+.pf .dg-badge .dot {
+  fill: var(--surface-2);
+  stroke: var(--accent);
+  stroke-width: 1.6;
+  opacity: 0.75;
+  transition:
+    fill 0.3s,
+    opacity 0.3s;
+}
+.pf .dg-badge text {
+  fill: var(--ink);
+  stroke: none;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 600;
+}
+.pf .dg-badge .pulse {
+  fill: none;
+  stroke: var(--accent);
+  stroke-width: 2;
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.pf .dg-badge.on .dot {
+  fill: var(--accent);
+  opacity: 1;
+}
+.pf .dg-badge.on text {
+  fill: var(--accent-ink);
+}
+.pf .dg-badge.on .pulse {
+  animation: pf-pulse 1.8s ease-out infinite;
+}
+@keyframes pf-pulse {
+  0% {
+    opacity: 0.8;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
 }
 
 /* scroll reveal: always readable at rest */

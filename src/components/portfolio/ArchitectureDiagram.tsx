@@ -346,6 +346,19 @@ export default function ArchitectureDiagram({
               paused={paused}
             />
           ))}
+
+          {/* Numbered tour stops: they hint that there's a sequence to follow. */}
+          {diagram.markers.map((m) => (
+            <g
+              key={m.step}
+              className={`dg-badge${m.step === step ? " on" : ""}`}
+              transform={`translate(${m.x},${m.y})`}
+            >
+              <circle className="pulse" r={11} />
+              <circle className="dot" r={11} />
+              <text y={4.2}>{m.step}</text>
+            </g>
+          ))}
         </g>
       </svg>
     </div>

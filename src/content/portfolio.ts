@@ -144,6 +144,15 @@ export const story: StoryStep[] = [
   },
 ];
 
+/** Words for the tour controls: they make it obvious there is something to follow. */
+export const tour = {
+  start: "Follow one request through the stack",
+  cue: "Scroll",
+  back: "Back",
+  next: "Next",
+  keepGoing: "Keep going",
+} as const;
+
 /** The cost readout on the last step. */
 export const cost = {
   running: "~$250",

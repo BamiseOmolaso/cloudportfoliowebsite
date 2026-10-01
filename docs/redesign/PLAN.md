@@ -71,6 +71,13 @@ least privilege.
   `StackStory` (scroll runway, cards, rail, pause/resume). Renders on the
   server too; no WebGL, no `three`. Tests guard the data and the content
   rules (17 passing). Checked in light/dark, desktop and phone.
+  **Made the scrolling obvious** (owner feedback: visitors may not know
+  to scroll): a "Follow one request through the stack ↓" button in the
+  hero (every screen size), numbered badges 1-5 on the diagram, Back /
+  Next buttons on every card, a clickable progress rail + dots on phones,
+  a thin progress bar, and a bobbing "Scroll" cue. All of them just scroll
+  the page, so scroll position stays the single source of truth. Tested by
+  clicking through the whole tour (hero button, every Next, Back, rail).
 - [ ] **6. Sections** — results, interactive pipeline, pattern cards,
   record, "why a doctor", writing, contact. **The "Least-privilege IAM"
   pattern card must be reworded** (see findings below).

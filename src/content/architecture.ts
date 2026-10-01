@@ -88,6 +88,13 @@ export interface DiagramLabel {
   showIn: number[];
 }
 
+/** A numbered badge on the diagram: the tour's stops, lit when that step is active. */
+export interface DiagramMarker {
+  step: number;
+  x: number;
+  y: number;
+}
+
 export interface DiagramStep {
   /** The part of the diagram to zoom to: [x, y, width, height]. */
   region: [number, number, number, number];
@@ -104,6 +111,7 @@ export interface Diagram {
   groups: DiagramGroup[];
   edges: DiagramEdge[];
   labels: DiagramLabel[];
+  markers: DiagramMarker[];
   /** Paths the animated request packets follow. */
   routes: string[];
   steps: DiagramStep[];
@@ -342,6 +350,14 @@ export const awsStack: Diagram = {
     { text: "3000", x: 92, y: 298, showIn: [4] },
     { text: "3000", x: 154, y: 298, showIn: [4] },
     { text: "5432", x: 90, y: 470, showIn: [4] },
+  ],
+
+  markers: [
+    { step: 1, x: 166, y: 18 },
+    { step: 2, x: 30, y: 326 },
+    { step: 3, x: 34, y: 510 },
+    { step: 4, x: 18, y: 134 },
+    { step: 5, x: 8, y: 96 },
   ],
 
   routes: ["M125,40 V282 H74 V540", "M125,40 V282 H176 V540 H100"],
