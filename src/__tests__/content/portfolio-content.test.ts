@@ -50,12 +50,19 @@ describe("portfolio content rules", () => {
     expect(content.profile.email).toMatch(/^[^@\s]+@[^@\s]+\.[^@\s]+$/);
   });
 
-  it("has the five story steps and six pipeline stages the layout expects", () => {
+  it("has the five story steps and a pipeline whose failing stage is a test", () => {
     expect(content.story).toHaveLength(5);
-    expect(content.pipeline.stages).toHaveLength(6);
-    expect(content.pipeline.failAt).toBeLessThan(
-      content.pipeline.stages.length,
-    );
+    expect(content.pipeline.stages.length).toBeGreaterThanOrEqual(5);
+    const failing = content.pipeline.stages[content.pipeline.failAt];
+    expect(failing.title).toMatch(/test/i);
+    // A stage that only reports can't be the one that stops the pipeline.
+    expect(failing.reportOnly).toBeFalsy();
+  });
+
+  it("gives the iam visual its policy rows", () => {
+    const iam = content.patterns.find((p) => p.visual === "iam");
+    expect(iam?.rows?.length).toBeGreaterThan(0);
+    expect(iam?.rows?.some((r) => !r.ok)).toBe(true);
   });
 
   it("gives every pattern a known visual", () => {

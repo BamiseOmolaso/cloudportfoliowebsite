@@ -37,6 +37,8 @@ export interface Stat {
 
 export interface PipelineStage {
   title: string;
+  /** Runs and reports, but doesn't block the deploy (shown as "reported", not "passed"). */
+  reportOnly?: boolean;
 }
 
 export type PatternVisual =
@@ -53,6 +55,8 @@ export interface Pattern {
   body: string;
   /** "Used in: …" line. */
   usedIn: string;
+  /** For the "iam" visual: the policy lines to draw. */
+  rows?: { text: string; ok: boolean }[];
 }
 
 export interface Experience {
@@ -208,7 +212,8 @@ export const pipeline = {
     { title: "Push to branch" },
     { title: "Lint and type-check" },
     { title: "Run tests" },
-    { title: "Build container image" },
+    { title: "Build the image" },
+    { title: "Security scans", reportOnly: true },
     { title: "Assume AWS role via OIDC" },
     { title: "Rolling deploy to ECS" },
   ] as PipelineStage[],
@@ -220,6 +225,9 @@ export const pipeline = {
     failed:
       "The image is never built and AWS is never touched, so production keeps serving the last good version.",
   },
+  /** Said plainly under the demo: scans report, tests and type checks gate. */
+  footnote:
+    "Lint, type-checks and tests gate the build. Security scans (dependency audit, secret check, Snyk, Trivy on the image) run on every change and report to GitHub's Security tab.",
 };
 
 export const patternsSection = {
@@ -232,31 +240,36 @@ export const patterns: Pattern[] = [
   {
     visual: "three-tier",
     title: "Three-tier separation",
-    body: "Edge, application and data are separate layers with one job each. Only the data tier holds state.",
+    body: "The load balancer, the containers and the database are separate layers with one job each, and each accepts traffic only from the layer in front of it. Only the database holds state.",
     usedIn: "this site, end to end",
   },
   {
     visual: "iam",
-    title: "Least-privilege IAM",
-    body: "Roles list the exact actions and the exact resources. A wildcard resource is a review failure, not a shortcut.",
-    usedIn: "pipeline and task roles",
+    title: "Scoped secrets access",
+    body: "The container's role can read exactly the secrets it needs to start, and nothing else in Secrets Manager. Anything not listed is denied by default.",
+    usedIn: "ECS task execution role",
+    rows: [
+      { text: "GetSecretValue · app secrets", ok: true },
+      { text: "GetSecretValue · database URL", ok: true },
+      { text: "every other secret", ok: false },
+    ],
   },
   {
     visual: "oidc",
     title: "OIDC federation",
-    body: "The pipeline proves who it is with a signed token and gets short-lived credentials. There is no key to rotate or leak.",
+    body: "The pipeline proves who it is with a signed token and receives short-lived credentials. Trust is limited to this repository's branches, and there is no access key to rotate or leak.",
     usedIn: "GitHub Actions to AWS",
   },
   {
     visual: "environments",
-    title: "One module, three environments",
-    body: "Dev, staging and production come from the same code, so they differ only by variables. Staging and production wait for approval.",
-    usedIn: "Terraform workflows",
+    title: "One codebase, three environments",
+    body: "Dev, staging and production are built from the same Terraform modules, so they differ only by variables. Dev deploys on its own, staging waits on a timer, and production needs a reviewer's approval.",
+    usedIn: "Terraform and deploy workflows",
   },
   {
     visual: "secrets",
     title: "Secrets at runtime",
-    body: "Database URLs and API keys are fetched when a container starts. They never appear in the repository or the image.",
+    body: "Database URLs and API keys are injected from Secrets Manager when a container starts. They never appear in the repository or the image.",
     usedIn: "ECS task definition",
   },
   {

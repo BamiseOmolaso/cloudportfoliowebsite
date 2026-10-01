@@ -45,9 +45,13 @@ story copy now say only what is true:
 | "IAM roles name specific resources instead of wildcards" | The **task** role is scoped to its two secrets, but the **GitHub OIDC role** has `Resource = "*"` in 5 places and broad grants (`iam:*`, `ec2:*`, …) | Claim removed. Story now covers the security-group chain and OIDC trust (limited to this repo's branches) |
 | "A compromised pipeline can only touch what it was allowed to" | Not true given the broad role | Reworded |
 
+| Pipeline "gated by security scans" | Lint, type-check and tests **gate** the build. The scans (npm audit, secret check, Snyk, Trivy) have `continue-on-error: true`: they **report** to GitHub's Security tab but don't block | Scans shown as "reported" in the demo; footnote says so |
+| "Staging and production wait for approval" | GitHub environments: development none, staging a **wait timer**, production **required reviewers** | "dev automatic · staging timer · prod approval" |
+
 Follow-up (separate from the redesign): tighten the OIDC role policies in
 `terraform/modules/github-oidc/main.tf`, then the page can honestly claim
-least privilege.
+least privilege. Also decide whether the security scans should block
+(remove `continue-on-error`) and then say "gated by scans".
 
 ## Steps
 
@@ -85,9 +89,13 @@ least privilege.
   now the default** (matches the blog/projects pages); the toggle switches
   to light and remembers the choice. To screenshot light mode:
   `--init="localStorage.setItem('pf-theme','light')"`.
-- [ ] **6. Sections** — results, interactive pipeline, pattern cards,
-  record, "why a doctor", writing, contact. **The "Least-privilege IAM"
-  pattern card must be reworded** (see findings below).
+- [x] **6. Sections** — results (count-up), interactive pipeline,
+  pattern cards with animated diagrams, record, "why a doctor", writing,
+  contact (copy email) + footer. Pipeline stages and pattern copy were
+  checked against `.github/workflows` and the GitHub environments. Phone:
+  no sideways overflow. Tested: "Break a test" stops at the tests and skips
+  the rest; copy-email falls back to select-text when the clipboard is
+  blocked.
 - [ ] **7. New content** — second stack (VPS), Terraform timeline, backups,
   hardening, incident method; apply the content rules above.
 - [ ] **8. Live data** — keep the latest posts/projects from the database
