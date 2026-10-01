@@ -55,6 +55,9 @@ export default function PortfolioShell({
             <a className="link" href="#proof">
               Results
             </a>
+            <a className="link" href="#work">
+              Work
+            </a>
             <a className="link" href="#pipeline">
               Pipeline
             </a>

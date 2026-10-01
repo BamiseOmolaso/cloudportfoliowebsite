@@ -23,6 +23,7 @@ const TONES: Record<Tone, string> = {
   compute: "#ed7100",
   database: "#c925d1",
   security: "#dd344c",
+  storage: "#7aa116",
   neutral: "#5b6577",
   dark: "#24292f",
 };

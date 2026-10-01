@@ -96,8 +96,17 @@ least privilege. Also decide whether the security scans should block
   no sideways overflow. Tested: "Break a test" stops at the tests and skips
   the rest; copy-email falls back to select-text when the clipboard is
   blocked.
-- [ ] **7. New content** — second stack (VPS), Terraform timeline, backups,
-  hardening, incident method; apply the content rules above.
+- [x] **7. New content + selected work** — "Selected work" (six projects
+  with status pills; only public repos are linked, private work says so),
+  the Terraform week-by-week timeline (challenge weeks 1-3, then this
+  site), the single-VPS stack drawn with the same diagram engine (tabs:
+  request path / backups / hardening), and "Found and fixed" (six
+  lessons). Facts checked against each repo's README and GitHub
+  visibility. 35 content tests, including guards that no private repo is
+  linked and that the tabs match the diagram.
+  **Left out on purpose** (owner to decide): MivarMart (lives under another
+  GitHub account), the inherited PHP/WordPress app, the Python/Go exercise
+  folders, the wedding site.
 - [ ] **8. Live data** — keep the latest posts/projects from the database
   (`/api/blog`, `/api/projects`) in "Building in public"; graceful empty state.
 - [ ] **9. Quality pass** — mobile widths, keyboard/focus, reduced motion,

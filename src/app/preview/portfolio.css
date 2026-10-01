@@ -1390,6 +1390,296 @@
   gap: 0.5rem;
 }
 
+/* selected work */
+.pf .projects {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 21rem), 1fr));
+}
+.pf .proj {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.3rem;
+  display: grid;
+  gap: 0.85rem;
+  align-content: start;
+  min-width: 0;
+}
+.pf .proj-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.8rem;
+}
+.pf .proj h3 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.pf .proj p {
+  color: var(--ink-2);
+  font-size: 0.93rem;
+}
+.pf .proj .chips {
+  margin-top: 0;
+}
+.pf .status {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 0.18rem 0.55rem;
+  border-radius: 99px;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+  color: var(--ink-2);
+}
+.pf .status.live {
+  color: var(--accent-2);
+  border-color: color-mix(in srgb, var(--accent-2) 55%, var(--line));
+}
+.pf .status.in-progress {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 55%, var(--line));
+}
+.pf .status.built,
+.pf .status.learning-lab {
+  color: var(--accent);
+  border-color: color-mix(in srgb, var(--accent) 50%, var(--line));
+}
+.pf .proj-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.1rem;
+  align-items: center;
+  font-size: 0.88rem;
+}
+.pf .proj-links a {
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.pf .proj-links a:hover {
+  text-decoration: underline;
+}
+.pf .proj-note {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--ink-2);
+}
+
+/* Terraform, week by week */
+.pf .tf {
+  list-style: none;
+  margin: 0;
+  padding: 1.4rem 0 0;
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: minmax(0, 1fr);
+  position: relative;
+}
+@media (min-width: 62rem) {
+  .pf .tf {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1.1rem;
+  }
+  /* the line the numbered badges are threaded on */
+  .pf .tf::before {
+    content: "";
+    position: absolute;
+    top: calc(1.4rem - 1px);
+    left: 1.2rem;
+    right: 1.2rem;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    opacity: 0.4;
+  }
+}
+.pf .tf-step {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.8rem 1.2rem 1.2rem;
+  display: grid;
+  gap: 0.6rem;
+  align-content: start;
+}
+.pf .tf-n {
+  position: absolute;
+  top: -1.15rem;
+  left: 1.1rem;
+  width: 2.3rem;
+  height: 2.3rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--font-mono);
+  font-weight: 600;
+  box-shadow: 0 0 0 5px var(--bg);
+}
+.pf .tf-when {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent);
+  padding-top: 0.4rem;
+}
+.pf .tf-step h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+.pf .tf-step p {
+  color: var(--ink-2);
+  font-size: 0.9rem;
+}
+.pf .tf-step .chip {
+  justify-self: start;
+}
+.pf .tf-link {
+  color: var(--accent);
+  font-size: 0.86rem;
+  font-weight: 500;
+  text-decoration: none;
+}
+.pf .tf-link:hover {
+  text-decoration: underline;
+}
+
+/* the same ideas on one server */
+.pf .vps-grid {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: start;
+}
+@media (min-width: 58rem) {
+  .pf .vps-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 3rem;
+  }
+}
+.pf .tabs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  margin-bottom: 1.4rem;
+}
+.pf .tabs button {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  padding: 0.45rem 0.95rem;
+  border-radius: 99px;
+  cursor: pointer;
+}
+.pf .tabs button:hover {
+  color: var(--ink);
+}
+.pf .tabs button.on {
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+.pf .vps-panel h3 {
+  font-size: clamp(1.3rem, 2.6vw, 1.7rem);
+  font-weight: 800;
+  margin-bottom: 0.7rem;
+}
+.pf .vps-panel p {
+  color: var(--ink-2);
+}
+.pf .vps-panel ul {
+  margin: 1.1rem 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.7rem;
+}
+.pf .vps-panel li {
+  position: relative;
+  padding-left: 1.4rem;
+  color: var(--ink-2);
+  font-size: 0.95rem;
+}
+.pf .vps-panel li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.55em;
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 50%;
+  background: var(--accent-2);
+}
+/* the diagram is normally pinned inside the scroll story; here it sits in the flow */
+.pf .vps-diagram .diagram {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  height: min(80svh, 700px);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--surface) 55%, transparent);
+}
+
+/* found and fixed */
+.pf .fixes {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr));
+}
+.pf .fix {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.3rem;
+  display: grid;
+  gap: 0.7rem;
+  align-content: start;
+  min-width: 0;
+}
+.pf .fix h3 {
+  font-size: 1.12rem;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.pf .fix p {
+  color: var(--ink-2);
+  font-size: 0.92rem;
+}
+.pf .fix p b {
+  color: var(--ink);
+  font-weight: 600;
+}
+.pf .fix .lesson {
+  margin-top: 0.2rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+}
+.pf .fix .lesson span {
+  font-family: var(--font-mono);
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-2);
+  margin-right: 0.5rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .pf *,
   .pf *::before,

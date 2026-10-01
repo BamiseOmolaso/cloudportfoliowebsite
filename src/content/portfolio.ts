@@ -59,6 +59,40 @@ export interface Pattern {
   rows?: { text: string; ok: boolean }[];
 }
 
+export type ProjectStatus = "Live" | "Built" | "In progress" | "Learning lab";
+
+export interface Project {
+  title: string;
+  status: ProjectStatus;
+  body: string;
+  stack: string[];
+  /** Public links only. Private repositories get `note` instead. */
+  links: Link[];
+  note?: string;
+}
+
+export interface TerraformStep {
+  when: string;
+  title: string;
+  body: string;
+  concept: string;
+  href: string;
+}
+
+export interface VpsTab {
+  name: string;
+  title: string;
+  body: string;
+  points: string[];
+}
+
+export interface Incident {
+  title: string;
+  happened: string;
+  changed: string;
+  lesson: string;
+}
+
 export interface Experience {
   when: string;
   title: string;
@@ -396,4 +430,214 @@ export const contact = {
     { label: "X", href: profile.links.x },
     { label: "YouTube", href: profile.links.youtube },
   ] as Link[],
+};
+
+/* ------------------------------------------------------------------ */
+/* Step 7: selected work, the Terraform journey, the VPS stack, lessons */
+/* ------------------------------------------------------------------ */
+
+const repo = (name: string) => `https://github.com/BamiseOmolaso/${name}`;
+
+export const work = {
+  label: "Selected work",
+  title: "Things I've built, run and learned from.",
+  intro:
+    "A mix of production systems, open projects and labs. Where a repository is private, I say so rather than link to a dead end.",
+};
+
+export const projects: Project[] = [
+  {
+    title: "Cloud portfolio on AWS",
+    status: "Live",
+    body: "The infrastructure behind this page: containers on ECS Fargate behind a load balancer, PostgreSQL on RDS, three environments from shared Terraform modules, GitHub OIDC instead of access keys, and a pause script that takes the idle bill from about $250 to under $5 a month.",
+    stack: [
+      "AWS",
+      "ECS Fargate",
+      "Terraform",
+      "GitHub Actions",
+      "Next.js",
+      "PostgreSQL",
+    ],
+    links: [{ label: "Repository", href: repo("cloudportfoliowebsite") }],
+  },
+  {
+    title: "Hotel booking platform",
+    status: "Live",
+    body: "A production booking app for a small hotel: multi-room bookings with timed holds, an admin panel, email notifications and bot protection. It runs on a single VPS with Docker Compose, deploys as an image tagged with the commit (so rollback is one command), and is backed up nightly.",
+    stack: ["Next.js", "PostgreSQL", "Drizzle", "Docker", "Nginx"],
+    links: [],
+    note: "Private repository",
+  },
+  {
+    title: "Self-hosted automation on a VPS",
+    status: "Live",
+    body: "A workflow-automation tool behind Nginx and HTTPS, with every step documented so it can be rebuilt from scratch: encrypted off-server backups with a tested restore, key-only SSH, and secrets kept out of git.",
+    stack: [
+      "n8n",
+      "Docker Compose",
+      "Nginx",
+      "Certbot",
+      "Cloudflare",
+      "rclone",
+    ],
+    links: [],
+    note: "Private repository",
+  },
+  {
+    title: "DeployMentor",
+    status: "Built",
+    body: "A serverless agent that reads a failed GitHub Actions run and explains the likely root cause and a fix. Lambda behind API Gateway, infrastructure in Terraform, CI/CD through OIDC, with a dev, staging and production promotion path.",
+    stack: ["AWS Lambda", "API Gateway", "Python", "Terraform", "GitHub OIDC"],
+    links: [{ label: "Repository", href: repo("deploymentor") }],
+  },
+  {
+    title: "infergate",
+    status: "In progress",
+    body: "An AI inference gateway in Go that speaks the OpenAI API and will sit in front of several model providers. Milestone 1 of 7 is done: a streaming reverse proxy that keeps tokens flowing as they arrive. Caching, rate limiting, routing and a Prometheus and Grafana observability stack are next.",
+    stack: ["Go", "SSE streaming", "OpenAI API", "Prometheus"],
+    links: [],
+    note: "Not published yet",
+  },
+  {
+    title: "Kubernetes and GitOps labs",
+    status: "Learning lab",
+    body: "A real application, not a toy guestbook, moved from Docker Compose onto a local kind cluster stage by stage, plus GitOps practice with Argo CD using Kustomize and Helm.",
+    stack: ["Kubernetes", "kind", "Argo CD", "Helm", "Kustomize"],
+    links: [{ label: "Argo CD practice repo", href: repo("argo-examples") }],
+  },
+];
+
+export const terraformJourney = {
+  label: "Terraform, week by week",
+  title: "From one EC2 instance to a production stack.",
+  intro:
+    "I learned Terraform through the HUG Lagos/Ibadan challenge, then kept building on it. Each step added one idea.",
+  steps: [
+    {
+      when: "Challenge · Week 1",
+      title: "One flat configuration",
+      body: "A VPC, a public subnet, a security group and an EC2 instance serving a page through Nginx, all written by hand in a few files.",
+      concept: "Resources and dependencies",
+      href: repo("HUG-Terraform-Challenge-"),
+    },
+    {
+      when: "Challenge · Week 2",
+      title: "Modules and remote state",
+      body: "The same build split into four reusable modules, with state kept in S3 instead of on a laptop.",
+      concept: "Modules · remote state",
+      href: repo("hug-terraform-challenge-week-2"),
+    },
+    {
+      when: "Challenge · Week 3",
+      title: "A two-tier network",
+      body: "A public web tier and a database in private subnets across two availability zones, with a NAT gateway, and a database firewall that accepts traffic only from the web tier.",
+      concept: "Network isolation",
+      href: repo("hug-terraform-challenge-week-3"),
+    },
+    {
+      when: "Then, in production",
+      title: "This site",
+      body: "Shared modules for three environments, GitHub OIDC instead of keys, and pause and resume. It also made a deliberate cost trade-off: public subnets with tight security groups rather than a NAT gateway.",
+      concept: "Trade-offs",
+      href: repo("cloudportfoliowebsite"),
+    },
+  ] as TerraformStep[],
+};
+
+export const vps = {
+  label: "The same ideas, on one server",
+  title: "Fewer managed services means more of the engineering is mine.",
+  intro:
+    "Alongside AWS I run production apps on a single VPS. There is no cloud provider handling backups, TLS or patching for me, so I built and documented each of those myself.",
+  tabs: [
+    {
+      name: "Request path",
+      title: "Only Nginx faces the internet.",
+      body: "Visitors reach Cloudflare, then Nginx on the server, which ends HTTPS with a certificate that renews itself and forwards to containers.",
+      points: [
+        "Containers listen on localhost only, so there is no way around the proxy.",
+        "A database sits on a named volume that survives container rebuilds.",
+        "Each app is its own Compose project in its own folder, so one can change without touching another.",
+      ],
+    },
+    {
+      name: "Backups",
+      title: "A backup is only real once it's been restored.",
+      body: "Each night the database is dumped to disk and kept for 14 days. A second job encrypts those files on the server and uploads them to object storage, which deletes them after 14 days.",
+      points: [
+        "Files are encrypted before they leave the server, so the storage provider only ever sees scrambled data.",
+        "The upload credentials can reach one bucket and nothing else.",
+        "I downloaded and decrypted a backup and checked it was byte-for-byte identical to the original.",
+      ],
+    },
+    {
+      name: "Hardening",
+      title: "Shrink what can be attacked, then check it.",
+      body: "SSH accepts keys only. In one week the logs showed tens of thousands of password guesses and no real password logins, so turning passwords off cost nothing.",
+      points: [
+        "Deploys pull an image tagged with the exact commit, so the server holds no source code and rollback is one command.",
+        "Secrets live in files only the deploy user can read, never in git.",
+        "Before and after every change, I check the real behaviour instead of assuming it.",
+      ],
+    },
+  ] as VpsTab[],
+};
+
+export const incidents = {
+  label: "Found and fixed",
+  title: "What went wrong, and what it taught me.",
+  intro:
+    "Production teaches things tutorials don't. These are real, they're all fixed, and each one changed how I work.",
+  items: [
+    {
+      title: "A CAPTCHA that wasn't checking",
+      happened:
+        "The widget showed on the forms and the secret was in the server's settings, but the container never received it, so the check quietly accepted everything.",
+      changed:
+        "I compared every environment variable the code reads with what the container is given, passed the missing one through, and added two one-line checks to the runbook.",
+      lesson: "A control that looks switched on is not proof that it is.",
+    },
+    {
+      title: "A deploy that failed safely",
+      happened:
+        "The registry login stored on the server had expired. The deploy stopped at the very first step, before anything changed, so the site never went down.",
+      changed:
+        "I replaced the stored token with a short-lived login created for each deploy, and recorded the new version only after every step succeeded.",
+      lesson:
+        "Order steps so failure happens before change, and avoid credentials that expire unattended.",
+    },
+    {
+      title: "66,559 password guesses in a week",
+      happened:
+        "The SSH logs showed constant automated guessing and not a single real password login.",
+      changed:
+        "I turned password logins off, tested a fresh key login from a second window before closing the first, and documented how to get back in.",
+      lesson:
+        "Read the logs before you change anything, and always keep a way back.",
+    },
+    {
+      title: "A database open to the whole Wi-Fi",
+      happened:
+        "A Docker port mapping without an address listens on every network interface. From the laptop's network address I could log in to a development database.",
+      changed:
+        "I bound it to localhost, proved the network address was now refused, and wrote the check up as a lesson in the repo.",
+      lesson: "Prove the risk, then prove the fix.",
+    },
+    {
+      title: "Restarting one container restarted its database",
+      happened:
+        "Compose recreated a dependency because its image tag had moved on. The data was safe on its volume, but the downtime was longer than planned.",
+      changed:
+        "Every deploy step now uses --no-deps, and I verify the volume and the data afterwards.",
+      lesson: "Know exactly what a command touches before you run it.",
+    },
+    {
+      title: '"The site is down", but only for me',
+      happened:
+        "A new subdomain didn't load on my laptop. My phone's hotspot had cached a \"doesn't exist\" answer from before I created the record.",
+      changed:
+        "I wrote a layer-by-layer checklist (container, proxy, CDN, public DNS, my DNS), and a one-line command that skips DNS to isolate it.",
+      lesson: "Change nothing until you know which layer is broken.",
+    },
+  ] as Incident[],
 };

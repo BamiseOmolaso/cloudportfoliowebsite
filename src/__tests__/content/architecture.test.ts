@@ -1,9 +1,10 @@
 /**
- * Guards the architecture diagram data (src/content/architecture.ts):
- * it must be internally consistent, stay inside its canvas, and obey the
- * same content rules as the rest of the page (docs/redesign/PLAN.md).
+ * Guards the architecture diagrams (src/content/architecture.ts): each must
+ * be internally consistent, stay inside its canvas, and obey the same
+ * content rules as the rest of the page (docs/redesign/PLAN.md). The AWS
+ * diagram is also checked against what the infrastructure really does.
  */
-import { awsStack as d } from "@/content/architecture";
+import { awsStack, vpsStack, type Diagram } from "@/content/architecture";
 
 function strings(value: unknown, out: string[] = []): string[] {
   if (typeof value === "string") out.push(value);
@@ -13,7 +14,10 @@ function strings(value: unknown, out: string[] = []): string[] {
   return out;
 }
 
-describe("awsStack diagram", () => {
+describe.each<[string, Diagram]>([
+  ["awsStack", awsStack],
+  ["vpsStack", vpsStack],
+])("%s diagram", (_name, d) => {
   const ids = [
     ...d.nodes.map((n) => n.id),
     ...d.groups.map((g) => g.id),
@@ -24,17 +28,10 @@ describe("awsStack diagram", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("has a focus list on every step that only names things that exist", () => {
+  it("has focus lists that only name things that exist", () => {
     d.steps.forEach((step) =>
       (step.focus ?? []).forEach((id) => expect(ids).toContain(id)),
     );
-  });
-
-  it("has a step for the hero plus each story step", () => {
-    expect(d.steps).toHaveLength(6);
-    // The hero and the cost step show everything.
-    expect(d.steps[0].focus).toBeUndefined();
-    expect(d.steps[5].focus).toBeUndefined();
   });
 
   it("keeps every node and zoom region inside the canvas", () => {
@@ -54,31 +51,7 @@ describe("awsStack diagram", () => {
     });
   });
 
-  it("only marks compute services that the pause script actually stops", () => {
-    // ALB (removed), Fargate tasks (scaled to 0), RDS (stopped) — nothing else.
-    const compute = d.nodes
-      .filter((n) => n.compute)
-      .map((n) => n.id)
-      .sort();
-    expect(compute).toEqual(["alb", "rds", "taskA", "taskB"]);
-    d.nodes
-      .filter((n) => n.compute)
-      .forEach((n) => expect(n.pausedText).toBeTruthy());
-  });
-
-  it("draws the outside-AWS services outside the AWS Cloud box", () => {
-    const cloud = d.groups.find((g) => g.kind === "cloud");
-    if (!cloud) throw new Error("diagram has no AWS Cloud group");
-    const inside = (x: number) => x > cloud.x && x < cloud.x + cloud.w;
-    d.nodes
-      .filter((n) => n.external)
-      .forEach((n) => expect(inside(n.x)).toBe(false));
-    d.nodes
-      .filter((n) => !n.external && !["visitor", "dns"].includes(n.id))
-      .forEach((n) => expect(inside(n.x)).toBe(true));
-  });
-
-  it("every packet route and edge is a non-empty SVG path", () => {
+  it("has well-formed paths for every edge and packet route", () => {
     [...d.routes, ...d.edges.map((e) => e.d)].forEach((p) =>
       expect(p).toMatch(/^M[\d.,\sVHL-]+$/),
     );
@@ -93,6 +66,40 @@ describe("awsStack diagram", () => {
     expect(text).not.toMatch(/\/opt\/|~\/\.ssh|\.pem\b|arn:aws|\b\d{12}\b/);
     expect(text).not.toMatch(/\b[0-9a-f]{32,}\b/);
   });
+});
+
+describe("awsStack matches the real infrastructure", () => {
+  const d = awsStack;
+
+  it("has a step for the hero plus each story step; hero and cost show everything", () => {
+    expect(d.steps).toHaveLength(6);
+    expect(d.steps[0].focus).toBeUndefined();
+    expect(d.steps[5].focus).toBeUndefined();
+  });
+
+  it("only marks compute services that the pause script actually stops", () => {
+    // ALB (removed), Fargate tasks (scaled to 0), RDS (stopped) — nothing else.
+    const compute = d.nodes
+      .filter((n) => n.compute)
+      .map((n) => n.id)
+      .sort();
+    expect(compute).toEqual(["alb", "rds", "taskA", "taskB"]);
+    d.nodes
+      .filter((n) => n.compute)
+      .forEach((n) => expect(n.pausedText).toBeTruthy());
+  });
+
+  it("draws outside-AWS services outside the AWS Cloud box", () => {
+    const cloud = d.groups.find((g) => g.kind === "cloud");
+    if (!cloud) throw new Error("diagram has no AWS Cloud group");
+    const inside = (x: number) => x > cloud.x && x < cloud.x + cloud.w;
+    d.nodes
+      .filter((n) => n.external)
+      .forEach((n) => expect(inside(n.x)).toBe(false));
+    d.nodes
+      .filter((n) => !n.external && !["visitor", "dns"].includes(n.id))
+      .forEach((n) => expect(inside(n.x)).toBe(true));
+  });
 
   it("does not claim things the infrastructure does not do", () => {
     const text = strings(d).join(" ").toLowerCase();
@@ -101,5 +108,36 @@ describe("awsStack diagram", () => {
     expect(text).not.toMatch(
       /route ?53|private subnet|nat gateway|elasticache/,
     );
+  });
+});
+
+describe("vpsStack", () => {
+  const d = vpsStack;
+
+  it("has one step per tab: request path, backups, hardening", () => {
+    expect(d.steps).toHaveLength(3);
+  });
+
+  it("keeps the app containers off the public internet", () => {
+    // The diagram must show them inside the Compose group, and the Compose
+    // group inside the server.
+    const compose = d.groups.find((g) => g.id === "compose");
+    const server = d.groups.find((g) => g.id === "server");
+    if (!compose || !server) throw new Error("missing compose or server group");
+    for (const id of ["app", "automation", "postgres"]) {
+      const n = d.nodes.find((x) => x.id === id);
+      if (!n) throw new Error(`missing node ${id}`);
+      expect(n.x).toBeGreaterThan(compose.x);
+      expect(n.x).toBeLessThan(compose.x + compose.w);
+    }
+    expect(compose.x).toBeGreaterThanOrEqual(server.x);
+  });
+
+  it("draws object storage outside the server", () => {
+    const server = d.groups.find((g) => g.id === "server");
+    const bucket = d.nodes.find((n) => n.id === "bucket");
+    if (!server || !bucket) throw new Error("missing server or bucket");
+    expect(bucket.external).toBe(true);
+    expect(bucket.x).toBeGreaterThan(server.x + server.w);
   });
 });

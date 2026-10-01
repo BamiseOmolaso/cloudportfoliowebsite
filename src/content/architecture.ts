@@ -33,6 +33,7 @@ export type Tone =
   | "compute"
   | "database"
   | "security"
+  | "storage"
   | "neutral"
   | "dark";
 
@@ -437,5 +438,208 @@ export const awsStack: Diagram = {
     },
     // 5 · cost: everything, compute shown paused
     { region: [0, 96, 440, 560] },
+  ],
+};
+
+/**
+ * The single-VPS stack, drawn with the same engine. Generic on purpose: no
+ * host names, addresses, paths or project names. Its three steps are the
+ * tabs in the "same ideas on one server" section: request path, backups,
+ * hardening.
+ */
+export const vpsStack: Diagram = {
+  width: 440,
+  height: 720,
+  summary:
+    "Diagram of a single server. A visitor reaches Cloudflare, then Nginx on the server, which ends HTTPS and forwards to an app container and an automation container that listen on localhost only. Both use PostgreSQL on a named volume. Each night the database is dumped to disk, encrypted, and uploaded to object storage. GitHub Actions deploys by pulling an image tagged with the commit; SSH accepts keys only.",
+
+  nodes: [
+    {
+      id: "visitor",
+      label: "Visitor",
+      x: 125,
+      y: 40,
+      icon: "browser",
+      tone: "neutral",
+    },
+    {
+      id: "cloudflare",
+      label: "Cloudflare",
+      sub: "DNS and proxy",
+      x: 125,
+      y: 140,
+      icon: "globe",
+      tone: "neutral",
+      external: true,
+    },
+    {
+      id: "nginx",
+      label: "Nginx",
+      sub: "HTTPS · reverse proxy",
+      x: 125,
+      y: 260,
+      icon: "gateway",
+      tone: "network",
+    },
+    {
+      id: "app",
+      label: "App",
+      sub: "localhost only",
+      x: 70,
+      y: 390,
+      icon: "container",
+      tone: "compute",
+    },
+    {
+      id: "automation",
+      label: "Automation",
+      sub: "localhost only",
+      x: 180,
+      y: 390,
+      icon: "container",
+      tone: "compute",
+    },
+    {
+      id: "postgres",
+      label: "PostgreSQL",
+      sub: "named volume",
+      x: 70,
+      y: 520,
+      icon: "database",
+      tone: "database",
+    },
+    {
+      id: "dumps",
+      label: "Nightly dumps",
+      sub: "kept 14 days",
+      x: 70,
+      y: 640,
+      icon: "registry",
+      tone: "storage",
+    },
+    {
+      id: "bucket",
+      label: "Object storage",
+      sub: "encrypted · 14 days",
+      x: 330,
+      y: 640,
+      icon: "registry",
+      tone: "storage",
+      external: true,
+    },
+    {
+      id: "github",
+      label: "GitHub Actions",
+      sub: "deploys by commit",
+      x: 330,
+      y: 140,
+      icon: "branch",
+      tone: "dark",
+      external: true,
+    },
+    {
+      id: "ssh",
+      label: "SSH",
+      sub: "keys only",
+      x: 330,
+      y: 520,
+      icon: "key",
+      tone: "security",
+    },
+  ],
+
+  groups: [
+    {
+      id: "server",
+      kind: "vpc",
+      x: 12,
+      y: 206,
+      w: 240,
+      h: 500,
+      label: "VPS",
+      labelAt: { x: 24, y: 224, anchor: "start" },
+    },
+    {
+      id: "compose",
+      kind: "service",
+      x: 24,
+      y: 334,
+      w: 216,
+      h: 262,
+      label: "Docker Compose · no public ports",
+      labelAt: { x: 132, y: 349, anchor: "middle" },
+    },
+  ],
+
+  edges: [
+    { id: "visitor-cf", d: "M125,66 V114" },
+    { id: "cf-nginx", d: "M125,166 V234" },
+    { id: "nginx-app", d: "M125,286 V318 H70 V364" },
+    { id: "nginx-auto", d: "M125,286 V318 H180 V364" },
+    { id: "app-pg", d: "M70,416 V494" },
+    { id: "pg-dumps", d: "M70,546 V614" },
+    { id: "dumps-bucket", d: "M96,640 H304", dashed: true },
+    { id: "gh-deploy", d: "M330,166 V440 H240", dashed: true },
+    { id: "ssh-in", d: "M304,520 H240", dashed: true },
+  ],
+
+  labels: [
+    { text: "80 / 443 only", x: 190, y: 236, showIn: [2] },
+    { text: "encrypted before upload", x: 200, y: 628, showIn: [1] },
+  ],
+
+  markers: [],
+
+  routes: ["M125,40 V318 H70 V494", "M125,40 V318 H180 V364"],
+
+  steps: [
+    // 0 · request path
+    {
+      region: [0, 10, 440, 560],
+      focus: [
+        "visitor",
+        "cloudflare",
+        "nginx",
+        "app",
+        "automation",
+        "postgres",
+        "server",
+        "compose",
+        "visitor-cf",
+        "cf-nginx",
+        "nginx-app",
+        "nginx-auto",
+        "app-pg",
+      ],
+    },
+    // 1 · backups
+    {
+      region: [10, 470, 420, 240],
+      focus: [
+        "postgres",
+        "dumps",
+        "bucket",
+        "pg-dumps",
+        "dumps-bucket",
+        "server",
+      ],
+    },
+    // 2 · hardening
+    {
+      region: [0, 100, 440, 500],
+      focus: [
+        "nginx",
+        "app",
+        "automation",
+        "ssh",
+        "github",
+        "server",
+        "compose",
+        "gh-deploy",
+        "ssh-in",
+        "nginx-app",
+        "nginx-auto",
+      ],
+    },
   ],
 };
