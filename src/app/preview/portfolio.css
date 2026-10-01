@@ -54,8 +54,8 @@
   --ink-2: #5a5875;
   --line: #d5d2e6;
   --accent: #5b3dd6;
-  --accent-2: #0e8f84;
-  --warn: #a8620a;
+  --accent-2: #0a766d;
+  --warn: #955807;
   --bad: #c4283c;
   --accent-ink: #ffffff;
   --glow-1: #a78bfa;
@@ -101,6 +101,68 @@
   color: var(--ink-2);
 }
 
+/* keyboard: skip the long intro, and don't hide anchored sections under the fixed header */
+.pf .skip {
+  position: absolute;
+  left: 1rem;
+  top: -4rem;
+  z-index: 60;
+  padding: 0.6rem 1rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  border-radius: var(--radius);
+  font-weight: 600;
+  text-decoration: none;
+}
+.pf .skip:focus {
+  top: 0.8rem;
+}
+.pf section[id],
+.pf .runway {
+  scroll-margin-top: 4.2rem;
+}
+
+/* phone menu: hidden on wider screens */
+/* .icon-btn also sets display, so the menu button needs the higher specificity */
+.pf .icon-btn.menu-btn,
+.pf .menu,
+.pf .menu-backdrop {
+  display: none;
+}
+@media (max-width: 55.99rem) {
+  .pf .icon-btn.menu-btn {
+    display: grid;
+  }
+  .pf .menu:not([hidden]) {
+    display: grid;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    padding: 0.4rem 1rem 1rem;
+    background: color-mix(in srgb, var(--bg) 96%, transparent);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--line);
+  }
+  .pf .menu a {
+    padding: 0.85rem 0.4rem;
+    font-size: 1.05rem;
+    color: var(--ink);
+    text-decoration: none;
+    border-bottom: 1px solid color-mix(in srgb, var(--line) 60%, transparent);
+  }
+  .pf .menu a:last-child {
+    border-bottom: 0;
+  }
+  .pf .menu-backdrop.open {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 25;
+    background: color-mix(in srgb, #000 45%, transparent);
+  }
+}
+
 /* header */
 .pf .bar {
   position: fixed;
@@ -123,6 +185,7 @@
   gap: 1rem;
 }
 .pf .brand {
+  white-space: nowrap;
   font-family: var(--font-display);
   font-weight: 800;
   text-decoration: none;
@@ -170,7 +233,7 @@
 .pf .icon-btn:hover {
   border-color: var(--accent);
 }
-@media (max-width: 42rem) {
+@media (max-width: 55.99rem) {
   .pf nav a.link {
     display: none;
   }
@@ -277,6 +340,13 @@
     padding-inline: 1.1rem;
     border-color: var(--line);
   }
+}
+.pf .card:focus {
+  outline: none;
+}
+.pf .card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 4px;
 }
 .pf .card .label {
   color: var(--accent);
@@ -399,7 +469,7 @@
   font-family: var(--font-mono);
   font-size: 0.68rem;
   color: var(--ink-2);
-  opacity: 0.55;
+  opacity: 0.9;
   transition:
     opacity 0.3s,
     color 0.3s;

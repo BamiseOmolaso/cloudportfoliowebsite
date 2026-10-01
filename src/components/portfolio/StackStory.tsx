@@ -23,6 +23,9 @@ export default function StackStory() {
   const runwayRef = useRef<HTMLDivElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const lastStep = useRef(0);
+  const cardRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // The step a button asked to scroll to; focus follows once the page arrives.
+  const navTarget = useRef<number | null>(null);
 
   const [step, setStep] = useState(0);
   // null = follow the step (paused on the last one); true/false = the visitor chose.
@@ -57,10 +60,24 @@ export default function StackStory() {
     };
   }, []);
 
+  // Keyboard users: when Next/Back/rail moves to another step the old card
+  // disappears, so move focus to the new one instead of losing it.
+  useEffect(() => {
+    if (navTarget.current === step) {
+      navTarget.current = null;
+      cardRefs.current[step]?.focus({ preventScroll: true });
+    }
+  }, [step]);
+
   /** Scroll the page so that step `i` becomes the active one. */
   const goTo = (i: number) => {
     const runway = runwayRef.current;
     if (!runway) return;
+    navTarget.current = i;
+    // Don't let a stale request steal focus later, if the visitor scrolls elsewhere.
+    window.setTimeout(() => {
+      if (navTarget.current === i) navTarget.current = null;
+    }, 3000);
     const total = Math.max(1, runway.offsetHeight - window.innerHeight);
     const runwayTop = runway.getBoundingClientRect().top + window.scrollY;
     // The middle of the step's slice, so rounding can never land on its neighbour.
@@ -74,8 +91,12 @@ export default function StackStory() {
   /** Past the last step: on to the next section if it exists, else the end of the runway. */
   const keepGoing = () => {
     const next = document.getElementById("proof");
-    if (next) next.scrollIntoView({ behavior: "smooth" });
-    else goTo(STEPS - 1);
+    if (next) {
+      next.scrollIntoView({ behavior: "smooth" });
+      // Move focus along with the page, so it isn't stranded on a button that scrolled away.
+      next.setAttribute("tabindex", "-1");
+      window.setTimeout(() => next.focus({ preventScroll: true }), 700);
+    } else goTo(STEPS - 1);
   };
 
   const dots = (
@@ -103,7 +124,15 @@ export default function StackStory() {
         <ArchitectureDiagram diagram={awsStack} step={step} paused={paused} />
 
         <div className="cards">
-          <div className={`card hero${step === 0 ? " on" : ""}`}>
+          <div
+            className={`card hero${step === 0 ? " on" : ""}`}
+            ref={(el) => {
+              cardRefs.current[0] = el;
+            }}
+            tabIndex={-1}
+            role="group"
+            aria-label="Introduction"
+          >
             <span className="label">{profile.role}</span>
             <h1>
               {hero.headlineStart}
@@ -136,6 +165,12 @@ export default function StackStory() {
               <div
                 key={s.label}
                 className={`card${step === i + 1 ? " on" : ""}`}
+                ref={(el) => {
+                  cardRefs.current[i + 1] = el;
+                }}
+                tabIndex={-1}
+                role="group"
+                aria-label={s.label}
               >
                 <span className="label">{s.label}</span>
                 <h2>{s.title}</h2>

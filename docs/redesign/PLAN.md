@@ -121,8 +121,27 @@ least privilege. Also decide whether the security scans should block
   Skill levels were set from evidence in the repos; Ansible, GitLab, GitOps,
   Kubernetes, Azure and GCP are marked "learning" until a project uses them.
   Bug caught by the overflow check: the scroller widened the page on phones.
-- [ ] **9. Quality pass** — mobile widths, keyboard/focus, reduced motion,
-  contrast in both themes, `npm run build`, lint, existing tests.
+- [x] **9. Quality pass** — all checked, not assumed:
+  - **Phone/tablet menu** (hamburger up to ~900px): Escape, outside tap and
+    choosing a link close it; focus returns to the button; sections land
+    below the fixed header (scroll-margin).
+  - **Keyboard:** skip link; logical Tab order; with real key presses the
+    whole story works without a mouse and focus follows the active card
+    (it used to be lost when a card disappeared).
+  - **Contrast:** every text/background pair in both themes is >= 4.5:1
+    (light-theme teal and amber darkened; inactive rail labels raised).
+  - **Reduced motion:** 0 animated elements, no packets, the scroller is a
+    static wrapping list; with it off, 56 elements animate.
+  - **Sizes:** 390 / 768 / 1000 / 1280 / 1920 — no horizontal overflow.
+  - **Production build:** passes; `/preview` is 13.4 kB (115 kB first load)
+    vs 138 kB for the old `/`; every section is server-rendered; the
+    testimonial placeholders, wedding site, server address, hotel name and
+    old email are absent from the served HTML; security headers intact; no
+    console/CSP errors in a real browser.
+  - **Whole test suite:** 17 suites / 205 tests pass.
+  Bugs found and fixed on the way: the hamburger was visible on desktop (CSS
+  specificity), the scroller widened the page on phones, focus was lost when
+  a story card disappeared, the brand wrapped on tablets.
 - [ ] **10. Go live** — swap `/` to the new page, remove `/preview`, open a PR.
   *(Only after the owner has reviewed it locally.)*
 

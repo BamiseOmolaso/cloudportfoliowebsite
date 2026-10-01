@@ -1,6 +1,6 @@
 // Headless-Chrome screenshot tool (Chrome DevTools Protocol, no dependencies).
-//   node shot.mjs <url> <out.png> [--w=1280] [--h=800] [--dark] [--scroll=Y]
-//        [--wait=2500] [--settle=1800] [--eval="js before scrolling"] [--after="js after scrolling"] [--init="js before the page loads"] [--keep-cookie]
+//   node shot.mjs <url> <out.png> [--w=1280] [--h=800] [--dark] [--scroll=Y] [--to="#css-selector"]
+//        [--wait=2500] [--settle=1800] [--eval="js before scrolling"] [--after="js after scrolling"] [--init="js before the page loads"] [--keys="Tab,Enter"] [--reduce] [--keep-cookie]
 // WebGL works through SwiftShader (software), so the 3D scene renders.
 import { spawn } from "node:child_process";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
@@ -91,7 +91,10 @@ try {
     mobile: W < 600,
   });
   await send("Emulation.setEmulatedMedia", {
-    features: [{ name: "prefers-color-scheme", value: opt.dark ? "dark" : "light" }],
+    features: [
+      { name: "prefers-color-scheme", value: opt.dark ? "dark" : "light" },
+      { name: "prefers-reduced-motion", value: opt.reduce ? "reduce" : "no-preference" },
+    ],
   });
 
   if (opt.init) await send("Page.addScriptToEvaluateOnNewDocument", { source: opt.init });
@@ -111,9 +114,29 @@ try {
     if (r.result?.result?.value !== undefined) console.log("eval →", JSON.stringify(r.result.result.value));
     if (r.result?.exceptionDetails) console.log("eval error:", r.result.exceptionDetails.text);
   }
-  if (opt.scroll) {
-    await evaluate(`window.scrollTo(0, ${+opt.scroll})`);
+  if (opt.to) {
+    await evaluate(`(() => { const el = document.querySelector(${JSON.stringify(opt.to)}); if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 70, behavior: "instant" }); })()`);
     await sleep(+opt.settle || 1800);
+  }
+  if (opt.scroll) {
+    await evaluate(`window.scrollTo({ top: ${+opt.scroll}, behavior: "instant" })`);
+    await sleep(+opt.settle || 1800);
+  }
+  if (opt.keys) {
+    // Real key presses, e.g. --keys="Tab,Tab,Shift+Tab,Enter,Escape"
+    const table = { Tab: [9, "Tab"], Enter: [13, "Enter"], Escape: [27, "Escape"], ArrowDown: [40, "ArrowDown"], ArrowUp: [38, "ArrowUp"], " ": [32, "Space"] };
+    for (const k of String(opt.keys).split(",")) {
+      const shift = k.startsWith("Shift+");
+      const name = shift ? k.slice(6) : k;
+      const [vk, code] = table[name] || [0, name];
+      const base = { key: name, code, windowsVirtualKeyCode: vk, nativeVirtualKeyCode: vk, modifiers: shift ? 8 : 0 };
+      // Enter and Space activate buttons only when the keydown carries text.
+      const text = name === "Enter" ? String.fromCharCode(13) : name === " " ? " " : undefined;
+      await send("Input.dispatchKeyEvent", text ? { type: "keyDown", text, unmodifiedText: text, ...base } : { type: "rawKeyDown", ...base });
+      await send("Input.dispatchKeyEvent", { type: "keyUp", ...base });
+      await sleep(+opt.keywait || 250);
+    }
+    await sleep(+opt.settle || 1500);
   }
   if (opt.after) {
     const r = await evaluate(opt.after);
