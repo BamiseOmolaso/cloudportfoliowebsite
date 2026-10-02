@@ -117,6 +117,18 @@ For a fresh k3s you should see pods for `coredns`, `local-path-provisioner`,
 `metrics-server` and `traefik` (plus a few `svclb-traefik` and `helm-install-*`
 pods that show `Completed`). It can take a minute or two for all of them to settle.
 
+**Always check which cluster you are talking to before you `apply` or `delete`.**
+Open a new terminal window and `KUBECONFIG` is gone; `kubectl` then silently uses
+your default config, which may point at a different cluster. In our run it pointed
+at a local cluster that was not running, so the command failed with
+`dial tcp 127.0.0.1:...: connection refused`. That was lucky: if that cluster had
+been running, the command would have changed the wrong one. The habit:
+
+```bash
+export KUBECONFIG=~/.kube/hetzner-portfolio.yaml
+kubectl config current-context     # must print: hetzner-portfolio
+```
+
 > **Keep the kubeconfig file private.** It contains an admin credential: anyone
 > holding it controls the cluster. It lives outside the repo on purpose. Our
 > firewall also only lets your IP reach the API port (6443), which is a second
@@ -133,9 +145,28 @@ kubectl -n hello get pods          # wait until 1/1 Running
 curl http://<server-ip>/           # replace with your server IP
 ```
 
+Run `apply` from the **repo root** (the folder that contains `infra/`). The path is
+relative, so from any other folder you get `the path "infra/k8s/hello/hello.yaml"
+does not exist`.
+
 You should get a short text reply that includes `Hostname:` and your request
 details. That one answer proves: internet → firewall → Traefik → Ingress → Service
 → pod.
+
+**What we saw:** the reply included `Hostname: hello-...`, `X-Forwarded-Server:
+traefik-...` and `X-Real-Ip: 10.42.0.1`. The Hostname is the pod, and the
+Traefik header shows the request went through the front door. `10.42.x.x` is the
+cluster's internal network.
+
+**Notice `X-Real-Ip` is not your own IP.** Traffic enters through the built-in
+load balancer (ServiceLB), which hides the visitor's real address. This matters
+for the app: its rate limiting counts requests per client IP. Behind Cloudflare
+the real address arrives in a header (`CF-Connecting-IP`), and Traefik must be told
+to trust it. We handle that when the app is deployed (doc 04/05).
+
+**The `helm-install-*` pods show `Completed` with a few restarts.** That is
+normal: they are one-time jobs that install Traefik, and they retry while the
+cluster settles.
 
 A few things in the file are worth reading, because the app will follow the same
 habits:
