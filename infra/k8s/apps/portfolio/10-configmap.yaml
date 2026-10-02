@@ -1,0 +1,16 @@
+# Settings that are NOT secret. Secrets (passwords, API keys, email addresses) live in
+# a Secret called `portfolio-secrets` that is created by hand and never committed:
+# see infra/scripts/create-portfolio-secrets.sh and docs/infra/07-the-application.md.
+# The NEXT_PUBLIC_* values are not here: they are baked into the image at build time.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: portfolio-config
+  namespace: portfolio
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+data:
+  NODE_ENV: production
+  PORT: "3000"
+  HOSTNAME: 0.0.0.0 # listen on all interfaces inside the pod, so the Service can reach it
+  NEXT_TELEMETRY_DISABLED: "1"

@@ -18,6 +18,8 @@ spec:
       namespace: hello
     - server: https://kubernetes.default.svc
       namespace: postgres
+    - server: https://kubernetes.default.svc
+      namespace: portfolio
   # Applications may create Namespaces and PersistentVolumes (and nothing else
   # cluster-wide). The database storage is a PersistentVolume.
   clusterResourceWhitelist:

@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: portfolio
+  namespace: argocd
+  # NOTE: no `resources-finalizer`. Deleting this Application must not delete the
+  # namespace, because the hand-made Secret `portfolio-secrets` lives in it.
+spec:
+  project: portfolio
+  source:
+    repoURL: https://github.com/BamiseOmolaso/cloudportfoliowebsite.git
+    targetRevision: develop
+    path: infra/k8s/apps/portfolio
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: portfolio
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

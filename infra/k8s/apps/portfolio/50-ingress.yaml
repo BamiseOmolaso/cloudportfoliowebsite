@@ -1,0 +1,28 @@
+# The rule "web requests for this hostname go to the portfolio Service", plus the
+# HTTPS certificate request (cert-manager sees the annotation and obtains it).
+# Test hostname first; the real domain is added at cut-over (doc 07).
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: portfolio
+  namespace: portfolio
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - test.oluwabamiseomolaso.com.ng
+      secretName: portfolio-tls
+  rules:
+    - host: test.oluwabamiseomolaso.com.ng
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: portfolio
+                port:
+                  number: 80
