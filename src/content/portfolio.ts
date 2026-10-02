@@ -167,7 +167,7 @@ export const hero = {
   headlineEmphasis: "secure,",
   headlineEnd: " repeatable and cheap to run.",
   intro:
-    "Dr. Bamise Omolaso. This is the real infrastructure behind this site, drawn the way I'd document it. Scroll to follow one request through it.",
+    "Dr. Bamise Omolaso. This is the AWS infrastructure I built for this portfolio, drawn the way I'd document it. It is paused while I move hosting. Scroll to follow one request through it.",
   primaryCta: "Work with me",
   secondaryCta: "View CV",
 } as const;
@@ -454,8 +454,8 @@ export const work = {
 export const projects: Project[] = [
   {
     title: "Cloud portfolio on AWS",
-    status: "Live",
-    body: "The infrastructure behind this page: containers on ECS Fargate behind a load balancer, PostgreSQL on RDS, three environments from shared Terraform modules, GitHub OIDC instead of access keys, and a pause script that takes the idle bill from about $250 to under $5 a month.",
+    status: "Built",
+    body: "The infrastructure this page was built to run on: containers on ECS Fargate behind a load balancer, PostgreSQL on RDS, three environments from shared Terraform modules, GitHub OIDC instead of access keys, and a pause script that takes the idle bill from about $250 to under $5 a month.",
     stack: [
       "AWS",
       "ECS Fargate",

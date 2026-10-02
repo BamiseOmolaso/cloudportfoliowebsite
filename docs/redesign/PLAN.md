@@ -142,14 +142,14 @@ least privilege. Also decide whether the security scans should block
   Bugs found and fixed on the way: the hamburger was visible on desktop (CSS
   specificity), the scroller widened the page on phones, focus was lost when
   a story card disappeared, the brand wrapped on tablets.
-- [ ] **10. Go live** — swap `/` to the new page, remove `/preview`, open a PR.
+- [x] **10. Go live** — new page is `/`; `/preview` removed; real metadata + Open Graph in the root layout. PR opened only with the owner's go.
   *(Only after the owner has reviewed it locally.)*
 
 ## Running it locally
 
 ```sh
 cd ~/coding_projects/.worktrees/portfolio-redesign
-npm run dev -- -p 3200        # then open http://localhost:3200/preview
+npm run dev -- -p 3200        # then open http://localhost:3200/
 ```
 
 No `.env` is needed: with no database the blog/projects calls return
@@ -161,9 +161,9 @@ empty lists and the page still renders.
 screenshot — light or dark, any width, any scroll position, WebGL included:
 
 ```sh
-node docs/redesign/shot.mjs http://localhost:3200/preview out.png            # light, 1280x800
-node docs/redesign/shot.mjs http://localhost:3200/preview out.png --dark --w=390 --h=844   # dark, phone
-node docs/redesign/shot.mjs http://localhost:3200/preview out.png --scroll=1400 --settle=5000   # scrolled (wait for the camera)
+node docs/redesign/shot.mjs http://localhost:3200/ out.png            # light, 1280x800
+node docs/redesign/shot.mjs http://localhost:3200/ out.png --dark --w=390 --h=844   # dark, phone
+node docs/redesign/shot.mjs http://localhost:3200/ out.png --scroll=1400 --settle=5000   # scrolled (wait for the camera)
 node docs/redesign/shot.mjs <url> out.png --after="document.title"    # run JS after scrolling; prints the result
 node docs/redesign/shot.mjs <url> out.png --init="HTMLCanvasElement.prototype.getContext=()=>null"   # simulate no WebGL
 ```

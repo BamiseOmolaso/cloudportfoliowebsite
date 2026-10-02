@@ -51,7 +51,7 @@ export default function PortfolioShell({
   className,
   children,
 }: {
-  /** Font CSS-variable classes from next/font (see app/preview/fonts.ts). */
+  /** Font CSS-variable classes from next/font (see app/fonts.ts). */
   className: string;
   children: React.ReactNode;
 }) {
