@@ -119,8 +119,11 @@ async function redisRateLimit(
 
     const results = await multi.exec();
 
-    // results[1] is the count before adding current request
-    const count = (results[1]?.[1] as number) || 0;
+    // exec() of the `redis` package (node-redis) returns the plain replies in
+    // order: [removed, count, added, expire]. (ioredis returns [error, reply]
+    // pairs instead; reading this like that always gave 0, so nothing was
+    // ever blocked.) results[1] is the count before adding this request.
+    const count = Number(results[1] ?? 0);
     const currentCount = count + 1;
 
     const remaining = Math.max(0, limit - currentCount);

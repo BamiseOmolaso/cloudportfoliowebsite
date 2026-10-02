@@ -6,12 +6,14 @@ type AsyncMock<Args extends any[] = any[], Return = unknown> = jest.MockedFuncti
 
 // ---- Database mocks ----
 const mockUpsert: AsyncMock<[unknown], unknown> = jest.fn();
+const mockFindUnique: AsyncMock<[unknown], unknown> = jest.fn();
 const mockCreate: AsyncMock<[unknown], unknown> = jest.fn();
 
 jest.mock('@/lib/db', () => ({
   db: {
     newsletterSubscriber: {
       upsert: mockUpsert,
+      findUnique: mockFindUnique,
     },
     newsletterAuditLog: {
       create: mockCreate,
@@ -67,7 +69,8 @@ beforeAll(async () => {
 beforeEach(() => {
   jest.clearAllMocks();
 
-  // Default DB behaviour
+  // Default DB behaviour: the email is not on the list yet
+  mockFindUnique.mockResolvedValue(null);
   mockUpsert.mockResolvedValue({
     id: 'sub-default',
     email: 'default@example.com',
@@ -346,6 +349,45 @@ describe('POST /api/newsletter/subscribe', () => {
       }),
       create: expect.any(Object),
     });
+  });
+
+  const signup = (email = 'test@example.com') =>
+    new Request('http://localhost:3000/api/newsletter/subscribe', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-forwarded-for': '192.168.1.1',
+        'user-agent': 'Mozilla/5.0',
+      },
+      body: JSON.stringify({ email, name: 'Test User' }),
+    });
+
+  it('does nothing when the email is already subscribed (no emails, no new tokens)', async () => {
+    mockFindUnique.mockResolvedValueOnce({ isSubscribed: true, isDeleted: false });
+
+    const response = await POST(signup());
+    const data = await response.json();
+
+    // Same answer as a new signup, so the form reveals nothing about who is on the list.
+    expect(response.status).toBe(200);
+    expect(data).toEqual({ success: true });
+    expect(mockUpsert).not.toHaveBeenCalled();
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(mockSendWelcomeEmail).not.toHaveBeenCalled();
+    expect(mockSendAdminNotification).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['unsubscribed earlier', { isSubscribed: false, isDeleted: false }],
+    ['deleted earlier', { isSubscribed: true, isDeleted: true }],
+  ])('lets someone re-subscribe who %s', async (_label, row) => {
+    mockFindUnique.mockResolvedValueOnce(row);
+
+    const response = await POST(signup());
+
+    expect(response.status).toBe(200);
+    expect(mockUpsert).toHaveBeenCalled();
+    expect(mockSendWelcomeEmail).toHaveBeenCalled();
   });
 
   it('should handle email sending errors gracefully', async () => {

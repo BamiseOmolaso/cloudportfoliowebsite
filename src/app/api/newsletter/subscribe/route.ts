@@ -60,6 +60,19 @@ export const POST = withRateLimit(apiLimiter, 'newsletter-subscribe', async (req
     }
   }
 
+  // Already on the list and active: answer exactly as for a new signup (so the
+  // form cannot be used to find out who is subscribed) but change nothing. No
+  // second welcome email, no admin notification, and above all no new tokens:
+  // generating them would silently break the unsubscribe and preferences links
+  // in the email this person already received.
+  const existing = await db.newsletterSubscriber.findUnique({
+    where: { email },
+    select: { isSubscribed: true, isDeleted: true },
+  });
+  if (existing?.isSubscribed && !existing.isDeleted) {
+    return NextResponse.json({ success: true });
+  }
+
   // Generate tokens
   const unsubscribeToken = crypto.randomBytes(32).toString('hex');
   const preferencesToken = crypto.randomBytes(32).toString('hex');
