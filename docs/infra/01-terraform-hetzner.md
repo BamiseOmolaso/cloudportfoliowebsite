@@ -82,6 +82,25 @@ tier is enough for a state file of a few kilobytes.
 State can contain sensitive values. Keep the bucket private and never commit
 state files.
 
+### Which login names does each backend use?
+
+Each backend reads its own variable names. The `AWS_` names in section 6.0 belong
+**only** to the `s3` backend, which we use for Cloudflare R2 because R2 copies
+Amazon's storage protocol. The Hetzner provider uses its own name,
+`HCLOUD_TOKEN`.
+
+| Backend | Where state lives | Login it reads |
+|---|---|---|
+| `s3` (what we use) | Amazon S3, Cloudflare R2, or any S3-compatible storage | `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY` |
+| `azurerm` | Azure storage | `ARM_CLIENT_ID`, `ARM_CLIENT_SECRET`, and others |
+| `gcs` | Google Cloud storage | `GOOGLE_CREDENTIALS` |
+| Terraform Cloud / HCP Terraform | HashiCorp's hosted service | `TF_TOKEN_app_terraform_io` |
+| `http` / GitLab | A web address you control | a username and password you set |
+| `local` | A file on your laptop | none |
+
+If you ever change backend, edit the `backend` block in `backend.tf` and use
+that backend's names. Check its documentation for the current list.
+
 ## 5. Safety features built in
 
 - **Admin-only SSH and Kubernetes API.** The firewall module refuses to accept
