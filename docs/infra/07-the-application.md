@@ -7,9 +7,8 @@ doc puts the website itself on it.
 reaches the cluster, how the database tables get created, where secrets live, and how
 to read each manifest file.
 
-> **Status: written, not yet verified.** Following our rule, nothing here is called
-> "working" until we have seen it work. The verified results go in section 9 after the
-> first deploy.
+> **Status: verified** on `test.oluwabamiseomolaso.com.ng` (section 9). The real domain
+> is not switched over yet, and the visitor-IP limit in section 7 is still open.
 
 ---
 
@@ -203,7 +202,33 @@ traffic from Cloudflare). It **must** be done before the real domain is switched
 | `OOMKilled` | Hit the 512 MiB limit: check `kubectl top pods -A` |
 | Certificate stays `False` | `kubectl -n portfolio describe certificate portfolio-tls` and see doc 04 |
 | ArgoCD shows `OutOfSync` for the Namespace | Harmless: the script created it first; sync once |
+| Migrate Job fails with `P3005 The database schema is not empty` | The database already has tables Prisma did not create (we hit this: the doc 06 `smoke_test` table). Drop the leftovers, or "baseline" a real existing database |
+| Sync hangs on `waiting for completion of hook batch/Job/portfolio-migrate` | A hook Job was deleted by hand mid-sync and is stuck `Terminating` on ArgoCD's finalizer. Remove it: `kubectl -n portfolio patch job portfolio-migrate --type merge -p '{"metadata":{"finalizers":null}}'`, then clear the stale operation: `kubectl -n argocd patch application portfolio --type merge -p '{"operation":null}'`. Better habit: never delete a hook Job by hand; fix the cause and let ArgoCD re-run it |
 
 ## 9. Verified results
 
-*To be filled in after the first deploy.*
+Seen working on 2 October 2026:
+
+| Check | Result |
+|---|---|
+| Migration Job | `Completed` in 7 seconds; **15 tables** created in the `portfolio` database |
+| Website pod | `1/1 Running`, ready in about 130 ms; uses about 40 MiB of memory |
+| ArgoCD | `portfolio`, `postgres`, `root` all `Synced` and `Healthy` |
+| HTTPS certificate | `portfolio-tls` `READY True` about a minute after the sync (Let's Encrypt, via Cloudflare DNS-01) |
+| Live site | `/` , `/blog`, `/admin` and `/api/health` all answer HTTP 200 over HTTPS |
+| Node memory | about 66 percent of 4 GB with ArgoCD, Postgres and the site running |
+
+### What went wrong the first time (and why it is worth reading)
+
+1. **The migration failed with `P3005`.** The database was not empty: it still held the
+   `smoke_test` table from the backup test in doc 06. Prisma refuses to run migrations
+   against a database it did not set up, because it cannot know what is in there. We
+   dropped the test table (it held one test row) and the migration then succeeded.
+   Lesson: a database meant for the app should hold nothing else.
+2. **The sync then hung.** We had deleted the failed Job by hand while ArgoCD was
+   waiting on it. ArgoCD puts a finalizer on hook Jobs and kept waiting for a Job that
+   could not finish deleting. Clearing the finalizer and the stale operation fixed it
+   (commands in section 8).
+3. **`kubectl` timed out** before any of this: our home IP had changed again. This is the
+   known limit of the allow-list; see `runbooks/01-my-ip-changed.md` and the WireGuard
+   plan in the TODO list.
