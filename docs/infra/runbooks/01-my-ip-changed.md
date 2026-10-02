@@ -45,6 +45,10 @@ nc -z -G 5 <server-ip> 22  && echo "ssh: open" || echo "ssh: blocked"
 If the first IP is **not** in the second list, and port 443 is open while 22 is blocked,
 this is your problem.
 
+**Try three times before you conclude anything.** A single timeout can be a brief network
+blip (we saw one that cleared on its own). Run `kubectl get nodes` three times a few seconds
+apart: if it works at least once, the firewall is fine and the network was flaky.
+
 (A timeout means packets are being dropped silently. A **refusal** such as
 `Connection refused` is a different problem: it means something answered and said no.)
 

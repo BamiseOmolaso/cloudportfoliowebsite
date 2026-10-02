@@ -11,8 +11,9 @@ honest: it is the shared memory of the project.
 
 - [~] **Postgres: finish verifying** (doc 06): first backup lands in R2, restore test
   passes, data survives a pod crash, the network policy blocks other namespaces.
-  *Open issue:* the first manual backup failed with `Connection refused` from the backup
-  pod to `postgres:5432`; to be diagnosed.
+  The first manual backup failed with `Connection refused` (a new-pod network-policy gap);
+  fixed by making the jobs wait for the database. Re-run the backup and the restore test
+  to confirm.
 - [ ] **Application deployment** (doc 07): build the image, push it to a registry (GitHub's
   container registry), deploy through ArgoCD into a `portfolio` namespace, connect to
   Postgres, set up the real client-IP header from Cloudflare.

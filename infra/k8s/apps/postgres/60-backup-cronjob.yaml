@@ -45,6 +45,15 @@ spec:
               args:
                 - |
                   set -eu
+                  # The network policy takes a moment to learn about a brand-new pod, so
+                  # connections in its first second or two are refused. Wait until the
+                  # database is reachable (up to 2 minutes) before doing anything.
+                  tries=0
+                  until pg_isready --host=postgres --username=postgres --quiet; do
+                    tries=$((tries + 1))
+                    if [ "$tries" -ge 60 ]; then echo "database not reachable after 2 minutes"; exit 1; fi
+                    sleep 2
+                  done
                   ts="$(date -u +%Y%m%dT%H%M%SZ)"
                   # Roles and their settings (not part of a single-database dump).
                   pg_dumpall --host=postgres --username=postgres --globals-only > "/backup/globals-${ts}.sql"
