@@ -1,0 +1,25 @@
+# The "root" application: the ONE thing you apply by hand. It watches the folder
+# infra/k8s/argocd/applications and creates an Application for every file in it
+# (the "app of apps" pattern). From then on, adding an app is just adding a file in git.
+#
+#   kubectl apply -f infra/k8s/argocd/root-app.yaml
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: root
+  namespace: argocd
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/BamiseOmolaso/cloudportfoliowebsite.git
+    targetRevision: develop
+    path: infra/k8s/argocd/applications
+    directory:
+      recurse: false
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: argocd
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
