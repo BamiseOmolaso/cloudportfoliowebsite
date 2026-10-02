@@ -183,11 +183,12 @@ describe("RateLimiter", () => {
 
     it("should use Redis when available", async () => {
       const mockMulti: any = redisMock.multi();
+      // The `redis` package returns plain replies, in command order.
       mockMulti.exec.mockResolvedValue([
-        [null, 0], // zRemRangeByScore result
-        [null, 0], // zCard result (count before adding)
-        [null, 1], // zAdd result
-        [null, 1], // expire result
+        0, // zRemRangeByScore result
+        0, // zCard result (count before adding)
+        1, // zAdd result
+        true, // expire result
       ]);
 
       const result = await limiter.check("test-identifier");
@@ -202,10 +203,10 @@ describe("RateLimiter", () => {
       const mockMulti: any = redisMock.multi();
       // Simulate 5 requests already in window
       mockMulti.exec.mockResolvedValue([
-        [null, 0],
-        [null, 5], // Already at limit
-        [null, 1],
-        [null, 1],
+        0,
+        5, // Already at limit
+        1,
+        true,
       ]);
 
       const result = await limiter.check("test-identifier");
