@@ -427,12 +427,48 @@ Expect `no response`. (From the `postgres` namespace's backup pods it works; fro
 | `initdb: error: directory exists but is not empty` | Something is already inside `/srv/data/postgres`. Inspect it before deleting anything |
 | App login or database missing | The init script only runs on an **empty** data folder. If the folder had data, it was skipped (see section 10 to fix by hand) |
 | Pod `OOMKilled` | Hit the 512 Mi ceiling: look at `kubectl top pods -n postgres`; lower `shared_buffers` or raise the limit |
+| Backup or restore pod fails at once with `Connection refused` to `postgres:5432` | **The new-pod gap** (see "A problem we hit" below). The jobs now wait for the database; if you still see it, check the `app=db-backup` label |
 | Backup pod `Init:Error` | The dump failed: read `kubectl logs ... -c dump`. `connection timed out` usually means the pod lacks the `app=db-backup` label; `password authentication failed` means the Secret differs from the real password |
 | Backup `upload` fails with `AccessDenied` / `403` | The R2 key lacks Object Read & Write on **this** bucket, or the endpoint is wrong |
 | Upload fails with a checksum or `Content-MD5` error | The two `AWS_*_CHECKSUM` settings in the job (they are there for this reason) |
 | `ImagePullBackOff` | The image tag is wrong, or the server cannot reach Docker Hub |
 | ArgoCD `postgres` app `OutOfSync` or `Sync failed` | `kubectl -n argocd describe application postgres`. A `not permitted` message means the `portfolio` project does not allow it: check `00-project.yaml` |
 | Restore test fails at `pg_restore` | Read the error above `RESTORE TEST PASSED`'s absence; an empty or corrupt dump is exactly what this test exists to catch |
+
+### A problem we hit: "Connection refused" from the backup pod
+
+The first manual backup failed three times in a row with
+`pg_dumpall: connection to server at "postgres" ... port 5432 failed: Connection refused`,
+even though the database was healthy. This is a good example of narrowing a problem
+down, so here is how it went:
+
+| What we checked | Result | What it ruled out |
+|---|---|---|
+| Is Postgres running and ready? | Yes: `1/1 Running`, no restarts | The database itself |
+| Is it listening on the network? | `listen_addresses = *` | A "localhost only" setting |
+| Does the Service point at the right pod? | Yes, same IP (`10.42.0.25`) | A DNS or Service mistake |
+| Do the backup pods have the label `app=db-backup`? | Yes | A missing label |
+| Test from a labelled pod **with a temporary allow-everything policy** | `accepting connections` | Proved the **network policy** was the blocker |
+| Test with only a label rule | Blocked | The rule text was not the problem |
+| Test with an **address-based** rule (`ipBlock`) | `accepting connections` | The policy engine works |
+| Test from a pod that had been **running for a few seconds**, real policies | `accepting connections` | The rule is right; **brand-new pods are blocked at first** |
+
+**The cause:** the network layer takes a second or two to learn about a **new pod** and
+its labels. During that moment its connections are refused. The backup pod's first action
+is to connect, immediately, so it fell into the gap, and its automatic retries (each a
+new pod) did the same.
+
+**The fix:** the backup and restore jobs now **wait until the database is reachable**
+(`pg_isready` in a loop, up to two minutes) before doing anything. That also makes them
+robust whenever Postgres is briefly restarting.
+
+**Lessons:**
+- A refusal (`Connection refused`) from a pod to a pod is often a **network policy**, not a
+  stopped service. A quick test is to add a temporary allow-everything policy: if it works
+  then, the policy is the cause. **Delete the temporary policy straight away.**
+- Test with a long-lived pod, not only a short-lived one, to separate "rule is wrong"
+  from "rule is not yet in effect".
+- Anything that connects to a locked-down service at start-up should **retry**.
 
 ## 10. Things to know
 

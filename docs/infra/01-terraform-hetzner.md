@@ -406,7 +406,7 @@ approval after a merge.
 | `invalid token` from Hetzner | `HCLOUD_TOKEN` unset in this shell, or the token is read-only |
 | `server type … not found` / deprecated | Re-run the API call in 6.2 and pick a current type |
 | `admin_cidrs must be a non-empty list…` | You used `0.0.0.0/0` or left it empty |
-| SSH times out | Your IP changed; update `admin_cidrs` and apply |
+| SSH or `kubectl` times out | Your IP changed. Follow the runbook `docs/infra/runbooks/01-my-ip-changed.md`: add the new IP to `admin_cidrs` and apply |
 | CI plan: `Authentication failed (code 9106)` from Cloudflare | The `CLOUDFLARE_API_TOKEN` secret in GitHub is wrong or has a stray character. Re-set it from the Keychain (see "The first CI run") |
 | CI plan: every secret empty in the log | The repository secrets and variables are not set yet |
 | `Error acquiring the state lock` | Another run is in progress, or one was killed; wait, then investigate before forcing |
