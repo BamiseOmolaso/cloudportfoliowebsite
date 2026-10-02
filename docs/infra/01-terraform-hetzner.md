@@ -100,6 +100,50 @@ state files.
 
 ## 6. One-time setup (you do these)
 
+### 6.0 Give your terminal the secrets (do this every time you open a new terminal)
+
+Terraform needs three secrets. You never write them in a file or in the code.
+Instead you hand them to your terminal, and Terraform reads them from there.
+
+The commands below are for **bash**, which is what the Mac terminal shows
+(the prompt looks like `MacBook-Pro:folder user$`). Run them one at a time. After
+each one, the terminal waits for you: **paste the secret (nothing shows on
+screen, that is normal) and press Enter.**
+
+```bash
+read -rsp "Paste Hetzner token: " HCLOUD_TOKEN; echo; export HCLOUD_TOKEN
+read -rsp "Paste R2 access key ID: " AWS_ACCESS_KEY_ID; echo; export AWS_ACCESS_KEY_ID
+read -rsp "Paste R2 secret access key: " AWS_SECRET_ACCESS_KEY; echo; export AWS_SECRET_ACCESS_KEY
+```
+
+Check one is set without showing it:
+
+```bash
+[ -n "$HCLOUD_TOKEN" ] && echo set
+```
+
+You should see `set`. If you see nothing, it is not set.
+
+Things to know:
+
+- **They only live in that one terminal window.** Open a new window or tab and
+  you must paste them again. Closing the window forgets them. That is a
+  feature: nothing sits on disk.
+- **Keep the name `HCLOUD_TOKEN` exactly.** The code never contains the token;
+  the Hetzner provider looks for a variable with that exact name. You only
+  supply the value.
+- **Why do the R2 keys have "AWS" in their names?** Terraform stores its state
+  using a method originally built for Amazon's storage (S3), and it looks for
+  login details under those names. Cloudflare R2 copies that method, so we
+  paste the *Cloudflare* keys under the AWS-looking names. No Amazon account is
+  involved. If you ever have real AWS keys loaded in the same window, they
+  would clash, so use a fresh window.
+- **If a secret ever leaks** (pasted in chat, committed to git), delete it in
+  the Hetzner or Cloudflare dashboard and create a new one.
+- **Later, to avoid retyping:** store them in the macOS Keychain and load them
+  with a small helper in `~/.bash_profile`. We will add this once the basics
+  work.
+
 ### 6.1 Cloudflare R2 bucket for state
 1. Cloudflare dashboard → **R2 Object Storage** → enable it (it asks for a
    payment method but the free allowance covers this).
@@ -147,9 +191,7 @@ Both files are git-ignored. `ssh_public_key` is the **contents** of
 Always do the first run by hand so you see every step.
 
 ```bash
-export HCLOUD_TOKEN="…"                   # your Hetzner token
-export AWS_ACCESS_KEY_ID="…"              # R2 access key (the S3 backend uses these names)
-export AWS_SECRET_ACCESS_KEY="…"          # R2 secret key
+# First do 6.0 in this same terminal window (the three secrets).
 
 cd infra/terraform/envs/prod
 terraform init -backend-config=backend.hcl
