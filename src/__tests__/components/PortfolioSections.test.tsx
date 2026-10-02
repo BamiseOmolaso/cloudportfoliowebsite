@@ -11,6 +11,7 @@ import Incidents from "@/components/portfolio/Incidents";
 import Patterns from "@/components/portfolio/Patterns";
 import TerraformJourney from "@/components/portfolio/TerraformJourney";
 import PipelineDemo from "@/components/portfolio/PipelineDemo";
+import Contact from "@/components/portfolio/Contact";
 import { pipeline } from "@/content/portfolio";
 
 beforeAll(() => {
@@ -81,5 +82,14 @@ describe("PipelineDemo", () => {
       jest.runAllTimers();
     });
     expect(screen.queryAllByText(/fail/i).length).toBeGreaterThan(0);
+  });
+});
+
+describe("Contact", () => {
+  it("links to the full contact form page", () => {
+    render(<Contact />);
+    expect(
+      screen.getByRole("link", { name: "Send a message" }),
+    ).toHaveAttribute("href", "/contact");
   });
 });

@@ -430,6 +430,9 @@ export const contact = {
   body: "Open to cloud engineering and DevSecOps roles, and to client work on security-conscious systems or healthcare data science.",
   copyLabel: "Copy email",
   copiedLabel: "Copied",
+  // The full contact form lives on its own page.
+  formLabel: "Send a message",
+  formHref: "/contact",
   links: [
     { label: "LinkedIn", href: profile.links.linkedin },
     { label: "GitHub", href: profile.links.github },

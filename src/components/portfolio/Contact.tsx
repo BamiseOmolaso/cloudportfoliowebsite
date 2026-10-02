@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRef, useState } from "react";
 import { contact, profile } from "@/content/portfolio";
 
@@ -43,6 +44,9 @@ export default function Contact() {
                 ? "Press Ctrl+C"
                 : contact.copyLabel}
           </button>
+          <Link className="btn" href={contact.formHref}>
+            {contact.formLabel}
+          </Link>
         </div>
         <div className="links">
           {contact.links.map((l) => (
