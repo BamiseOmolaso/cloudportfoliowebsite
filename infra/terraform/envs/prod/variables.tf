@@ -24,3 +24,9 @@ variable "volume_size_gb" {
   type        = number
   default     = 10
 }
+
+variable "protect" {
+  description = "Delete and rebuild protection on the server and data volume. Leave true; turn off only briefly to replace the server (see docs/infra/01-terraform-hetzner.md, section 12)."
+  type        = bool
+  default     = true
+}

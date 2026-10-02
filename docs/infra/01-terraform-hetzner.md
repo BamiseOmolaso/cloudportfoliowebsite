@@ -396,3 +396,50 @@ for any variable.
 
 `02` Ansible: harden the server (users, SSH, automatic updates), mount the
 data volume, and install k3s.
+
+## 12. Lost your SSH key or passphrase: replacing the server
+
+**What happened to us:** we forgot the passphrase of the new key right after the
+first apply. A passphrase cannot be recovered by anyone, so the key was
+useless.
+
+**Why we can't just swap the key in Terraform:** Hetzner installs your public key
+on the server only when it is *created*. The server module deliberately has
+`ignore_changes = [ssh_keys]`, so editing the key later does nothing to a
+running server. (That protection exists so a small edit can never wipe a
+machine.) The clean fix is to replace the server. Do this only while the server
+holds nothing you can't recreate. The data volume is not deleted by this.
+
+**Steps**
+
+1. Set aside the old key and make a new one. Put the passphrase in your password
+   manager *immediately*:
+   ```bash
+   mv ~/.ssh/hetzner_portfolio ~/.ssh/hetzner_portfolio.lost
+   mv ~/.ssh/hetzner_portfolio.pub ~/.ssh/hetzner_portfolio.lost.pub
+   ssh-keygen -t ed25519 -f ~/.ssh/hetzner_portfolio -C "hetzner-portfolio"
+   ```
+2. Put the new public key (the contents of `hetzner_portfolio.pub`) into
+   `ssh_public_key` in `terraform.tfvars`.
+3. The server has delete and rebuild protection, so Terraform cannot replace it.
+   Turn protection off, as its own step:
+   ```bash
+   terraform apply -var protect=false
+   ```
+   Read the plan: it should show only protection flags changing on the server
+   and volume, plus the SSH key being replaced.
+4. Replace the server, and turn protection back on in the same step:
+   ```bash
+   terraform apply -replace=module.server.hcloud_server.this
+   ```
+   Read the plan: the old server is destroyed and a new one created. The data
+   volume is only detached and re-attached, never destroyed.
+5. The new server has a new fingerprint and may get a new IP. If SSH warns about
+   a changed host key, remove the stale entry:
+   ```bash
+   ssh-keygen -R <old-ip>
+   ```
+6. Check you can log in: `ssh -i ~/.ssh/hetzner_portfolio root@<new-ip>`.
+
+**Prevent it next time:** store the passphrase in a password manager the moment
+you create it, and test the login once before building anything on the server.

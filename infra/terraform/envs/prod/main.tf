@@ -48,6 +48,7 @@ module "server" {
   location       = var.location
   network_id     = module.network.network_id
   volume_size_gb = var.volume_size_gb
+  protect        = var.protect
   labels         = local.labels
 
   # Ensure the subnet exists before the server tries to attach to it.
