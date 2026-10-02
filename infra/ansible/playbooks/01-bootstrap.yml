@@ -1,0 +1,13 @@
+---
+# Step 1 - run as root (the only account that exists on a new server):
+#   ansible-playbook playbooks/01-bootstrap.yml -u root
+#
+# Creates the admin user, installs updates and brute-force protection, and
+# mounts the data disk. It does NOT touch SSH settings, so root login keeps
+# working until you have proven the admin login works (see 02-lock-ssh.yml).
+- name: Bootstrap the node
+  hosts: k8s_nodes
+  become: true
+  roles:
+    - base
+    - data_volume

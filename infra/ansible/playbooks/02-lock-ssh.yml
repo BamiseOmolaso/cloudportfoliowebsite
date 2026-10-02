@@ -1,0 +1,21 @@
+---
+# Step 2 - run as the ADMIN user, never as root:
+#   ansible-playbook playbooks/02-lock-ssh.yml -u bamise
+#
+# Because this connects as the admin user, it can only run if the admin login
+# already works. That is the safety net against locking yourself out.
+- name: Lock down SSH
+  hosts: k8s_nodes
+  become: true
+  pre_tasks:
+    - name: Make sure the admin user and its key exist before removing other ways in
+      ansible.builtin.stat:
+        path: "/home/{{ admin_user }}/.ssh/authorized_keys"
+      register: admin_keys
+
+    - name: Stop if the admin login is not set up
+      ansible.builtin.assert:
+        that: admin_keys.stat.exists
+        fail_msg: "{{ admin_user }} has no authorized_keys. Run 01-bootstrap.yml first."
+  roles:
+    - ssh_hardening

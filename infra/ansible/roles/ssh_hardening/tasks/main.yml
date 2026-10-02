@@ -1,0 +1,40 @@
+---
+# If anything below fails, the new file is removed and sshd is never reloaded,
+# so a mistake cannot leave you with a half-applied, broken SSH config.
+- name: Apply the SSH settings safely
+  block:
+    # sshd uses the FIRST value it finds for a setting. Files in sshd_config.d
+    # are read in alphabetical order, so "00-" makes ours win over the cloud
+    # image's own file (which allowed password login).
+    - name: Write the hardening settings
+      ansible.builtin.copy:
+        dest: /etc/ssh/sshd_config.d/00-hardening.conf
+        content: |
+          # Managed by Ansible.
+          PasswordAuthentication no
+          KbdInteractiveAuthentication no
+          PermitRootLogin no
+          PubkeyAuthentication yes
+          MaxAuthTries 3
+          X11Forwarding no
+        owner: root
+        group: root
+        mode: "0644"
+
+    - name: Check that sshd accepts the full configuration
+      ansible.builtin.command: sshd -t
+      changed_when: false
+
+    - name: Reload sshd (existing sessions stay connected)
+      ansible.builtin.service:
+        name: ssh
+        state: reloaded
+  rescue:
+    - name: Remove the new settings because they did not validate
+      ansible.builtin.file:
+        path: /etc/ssh/sshd_config.d/00-hardening.conf
+        state: absent
+
+    - name: Fail loudly
+      ansible.builtin.fail:
+        msg: "sshd rejected the new settings. They were removed and sshd was not reloaded."

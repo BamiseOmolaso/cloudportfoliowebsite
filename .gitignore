@@ -77,3 +77,6 @@ redis_data/
 infra/terraform/envs/*/backend.hcl
 infra/terraform/envs/*/terraform.tfvars
 infra/terraform/envs/*/*.tfplan
+
+# Ansible: the real inventory holds the server address
+infra/ansible/inventory/hosts.yml

@@ -1,0 +1,10 @@
+# The named account you will use instead of root.
+admin_user: bamise
+admin_public_key_file: ~/.ssh/hetzner_portfolio.pub
+admin_public_key: "{{ lookup('ansible.builtin.file', admin_public_key_file) }}"
+
+# Where the Postgres data disk is mounted.
+data_mount_path: /srv/data
+
+# Addresses fail2ban must never ban (your own IP, as plain addresses).
+fail2ban_ignore_ips: []
