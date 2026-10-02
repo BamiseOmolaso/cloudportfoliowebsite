@@ -434,11 +434,17 @@ holds nothing you can't recreate. The data volume is not deleted by this.
    ```
    Read the plan: the old server is destroyed and a new one created. The data
    volume is only detached and re-attached, never destroyed.
-5. The new server has a new fingerprint and may get a new IP. If SSH warns about
-   a changed host key, remove the stale entry:
+5. The new server has a new identity (host key). Even though it kept the **same
+   IP** in our run, SSH printed `WARNING: REMOTE HOST IDENTIFICATION HAS CHANGED!`
+   because the Mac had saved the old server's identity in `~/.ssh/known_hosts`
+   when we first tried to connect. This is expected after a rebuild, not an attack:
+   we replaced the machine ourselves. Remove the stale entry and reconnect:
    ```bash
-   ssh-keygen -R <old-ip>
+   ssh-keygen -R <ip>
    ```
+   Then SSH asks you to trust the new host: type `yes`.
+   **If you see this warning and you have NOT just rebuilt the server, do not
+   clear it. That is exactly the situation the warning exists to catch.**
 6. Check you can log in: `ssh -i ~/.ssh/hetzner_portfolio root@<new-ip>`.
 
 **What the two plans should look like (from our real run)**
