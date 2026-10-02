@@ -102,7 +102,7 @@ state files.
 
 ### 6.0 Give your terminal the secrets (do this every time you open a new terminal)
 
-Terraform needs three secrets. You never write them in a file or in the code.
+Terraform needs three secrets (Hetzner token, R2 key ID, R2 secret). You never write them in a file or in the code.
 Instead you hand them to your terminal, and Terraform reads them from there.
 
 The commands below are for **bash**, which is what the Mac terminal shows
@@ -112,8 +112,8 @@ screen, that is normal) and press Enter.**
 
 ```bash
 read -rsp "Paste Hetzner token: " HCLOUD_TOKEN; echo; export HCLOUD_TOKEN
-read -rsp "Paste R2 access key ID: " AWS_ACCESS_KEY_ID; echo; export AWS_ACCESS_KEY_ID
-read -rsp "Paste R2 secret access key: " AWS_SECRET_ACCESS_KEY; echo; export AWS_SECRET_ACCESS_KEY
+read -rsp "Paste R2 access key ID: " R2_ACCESS_KEY_ID; echo; export R2_ACCESS_KEY_ID
+read -rsp "Paste R2 secret access key: " R2_SECRET_ACCESS_KEY; echo; export R2_SECRET_ACCESS_KEY
 ```
 
 **What does that line mean?** Take the first one and read it in pieces. The
@@ -161,12 +161,15 @@ Things to know:
 - **Keep the name `HCLOUD_TOKEN` exactly.** The code never contains the token;
   the Hetzner provider looks for a variable with that exact name. You only
   supply the value.
-- **Why do the R2 keys have "AWS" in their names?** Terraform stores its state
-  using a method originally built for Amazon's storage (S3), and it looks for
-  login details under those names. Cloudflare R2 copies that method, so we
-  paste the *Cloudflare* keys under the AWS-looking names. No Amazon account is
-  involved. If you ever have real AWS keys loaded in the same window, they
-  would clash, so use a fresh window.
+- **Check the key lengths.** The R2 key ID is 32 characters and the secret is
+  64. Check with `echo ${#R2_ACCESS_KEY_ID} ${#R2_SECRET_ACCESS_KEY}`: you
+  should see `32 64`. A different length means the wrong value was pasted.
+- **Always run Terraform through `tf.sh`, not plain `terraform`.** Terraform's
+  storage method was built for Amazon and only understands variable names
+  starting with `AWS_`. Cloudflare R2 copies that method, so the script takes
+  your clearly-named `R2_` values and hands them to Terraform under the names it
+  wants, for that one command only. It also checks the lengths and clears any
+  real Amazon login loaded in the terminal. No Amazon account is involved.
 - **If a secret ever leaks** (pasted in chat, committed to git), delete it in
   the Hetzner or Cloudflare dashboard and create a new one.
 - **Later, to avoid retyping:** store them in the macOS Keychain and load them
@@ -223,8 +226,8 @@ Always do the first run by hand so you see every step.
 # First do 6.0 in this same terminal window (the three secrets).
 
 cd infra/terraform/envs/prod
-terraform init -backend-config=backend.hcl
-terraform plan
+../../tf.sh init -backend-config=backend.hcl
+../../tf.sh plan
 ```
 
 **Read the plan.** Expected: 7 resources to add (network, subnet,
@@ -232,18 +235,18 @@ firewall, SSH key, server, volume, volume attachment) and nothing to change or
 destroy. If you see destroys, stop.
 
 ```bash
-terraform apply
+../../tf.sh apply
 ```
 
 Type `yes` when prompted. Afterwards:
 
 ```bash
-terraform output server_ipv4
-ssh -i ~/.ssh/hetzner_portfolio root@$(terraform output -raw server_ipv4)
+../../tf.sh output server_ipv4
+ssh -i ~/.ssh/hetzner_portfolio root@$(../../tf.sh output -raw server_ipv4)
 ```
 
 ### How to know it worked
-- `terraform output` prints an IPv4 address.
+- `../../tf.sh output` prints an IPv4 address.
 - SSH logs you in as root.
 - In the Hetzner console you see the server, the firewall attached to it, and
   the volume attached.
