@@ -13,9 +13,10 @@ honest: it is the shared memory of the project.
   network policy all confirmed. Still to rehearse: a restore into the live database, and
   a restore after a full server rebuild.
 - [x] **Application deployment** (doc 07): verified on the test hostname.
-- [ ] **Real visitor IP** (doc 07, section 7): app change and Cloudflare-only firewall are
-  written; verify after `terraform apply`, then fill in doc 07 section 9. Still to test:
-  contact form email and Redis rate limiting end to end. Must be done before the cut-over.
+- [x] **Real visitor IP** (doc 07, section 7): verified. Web ports are Cloudflare-only and
+  the app records the real address.
+- [ ] **Test end to end on the test site**: contact form email arrives, newsletter signup
+  email, Redis rate limiting actually blocks after the limit. Do before the cut-over.
 - [ ] **Monitoring** (doc 08): Prometheus and Grafana. Watch node memory (about 57% used
   before monitoring); a larger server type may be needed.
 - [ ] **Cut over the real domain**: point the root domain at the new site, redirect the

@@ -217,9 +217,7 @@ app without Cloudflare (local development).
   adds a range, the next plan shows it. Run a plan occasionally.
 - Visiting the server's IP address directly no longer works. That is intended.
 
-> **Status: written, to be verified after `terraform apply`.** Verification (section 9)
-> will show: a request through the domain records the real address, and a request
-> straight to the server IP times out.
+> **Status: verified** (section 9).
 
 ## 8. When things go wrong
 
@@ -262,3 +260,18 @@ Seen working on 2 October 2026:
 3. **`kubectl` timed out** before any of this: our home IP had changed again. This is the
    known limit of the allow-list; see `runbooks/01-my-ip-changed.md` and the WireGuard
    plan in the TODO list.
+
+### The visitor IP fix (3 October 2026)
+
+| Check | Result |
+|---|---|
+| Terraform plan | `0 to add, 1 to change, 0 to destroy`: only the HTTP and HTTPS rules changed, to 22 Cloudflare ranges (15 IPv4, 7 IPv6). SSH and the Kubernetes API rules were not in the plan |
+| Site through the domain | `/`, `/blog`, `/api/health` all HTTP 200 after the apply |
+| Server reached directly by IP | HTTPS and HTTP both **time out** (curl exit 28) |
+| SSH and `kubectl` | Still work (admin rules untouched) |
+| Real visitor address recorded | An invalid newsletter signup writes a row to `failed_attempts`. The row held the public IP of the machine that sent the request (it matched `curl -4 https://ifconfig.me`), not the cluster address `10.42.0.1`. The test row was deleted afterwards |
+
+**How to repeat the last check:** send one request with an invalid email to
+`/api/newsletter/subscribe`, read the newest `failed_attempts` row, compare its
+`ip_address` to `curl -4 https://ifconfig.me`, then delete the row. (Do not paste your
+own address into the docs: this repository is public.)
