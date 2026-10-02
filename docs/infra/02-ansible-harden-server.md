@@ -38,8 +38,9 @@ Terraform builds the house; Ansible furnishes it. Neither replaces the other.
 infra/ansible/
 ├─ ansible.cfg
 ├─ requirements.yml            extra module collection we need
-├─ inventory/hosts.example.yml copy to hosts.yml (git-ignored) with your server
-├─ group_vars/all.yml          settings: admin user name, mount path, ...
+├─ inventory/
+│  ├─ hosts.example.yml        copy to hosts.yml (git-ignored) with your server
+│  └─ group_vars/all.yml       settings: admin user name, mount path, ...
 ├─ playbooks/
 │  ├─ 01-bootstrap.yml         run as root: user, updates, fail2ban, disk
 │  └─ 02-lock-ssh.yml          run as the admin user: turn off passwords/root
@@ -202,6 +203,7 @@ idempotence, and it proves nothing drifted.
 
 | Symptom | Likely cause |
 |---|---|
+| `'admin_user' is undefined` | `group_vars` must sit next to the **inventory** (`inventory/group_vars/`) or next to the playbook. Ours had been put at the top level, where Ansible never looks. Fixed by moving it |
 | `Permission denied (publickey)` on ping | Key not loaded in the agent: run the `ssh-add` line in section 6 |
 | Hangs asking for a passphrase | Same: Ansible cannot type it; use the agent |
 | `Host key verification failed` | The server was rebuilt; see doc 01, section 12 |
