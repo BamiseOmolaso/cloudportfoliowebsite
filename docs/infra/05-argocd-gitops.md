@@ -172,9 +172,17 @@ Check the memory again:
 kubectl top nodes
 ```
 
-ArgoCD adds some memory. If the server gets tight later, the unused pieces can be
-switched off: `kubectl -n argocd scale deploy argocd-dex-server
-argocd-notifications-controller --replicas=0`. Leave them on for now.
+**What we measured:** before ArgoCD the node used about **1.0 GB of 4 GB** (26%); after
+it, about **2.1 GB** (54%). So ArgoCD costs roughly **1 GB**, which leaves about
+1.8 GB for Postgres, the app and monitoring. That is workable but not roomy.
+
+If the server gets tight, there are two levers:
+
+- Switch off the unused pieces: `kubectl -n argocd scale deploy argocd-dex-server
+  argocd-notifications-controller --replicas=0`, then check `kubectl top nodes` to see
+  what it saved.
+- Move to a larger server type (a small Terraform change with a short reboot; check the
+  price first).
 
 ## 6. Open the dashboard
 
@@ -225,6 +233,11 @@ recreate it).
 Check the page: `curl -I https://test.oluwabamiseomolaso.com.ng/` should return `HTTP/2
 200`. (A new certificate can take a minute or two.)
 
+**What we saw:** `kubectl -n argocd get applications` listed `hello` and `root`, both
+`Synced` and `Healthy`. All seven ArgoCD pods were `1/1 Running`. The `hello` Application
+reported the revision of the merge commit on `develop` (so ArgoCD really deploys what is
+in git), its certificate was `True`, and the page answered `200` through Cloudflare.
+
 ## 8. Watch GitOps work
 
 These three experiments are the point of the whole doc.
@@ -236,9 +249,16 @@ kubectl -n hello scale deploy hello --replicas=3
 kubectl -n hello get pods -w
 ```
 
-You will see extra pods appear, then ArgoCD notice the difference and scale back down
-to 1 within a minute or so (`selfHeal`). In the dashboard the `hello` tile briefly
-turns **OutOfSync**, then **Synced** again.
+Extra pods appear, then ArgoCD notices the difference and scales back to 1
+(`selfHeal`). In the dashboard the `hello` tile briefly turns **OutOfSync**, then
+**Synced** again.
+
+**What we saw:** the heal was **almost instant**. The cluster's event log showed the
+scale-up to 3 and, **two seconds later**, the scale-down to 1 with the extra pods
+deleted. ArgoCD's sync was recorded as `Succeeded` and took about a second. By the time
+we ran `kubectl get pods -w`, the extra pods were already gone, so we saw only one. To
+see the pods yourself, check the events instead:
+`kubectl -n hello get events --sort-by=.lastTimestamp`.
 
 ### 8.2 A change through git
 
@@ -246,6 +266,24 @@ Edit `infra/k8s/apps/hello/hello.yaml`: change `replicas: 1` to `replicas: 2`, o
 pull request, merge it to `develop`. After ArgoCD's next poll (up to about three
 minutes, or press **Refresh** in the dashboard) there are two pods. Nobody ran
 `kubectl`. Revert it the same way.
+
+**What we saw** (times in UTC, 2 October):
+
+| Time | Event |
+|---|---|
+| 18:12:50 | Pull request merged to `develop` |
+| 18:14:11 | ArgoCD synced: **81 seconds** after the merge |
+| 18:14:12 | The second pod was created |
+| 18:18:29 | The revert pull request was merged |
+| 18:19:02 | ArgoCD synced: **33 seconds** after the merge, back to one pod |
+
+ArgoCD reported the revision it deployed as the merge commit itself, which is the proof
+that what runs is exactly what is in git. The delay varies between about half a minute
+and three minutes because ArgoCD polls on a timer; **Refresh** (or a webhook, which we
+may add later) removes the wait.
+
+The two "experiment" pull requests are in the repository history as a worked example of
+a change and its revert.
 
 ### 8.3 Pruning: delete through git
 
