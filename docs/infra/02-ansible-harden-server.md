@@ -146,9 +146,20 @@ First a **dry run**. `--check` shows what *would* change without changing it, an
 ansible-playbook playbooks/01-bootstrap.yml -u root --check --diff
 ```
 
-(Some tasks cannot be predicted in a dry run on a brand-new server, for example
-starting a service for a package that is not installed yet. A few errors there
-are normal; a real run is fine.) Then the real run:
+**A dry-run trap we hit:** on a brand-new server the package list is empty, and in
+`--check` mode Ansible does not really refresh it. So the dry run failed with
+`No package matching 'fail2ban' is available`. That is a limit of dry runs, not
+a mistake in the playbook: in a real run the refresh happens first. To let the
+dry run get further, refresh the list once for real (harmless, changes no
+settings), then dry-run again:
+
+```bash
+ansible all -u root -m apt -a "update_cache=yes"
+```
+
+Dry runs also cannot predict tasks that depend on a package they did not really
+install, such as starting its service. A few such errors are normal. Then the
+real run:
 
 ```bash
 ansible-playbook playbooks/01-bootstrap.yml -u root
