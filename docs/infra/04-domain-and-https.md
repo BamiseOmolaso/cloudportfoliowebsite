@@ -511,5 +511,6 @@ Nothing. Let's Encrypt, Cloudflare's free plan and cert-manager are free.
 
 ## 11. What comes next
 
-`05` PostgreSQL on the data disk (with backups), then the app, then the cut-over of
-the real domain, then ArgoCD and monitoring.
+`05` ArgoCD and GitOps (so everything after this is deployed from git), then `06`
+PostgreSQL on the data disk with backups, then the app, monitoring, and the cut-over
+of the real domain.

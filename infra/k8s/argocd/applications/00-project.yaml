@@ -1,0 +1,22 @@
+# An AppProject is a fence around what applications may do. Ours may only read this
+# repository and only deploy into the namespaces listed. When you add an app that
+# needs a new namespace, add it to `destinations` here (a reviewed change in git).
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: portfolio
+  namespace: argocd
+  annotations:
+    # Sync this before the applications that use it (lower numbers first).
+    argocd.argoproj.io/sync-wave: "-1"
+spec:
+  description: The portfolio platform
+  sourceRepos:
+    - https://github.com/BamiseOmolaso/cloudportfoliowebsite.git
+  destinations:
+    - server: https://kubernetes.default.svc # this cluster
+      namespace: hello
+  # Applications may create Namespaces (and nothing else cluster-wide).
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
