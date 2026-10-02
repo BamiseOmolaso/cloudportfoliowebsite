@@ -524,10 +524,13 @@ Step 4 (`-replace=...`), summary `2 to add, 1 to change, 2 to destroy`:
   destroyed. If a plan ever shows the volume being destroyed, **stop**.
 - the server's IPv4 and IPv6 addresses change (`(known after apply)`).
 
-**A harmless oddity:** the plan shows the server's `network { ... }` and
-`public_net { ... }` blocks removed and added back with the same values. That is
-how the Hetzner provider lists those blocks and is not a real change. It does not
-create or delete anything.
+**An oddity we later fixed:** the plan shows the server's `network { ... }` block
+removed and added back with the same values. It is only how the Hetzner provider
+reports the block, but it appeared in **every** plan, which hides real changes and
+could detach and re-attach the private network. We fixed the cause by adding
+`network` to the server's `ignore_changes` list (see the comment in
+`modules/server/main.tf`). After the fix a plan with no real changes says
+`No changes`.
 
 **Why replace instead of fixing the old server?** The alternative is to reset the
 root password in the Hetzner web console and add the new key by hand. That works

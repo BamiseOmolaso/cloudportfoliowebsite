@@ -34,7 +34,13 @@ resource "hcloud_server" "this" {
   lifecycle {
     # Changing the image later (a newer Ubuntu) must not silently rebuild the
     # machine and lose everything on its root disk.
-    ignore_changes = [image, ssh_keys]
+    #
+    # `network`: the Hetzner provider reports the private-network details
+    # (address, MAC) back in a shape that never matches our short config, so
+    # every plan showed a pointless "update in place" that could detach and
+    # re-attach the network. The server joins the network when it is created;
+    # we ignore the attachment block afterwards to keep plans clean.
+    ignore_changes = [image, ssh_keys, network]
   }
 }
 
