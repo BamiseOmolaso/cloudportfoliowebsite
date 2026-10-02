@@ -1,0 +1,68 @@
+---
+- name: Create the k3s config directory
+  ansible.builtin.file:
+    path: "{{ k3s_config_dir }}"
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+# Written BEFORE installing, so k3s starts with these settings the first time.
+- name: Write the k3s config
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: "{{ k3s_config_dir }}/config.yaml"
+    owner: root
+    group: root
+    mode: "0600"
+  notify: Restart k3s
+
+# We download the installer from the tag matching our pinned version, so its
+# content is fixed. The installer then checks the k3s binary's checksum itself.
+- name: Download the k3s installer for the pinned version
+  ansible.builtin.get_url:
+    url: "https://raw.githubusercontent.com/k3s-io/k3s/{{ k3s_version | urlencode }}/install.sh"
+    dest: /usr/local/bin/k3s-install.sh
+    owner: root
+    group: root
+    mode: "0755"
+
+# `creates` makes this run only once: if k3s is already installed, it is skipped.
+# (Upgrading is a deliberate, separate job; see the doc.)
+- name: Install k3s
+  ansible.builtin.command: /usr/local/bin/k3s-install.sh
+  environment:
+    INSTALL_K3S_VERSION: "{{ k3s_version }}"
+  args:
+    creates: /usr/local/bin/k3s
+
+- name: Make sure k3s is running and starts at boot
+  ansible.builtin.service:
+    name: k3s
+    state: started
+    enabled: true
+
+- name: Wait until the node reports Ready
+  ansible.builtin.command: k3s kubectl wait --for=condition=Ready node --all --timeout=180s
+  changed_when: false
+
+- name: Read the cluster's admin kubeconfig
+  ansible.builtin.slurp:
+    src: "{{ k3s_config_dir }}/k3s.yaml"
+  register: k3s_kubeconfig
+  no_log: true
+
+# On the server the file points at 127.0.0.1 and names everything "default".
+# For your laptop we point it at the server's address and give it a clear name,
+# so it never gets confused with other clusters.
+- name: Write a kubeconfig for your laptop
+  ansible.builtin.copy:
+    dest: "{{ kubeconfig_local_path }}"
+    content: >-
+      {{ (k3s_kubeconfig.content | b64decode)
+         | regex_replace('https://127\.0\.0\.1:6443', 'https://' ~ ansible_host ~ ':6443')
+         | regex_replace('(name|cluster|user|current-context): default', '\1: hetzner-portfolio') }}
+    mode: "0600"
+  delegate_to: localhost
+  become: false
+  no_log: true
