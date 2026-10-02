@@ -210,6 +210,48 @@ Things to know:
   with a small helper in `~/.bash_profile`. We will add this once the basics
   work.
 
+### 6.0b The easy way: load everything with one command
+
+Pasting secrets into every new terminal gets old fast, and it caused most of our
+early errors (secrets set but not exported, wrong key length, an old Amazon login
+being picked up). This replaces all of it.
+
+**One time:** store each secret in the macOS **Keychain** (encrypted, survives
+restarts). Each command prompts you for the secret and hides it:
+
+```bash
+security add-generic-password -U -a "$USER" -s portfolio-hcloud-token -w
+security add-generic-password -U -a "$USER" -s portfolio-r2-key-id -w
+security add-generic-password -U -a "$USER" -s portfolio-r2-secret -w
+security add-generic-password -U -a "$USER" -s portfolio-cf-terraform-token -w
+```
+
+macOS may ask whether Terminal can access the Keychain item: choose **Always Allow**.
+
+**Install the loader** (copies a script that contains no secrets, only lookups, and
+adds a `hetzner` command):
+
+```bash
+mkdir -p ~/.config/hetzner
+cp infra/scripts/load-secrets.sh ~/.config/hetzner/load-secrets.sh
+```
+
+and add this to `~/.bash_profile`:
+
+```bash
+hetzner() { source "$HOME/.config/hetzner/load-secrets.sh"; }
+```
+
+**Every time after that:** open a terminal, type `hetzner`, and you are ready. It
+sets and **exports** the four secrets, points Terraform away from any old Amazon
+login, points `kubectl` at this cluster, and checks the R2 key lengths for you. You
+no longer need the `AWS_SHARED_CREDENTIALS_FILE=/dev/null ...` prefix on Terraform
+commands.
+
+**How is this different from a real job?** Teams use the same idea: secrets live in a
+manager (a Keychain, 1Password, Vault) and tooling loads them on demand, instead of
+anyone pasting them by hand. Later, CI holds them as encrypted secrets.
+
 ### 6.1 Cloudflare R2 bucket for state
 1. Cloudflare dashboard → **R2 Object Storage** → enable it (it asks for a
    payment method but the free allowance covers this).
