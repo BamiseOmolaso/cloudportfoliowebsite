@@ -4,8 +4,7 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/layout/Navbar";
-import Footer from "@/components/layout/Footer";
+import SiteChrome from "@/components/layout/SiteChrome";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import CookieConsent from "@/components/CookieConsent";
 
@@ -27,10 +26,32 @@ const inter = Inter({
   variable: "--font-inter", // CSS variable for better performance
 });
 
+const TITLE = "Dr. Bamise Omolaso — Cloud & DevSecOps Engineer";
+const DESCRIPTION =
+  "Medical doctor turned cloud & DevSecOps engineer. Secure, repeatable infrastructure with Terraform and CI/CD, documented in public. Projects, write-ups and the architecture behind this portfolio.";
+
+// Absolute URLs for Open Graph/Twitter cards are built from this base.
+const SITE_URL =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  "https://portfolio.oluwabamiseomolaso.com.ng";
+
 export const metadata: Metadata = {
-  title: "Dr. Bamise Omolaso — Cloud & DevSecOps Engineer",
-  description:
-    "Medical doctor turned cloud & DevSecOps engineer. Building production systems on AWS — in public. Projects, write-ups, and the cloudportfoliowebsite architecture.",
+  metadataBase: new URL(SITE_URL),
+  title: TITLE,
+  description: DESCRIPTION,
+  alternates: { canonical: "/" },
+  openGraph: {
+    type: "website",
+    url: "/",
+    siteName: "Dr. Bamise Omolaso",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: TITLE,
+    description: DESCRIPTION,
+  },
   icons: {
     icon: [
       {
@@ -63,9 +84,7 @@ export default function RootLayout({
         className={`${inter.variable} ${inter.className} bg-gray-950 text-white`}
       >
         <ErrorBoundary>
-          <Navbar />
-          <main className="min-h-screen pt-16">{children}</main>
-          <Footer />
+          <SiteChrome>{children}</SiteChrome>
           <CookieConsent />
         </ErrorBoundary>
       </body>

@@ -401,6 +401,28 @@ kubectl run nettest --rm -it --restart=Never --image=postgres:17.11-bookworm -- 
 Expect `no response`. (From the `postgres` namespace's backup pods it works; from
 `default` it does not. That is the NetworkPolicy doing its job.)
 
+### What we saw (the verified results)
+
+All times are UTC on 2 October. Everything below was observed on the real cluster.
+
+| Step | Result |
+|---|---|
+| **C** Deploy through ArgoCD | After the merge, ArgoCD created the namespace, storage, config, service, StatefulSet, backup job and network policies. The pod waited at `CreateContainerConfigError` until the Secret existed, as expected |
+| **D** Secrets | Both created by hand; the pod started on its own and was `1/1 Running` |
+| **E** First start | The log showed the first-run script running: `CREATE ROLE`, `CREATE DATABASE`, then `ready to accept connections`. The `portfolio` database was owned by `portfolio_app`; only two roles existed (`postgres`, `portfolio_app`). The pod used about **35 MB** of memory when idle |
+| **E** App login | `psql` as `portfolio_app` created `smoke_test` and inserted a row |
+| **F** First backup | Failed three times with `Connection refused`; fixed (see "A problem we hit"). The re-run took about **20 seconds** and uploaded two files: `globals-...sql` (950 bytes) and `portfolio-...dump` (2.9 KB) to `daily/` in the bucket |
+| **G** Restore test | Restored the newest backup into a scratch database: `1 tables in schema public`, `smoke_test: ~1 rows`, scratch database dropped, **`RESTORE TEST PASSED`** |
+| **H** Crash | Deleting `postgres-0` made Kubernetes start a new one on the same storage within a minute; Postgres' start time reset, and the test row **survived** |
+| **I** Strangers | From a pod in the `default` namespace, `pg_isready` answered `no response`: the network policy blocks outsiders |
+
+**Memory:** the node sat at about 57% (2.2 GB of 4 GB) with ArgoCD and Postgres running, so
+about 1.8 GB is left for the app and monitoring.
+
+**What is still not proven:** a restore **into the live database** (the test restores into a
+scratch one), and a restore after a full server rebuild. Both are worth rehearsing before the
+database holds anything you cannot recreate.
+
 ## 8. Reading the output
 
 | What you see | Meaning |

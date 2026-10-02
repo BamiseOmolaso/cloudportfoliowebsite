@@ -11,7 +11,7 @@ Read this first. It explains the whole system in pictures, then each numbered do
 **Legend.** A solid box is **built and verified**. A dashed box is **planned or in
 progress**, not yet seen working. We only call something "working" once we have
 actually seen it work. (Today: the firewall, server, disk, k3s, Traefik, Cloudflare
-routing and cert-manager are verified, on a test hostname. The app, database and
+routing, cert-manager, ArgoCD and PostgreSQL with backups are verified. The app and
 monitoring are still to come.)
 
 ---
@@ -54,7 +54,7 @@ flowchart LR
         TR["Traefik<br/>the front door"]
         CM["cert-manager<br/>HTTPS certificates"]
         APP["Next.js app"]:::planned
-        PG["PostgreSQL"]:::planned
+        PG["PostgreSQL"]
         MON["Prometheus and Grafana"]:::planned
         TR --> APP
         APP --> PG
@@ -148,14 +148,14 @@ flowchart LR
   TF -.->|"state file"| R2[("Cloudflare R2")]
   ME -->|"SSH"| ANS["Ansible"] -->|"configures"| SRV["Server"]
   ME -->|"kubectl"| API["k3s API"]
-  GH -.->|"planned: watches the repo and deploys"| ARGO["ArgoCD"]:::planned
-  ARGO -.-> API
+  GH -->|"ArgoCD watches the repo and deploys"| ARGO["ArgoCD"]
+  ARGO --> API
 
   classDef planned stroke-dasharray: 5 5
 ```
 
 Today you run Terraform, Ansible and `kubectl` from your laptop, and the CI pipeline
-checks Terraform changes. Later, ArgoCD will watch git and deploy the apps by
+checks Terraform changes. ArgoCD now watches git and deploys the apps by
 itself, so a change to the repo is the only way a change reaches the cluster. That
 idea is called **GitOps**.
 
