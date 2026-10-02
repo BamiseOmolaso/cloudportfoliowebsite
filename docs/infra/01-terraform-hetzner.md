@@ -159,6 +159,19 @@ Check one is set without showing it:
 
 You should see `set`. If you see nothing, it is not set.
 
+**Important: "set" is not the same as "exported".** The `echo` and `[ -n ... ]`
+checks only prove the variable exists *in your terminal*. Terraform is a separate
+program, and it only sees variables that were **exported**. If you ran the `read`
+part but not `export`, your checks look fine but Terraform finds nothing. The
+proof that Terraform can see a variable is:
+
+```bash
+env | grep -c '^AWS_ACCESS_KEY_ID='
+```
+
+`1` means exported, `0` means it is not. If it is `0`, run
+`export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY HCLOUD_TOKEN`.
+
 The check line works like this:
 
 | Piece | What it does |
@@ -319,6 +332,55 @@ Repository → Settings:
 **State locking on R2:** `use_lockfile` relies on S3 conditional writes. We have
 not yet confirmed R2 behaves identically, so the first `plan` is also the test.
 If locking errors, tell me, and we will adjust.
+
+### Problems we actually hit (and what each one really meant)
+
+These happened during the first `terraform init`, in this order. They look
+unrelated but had one root cause.
+
+**1. `Credential access key has length 20, should be 32`**
+- *What it says:* the key Terraform sent to R2 is the wrong length. R2 key IDs
+  are 32 characters; an Amazon key is 20.
+- *What it really meant:* Terraform did not see our R2 keys at all, so it fell
+  back to an old Amazon login saved on this Mac in `~/.aws/credentials` (left over
+  from the old AWS stack) and sent that to R2.
+- *Fix:* make sure the keys are **exported** (see the box in 6.0).
+
+**2. `No valid credential sources found ... no EC2 IMDS role found`**
+- *What it says:* Terraform looked everywhere for a login and found none.
+- *What it really meant:* we had told Terraform to ignore the old Amazon file
+  (`AWS_SHARED_CREDENTIALS_FILE=/dev/null AWS_CONFIG_FILE=/dev/null`), so with the
+  keys not exported there was nothing left. This confirmed problem 1.
+- *Fix:* the same: export the keys.
+
+**3. `lookup s3.auto.amazonaws.com: no such host`**
+- *What it says:* Terraform tried to reach a made-up Amazon address.
+- *What it really meant:* we ran `terraform init` **without**
+  `-backend-config=backend.hcl`, so it never learned the Cloudflare R2 address and
+  guessed an Amazon one from the region name `auto`.
+- *Fix:* always include `-backend-config=backend.hcl` when running `init`.
+
+**4. Two false leads worth knowing about**
+- `echo ${#AWS_ACCESS_KEY_ID}` printing `32 64` does **not** prove the variable is
+  exported (see 6.0).
+- A half-typed line such as `ACCESS_KEY_ID; echo; ...` just gives
+  `command not found`. Harmless; paste the whole line.
+
+**What finally worked:**
+```bash
+export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY HCLOUD_TOKEN
+AWS_SHARED_CREDENTIALS_FILE=/dev/null AWS_CONFIG_FILE=/dev/null \
+  terraform init -reconfigure -backend-config=backend.hcl
+```
+The two `=/dev/null` settings tell Terraform to ignore any old Amazon login on
+your machine. Once the keys are exported, Terraform should prefer them anyway, so
+these settings are a safety net rather than a requirement; we did not test
+without them after fixing the export. Keep them if you still have an old
+`~/.aws/credentials` and want to be sure it can never be used by mistake.
+
+**A general habit:** when an error looks confusing, ask "what does Terraform
+actually see?" before changing anything. `env | grep -c '^NAME='` answers that
+for any variable.
 
 ## 10. Cost notes
 
