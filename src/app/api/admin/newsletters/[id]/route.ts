@@ -4,6 +4,7 @@ import { secureAdminRoute, handleError, mapPrismaError, sanitizeContent } from '
 import { newsletterUpdateSchema } from '@/lib/validation-schemas';
 import { z } from 'zod';
 import type { NewsletterUpdateData } from '@/types/database';
+import { getClientIp } from "@/lib/client-ip";
 
 export const dynamic = 'force-dynamic';
 
@@ -103,7 +104,7 @@ async function putHandler(request: NextRequest, user: { id: string; email: strin
       resourceType: 'Newsletter',
       resourceId: newsletter.id,
       details: { subject: newsletter.subject },
-      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+      ipAddress: getClientIp(request.headers),
       userAgent: request.headers.get('user-agent') || null,
       timestamp: new Date().toISOString(),
     });

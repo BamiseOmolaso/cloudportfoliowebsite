@@ -11,6 +11,7 @@ import { newsletterSendSchema } from "@/lib/validation-schemas";
 import { getSiteUrl } from "@/lib/site-url";
 import { z } from "zod";
 import { randomBytes } from "crypto";
+import { getClientIp } from "@/lib/client-ip";
 
 const sanitizeAndConvertToText = (dirtyHtml: string): string => {
   const cleanHtml = sanitizeHtmlServer(dirtyHtml);
@@ -82,10 +83,7 @@ export const POST = secureAdminRoute(async (request: NextRequest, user) => {
         recipientCount: subscribers.length,
         subject: newsletter.subject,
       },
-      ipAddress:
-        request.headers.get("x-forwarded-for") ||
-        request.headers.get("x-real-ip") ||
-        null,
+      ipAddress: getClientIp(request.headers),
       userAgent: request.headers.get("user-agent") || null,
       timestamp: new Date().toISOString(),
     });
