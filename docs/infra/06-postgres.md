@@ -287,7 +287,41 @@ unset R2ID R2SECRET R2EP
 ```
 
 (`$PGPW` and the others are variables, so your shell history keeps the names, not the
-values.) Then watch the pod start:
+values.)
+
+**Alternative for the R2 backup key: use the macOS Keychain.** Store the two values once
+(each command prompts you and hides what you type), using **new names** so the backup key
+never mixes with the Terraform state key (`portfolio-r2-key-id` and `portfolio-r2-secret`):
+
+```bash
+security add-generic-password -U -a "$USER" -s portfolio-r2-backup-key-id -w
+security add-generic-password -U -a "$USER" -s portfolio-r2-backup-secret -w
+```
+
+Check they are stored without showing them:
+
+```bash
+security find-generic-password -a "$USER" -s portfolio-r2-backup-key-id >/dev/null && echo "key id: stored"
+security find-generic-password -a "$USER" -s portfolio-r2-backup-secret >/dev/null && echo "secret: stored"
+```
+
+Then create the Secret straight from the Keychain, with no pasting (replace the account
+ID, which is not a secret and is in `backend.hcl`):
+
+```bash
+kubectl -n postgres create secret generic r2-backup \
+  --from-literal=access-key-id="$(security find-generic-password -a "$USER" -s portfolio-r2-backup-key-id -w)" \
+  --from-literal=secret-access-key="$(security find-generic-password -a "$USER" -s portfolio-r2-backup-secret -w)" \
+  --from-literal=endpoint="https://<your-account-id>.r2.cloudflarestorage.com" \
+  --from-literal=bucket=portfolio-db-backups
+```
+
+Keep your **password manager** as the permanent copy; the Keychain is the convenient one
+on this Mac. The Keychain is **not linked to the cluster**: if you rotate the R2 key later,
+update the Keychain item, then delete and re-create the Kubernetes Secret
+(`kubectl -n postgres delete secret r2-backup`, then create it again).
+
+Then watch the pod start:
 
 ```bash
 kubectl -n postgres get pods -w
