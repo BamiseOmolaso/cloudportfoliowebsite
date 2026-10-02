@@ -1,0 +1,17 @@
+---
+# Terraform already formatted the disk (ext4), so here we only mount it.
+- name: Create the mount point
+  ansible.builtin.file:
+    path: "{{ data_mount_path }}"
+    state: directory
+    mode: "0755"
+
+# `nofail` matters: without it, a missing disk at boot would stop the whole
+# server from starting. `discard` lets the disk reclaim deleted blocks.
+- name: Mount the data volume now and on every boot
+  ansible.posix.mount:
+    src: "{{ data_volume_device }}"
+    path: "{{ data_mount_path }}"
+    fstype: ext4
+    opts: discard,nofail,defaults
+    state: mounted

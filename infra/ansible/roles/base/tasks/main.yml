@@ -1,0 +1,70 @@
+---
+# The apt module will not combine "upgrade" and "name" in one task, so these
+# are two steps: first bring existing packages up to date, then add ours.
+- name: Install pending security updates
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+    upgrade: safe
+
+- name: Install the base packages
+  ansible.builtin.apt:
+    name: "{{ base_packages }}"
+    state: present
+
+- name: Create the admin user
+  ansible.builtin.user:
+    name: "{{ admin_user }}"
+    groups: sudo
+    append: true
+    shell: /bin/bash
+    create_home: true
+    # No password at all: you log in with your key only.
+    password_lock: true
+
+- name: Trust the admin user's public key
+  ansible.posix.authorized_key:
+    user: "{{ admin_user }}"
+    key: "{{ admin_public_key }}"
+    state: present
+  # In a dry run (--check) the user above is only pretended, so it has no home
+  # directory yet and this task cannot run. Tolerate that, in dry runs only.
+  ignore_errors: "{{ ansible_check_mode }}"
+
+# The account has no password, so sudo cannot ask for one. This is the usual
+# trade-off for a single-admin server: anyone holding your key is effectively
+# root, which is why the key has a passphrase.
+- name: Let the admin user use sudo without a password
+  ansible.builtin.copy:
+    dest: "/etc/sudoers.d/90-{{ admin_user }}"
+    content: "{{ admin_user }} ALL=(ALL) NOPASSWD:ALL\n"
+    owner: root
+    group: root
+    mode: "0440"
+    # visudo checks the file first; a broken sudoers file would lock out sudo.
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Turn on automatic security updates
+  ansible.builtin.copy:
+    dest: /etc/apt/apt.conf.d/20auto-upgrades
+    content: |
+      APT::Periodic::Update-Package-Lists "1";
+      APT::Periodic::Unattended-Upgrade "1";
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Configure fail2ban for SSH
+  ansible.builtin.template:
+    src: jail.local.j2
+    dest: /etc/fail2ban/jail.local
+    owner: root
+    group: root
+    mode: "0644"
+  notify: Restart fail2ban
+
+- name: Make sure fail2ban is running and starts at boot
+  ansible.builtin.service:
+    name: fail2ban
+    state: started
+    enabled: true

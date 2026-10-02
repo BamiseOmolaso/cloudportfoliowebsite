@@ -1,0 +1,10 @@
+# Managed by Ansible. Bans an address for an hour after 5 failed SSH logins.
+[DEFAULT]
+bantime  = 1h
+findtime = 10m
+maxretry = 5
+ignoreip = 127.0.0.1/8 ::1{% for ip in fail2ban_ignore_ips %} {{ ip }}{% endfor %}
+
+
+[sshd]
+enabled = true

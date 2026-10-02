@@ -2,9 +2,9 @@
 
 This guide shows you how to set up OIDC (OpenID Connect) authentication for GitHub Actions instead of using access keys.
 
-> **Note on trust-policy subject claims:** the policies below restrict `token.actions.githubusercontent.com:sub` to the three protected branches (`main`, `staging`, `develop`) plus `pull_request`. Avoid the wildcard form `repo:<owner>/<repo>:*` — it allows OIDC token issuance for arbitrary feature branches, manual `workflow_dispatch` runs from any branch, and any workflow run. The branch-and-PR list keeps the role usable for our actual CI flows (plan on PRs, apply on protected branches) without granting access to every push everywhere. PR runs from forks cannot match the `pull_request` entry because the OIDC token's sub claim for fork PRs uses the fork's repo path, not the base repo's.
+> **Note on trust-policy subject claims:** the policies below restrict `token.actions.githubusercontent.com:sub` to the three protected branches (`main`, `staging`, `develop`), `pull_request`, and the three deployment environments (`production`, `staging`, `development`). Avoid the wildcard form `repo:<owner>/<repo>:*` — it allows OIDC token issuance for arbitrary feature branches, manual `workflow_dispatch` runs from any branch, and any workflow run. The environment entries are required because any GitHub job with an `environment:` declaration emits a sub of the form `repo:<repo>:environment:<name>` instead of the branch ref — without them, manual-approval deploys fail at `AssumeRoleWithWebIdentity`. PR runs from forks cannot match the `pull_request` entry because the OIDC token's sub claim for fork PRs uses the fork's repo path, not the base repo's.
 >
-> The wildcard `*:*` on action verbs in the IAM **policy** statements below (e.g. `"ec2:*"`, `"iam:*"`) is also broad — that's a separate scope-down task tracked as a follow-up, not in this guide yet.
+> **Note on IAM policy scope:** the Terraform role's policy still uses broad action wildcards (`"ec2:*"`, `"iam:*"`, `"kms:*"`) on `Resource: "*"` — provisioning role, hardest to scope without breaking future apply runs; tracked as a follow-up. The Deploy role's policy below is partly scoped: IAM is restricted to read + tag + `PassRole`, EC2 to describe-only, and S3/DynamoDB statements are pinned to the Terraform state bucket and lock table by ARN. The source of truth for both is [`terraform/modules/github-oidc/main.tf`](terraform/modules/github-oidc/main.tf) — the JSON blocks in this guide are summaries.
 
 ## 🎯 Why OIDC?
 
@@ -47,7 +47,7 @@ cat > terraform-trust-policy.json << 'EOF'
     {
       "Effect": "Allow",
       "Principal": {
-        "Federated": "arn:aws:iam::827327671360:oidc-provider/token.actions.githubusercontent.com"
+        "Federated": "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
       },
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
@@ -59,7 +59,10 @@ cat > terraform-trust-policy.json << 'EOF'
             "repo:BamiseOmolaso/cloudportfoliowebsite:ref:refs/heads/main",
             "repo:BamiseOmolaso/cloudportfoliowebsite:ref:refs/heads/staging",
             "repo:BamiseOmolaso/cloudportfoliowebsite:ref:refs/heads/develop",
-            "repo:BamiseOmolaso/cloudportfoliowebsite:pull_request"
+            "repo:BamiseOmolaso/cloudportfoliowebsite:pull_request",
+            "repo:BamiseOmolaso/cloudportfoliowebsite:environment:production",
+            "repo:BamiseOmolaso/cloudportfoliowebsite:environment:staging",
+            "repo:BamiseOmolaso/cloudportfoliowebsite:environment:development"
           ]
         }
       }
@@ -126,7 +129,7 @@ cat > deploy-trust-policy.json << 'EOF'
     {
       "Effect": "Allow",
       "Principal": {
-        "Federated": "arn:aws:iam::827327671360:oidc-provider/token.actions.githubusercontent.com"
+        "Federated": "arn:aws:iam::123456789012:oidc-provider/token.actions.githubusercontent.com"
       },
       "Action": "sts:AssumeRoleWithWebIdentity",
       "Condition": {
@@ -138,7 +141,10 @@ cat > deploy-trust-policy.json << 'EOF'
             "repo:BamiseOmolaso/cloudportfoliowebsite:ref:refs/heads/main",
             "repo:BamiseOmolaso/cloudportfoliowebsite:ref:refs/heads/staging",
             "repo:BamiseOmolaso/cloudportfoliowebsite:ref:refs/heads/develop",
-            "repo:BamiseOmolaso/cloudportfoliowebsite:pull_request"
+            "repo:BamiseOmolaso/cloudportfoliowebsite:pull_request",
+            "repo:BamiseOmolaso/cloudportfoliowebsite:environment:production",
+            "repo:BamiseOmolaso/cloudportfoliowebsite:environment:staging",
+            "repo:BamiseOmolaso/cloudportfoliowebsite:environment:development"
           ]
         }
       }
@@ -153,14 +159,87 @@ aws iam create-role \
   --assume-role-policy-document file://deploy-trust-policy.json \
   --description "Role for GitHub Actions to deploy applications"
 
-# Attach ECS and ECR policies
-aws iam attach-role-policy \
-  --role-name GitHubActionsDeployRole \
-  --policy-arn arn:aws:iam::aws:policy/AmazonECS_FullAccess
+# Attach the scoped inline policy (see terraform/modules/github-oidc/main.tf
+# for the full version-controlled definition). Summary:
+#   - ecr / ecs / elasticloadbalancing / rds / application-autoscaling /
+#     secretsmanager / logs / cloudwatch : "*:*" on Resource "*"
+#     (still broad; tracked as follow-up)
+#   - iam   : read + tag operations + PassRole only — NOT full IAM
+#   - ec2   : Describe / Get / List only — no mutation
+#   - s3    : GetObject / ListBucket / PutObject scoped to the
+#             omolaso-terraform-state bucket, plus DeleteObject limited
+#             to *.tflock keys
+#   - dynamodb : GetItem / PutItem / DeleteItem / Query / DescribeTable
+#                scoped to table/portfolio-tf-locks
+#   - sts:GetCallerIdentity for credential verification
+cat > deploy-policy.json << 'EOF'
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ecr:*", "ecs:*", "elasticloadbalancing:*", "rds:*",
+        "application-autoscaling:*", "secretsmanager:*",
+        "logs:*", "cloudwatch:*"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "iam:GetRole", "iam:ListRolePolicies", "iam:ListAttachedRolePolicies",
+        "iam:GetRolePolicy", "iam:ListOpenIDConnectProviders",
+        "iam:GetOpenIDConnectProvider", "iam:GetPolicy", "iam:GetPolicyVersion",
+        "iam:ListPolicyVersions", "iam:ListRoles", "iam:ListPolicies",
+        "iam:TagRole", "iam:UntagRole", "iam:PassRole"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["ec2:Describe*", "ec2:Get*", "ec2:List*"],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:GetObject", "s3:ListBucket"],
+      "Resource": [
+        "arn:aws:s3:::omolaso-terraform-state",
+        "arn:aws:s3:::omolaso-terraform-state/*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject"],
+      "Resource": ["arn:aws:s3:::omolaso-terraform-state/envs/*/terraform.tfstate"]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["s3:PutObject", "s3:DeleteObject"],
+      "Resource": ["arn:aws:s3:::omolaso-terraform-state/*.tflock"]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem", "dynamodb:PutItem", "dynamodb:DeleteItem",
+        "dynamodb:Query", "dynamodb:DescribeTable"
+      ],
+      "Resource": ["arn:aws:dynamodb:us-east-1:*:table/portfolio-tf-locks"]
+    },
+    {
+      "Effect": "Allow",
+      "Action": ["sts:GetCallerIdentity"],
+      "Resource": "*"
+    }
+  ]
+}
+EOF
 
-aws iam attach-role-policy \
+aws iam put-role-policy \
   --role-name GitHubActionsDeployRole \
-  --policy-arn arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryFullAccess
+  --policy-name deploy-access \
+  --policy-document file://deploy-policy.json
 ```
 
 ### Step 5: Get Role ARNs

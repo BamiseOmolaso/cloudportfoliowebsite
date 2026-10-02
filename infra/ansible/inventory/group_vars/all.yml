@@ -1,0 +1,17 @@
+# The named account you will use instead of root.
+admin_user: bamise
+admin_public_key_file: ~/.ssh/hetzner_portfolio.pub
+admin_public_key: "{{ lookup('ansible.builtin.file', admin_public_key_file) }}"
+
+# Where the Postgres data disk is mounted.
+data_mount_path: /srv/data
+
+# Addresses fail2ban must never ban (your own IP, as plain addresses).
+fail2ban_ignore_ips: []
+
+# k3s (Kubernetes). Pinned so a rebuild gives the same cluster every time.
+# Keep within one minor version of your local kubectl (check: kubectl version --client).
+k3s_version: "v1.35.9+k3s1"
+
+# Where your laptop's kubeconfig is written (it is a credential: never commit it).
+kubeconfig_local_path: ~/.kube/hetzner-portfolio.yaml
