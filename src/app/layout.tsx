@@ -4,6 +4,8 @@ export const dynamic = "force-dynamic";
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import "./portfolio.css";
+import { fontVars } from "./fonts";
 import SiteChrome from "@/components/layout/SiteChrome";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import CookieConsent from "@/components/CookieConsent";
@@ -84,7 +86,7 @@ export default function RootLayout({
         className={`${inter.variable} ${inter.className} bg-gray-950 text-white`}
       >
         <ErrorBoundary>
-          <SiteChrome>{children}</SiteChrome>
+          <SiteChrome fontClass={fontVars}>{children}</SiteChrome>
           <CookieConsent />
         </ErrorBoundary>
       </body>

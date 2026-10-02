@@ -15,7 +15,6 @@ import VpsStack from "@/components/portfolio/VpsStack";
 import Work from "@/components/portfolio/Work";
 import YouTube from "@/components/portfolio/YouTube";
 import { fontVars } from "./fonts";
-import "./portfolio.css";
 
 // Metadata (title, description, Open Graph) comes from the root layout.
 // The scroll story, then the sections below it. Posts and projects added in
