@@ -229,4 +229,5 @@ Check current Hetzner prices in the console; we do not quote numbers from memory
 6. **05** ArgoCD and GitOps: git becomes the only way a change reaches the cluster
 7. **06** PostgreSQL on the data disk, with nightly backups to R2 and a tested restore
 8. **07** the application: images, migrations, secrets, deploy (verified on the test hostname)
-9. Next: monitoring and the cut-over of the main domain
+9. **08** the cut-over: moving the real domain to the new site (planned)
+10. Next: monitoring

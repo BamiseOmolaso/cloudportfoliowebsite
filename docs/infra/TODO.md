@@ -20,8 +20,11 @@ honest: it is the shared memory of the project.
   look by hand: a repeat signup with the same email sends nothing.
 - [ ] **Monitoring** (doc 08): Prometheus and Grafana. Watch node memory (about 57% used
   before monitoring); a larger server type may be needed.
-- [ ] **Cut over the real domain**: point the root domain at the new site, redirect the
-  `portfolio.` subdomain, retire the old WordPress site and cancel its hosting.
+- [ ] **Cut over the real domain** (doc 08): in progress. Done: reCAPTCHA domains. Next: give
+  mail its own name (`mailhost`), then ingress and certificate, image with the real URL,
+  Terraform import and switch, Cloudflare Access for `/admin`.
+- [ ] **Incoming mail decision**: keep the old cPanel hosting only for mail, or switch to
+  Cloudflare Email Routing and cancel the hosting (doc 08, section 10).
 
 ## Access and security
 
