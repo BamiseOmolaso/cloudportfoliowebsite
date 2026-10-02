@@ -1,9 +1,14 @@
 ---
-- name: Install security updates and the base packages
+# The apt module will not combine "upgrade" and "name" in one task, so these
+# are two steps: first bring existing packages up to date, then add ours.
+- name: Install pending security updates
   ansible.builtin.apt:
     update_cache: true
     cache_valid_time: 3600
     upgrade: safe
+
+- name: Install the base packages
+  ansible.builtin.apt:
     name: "{{ base_packages }}"
     state: present
 
