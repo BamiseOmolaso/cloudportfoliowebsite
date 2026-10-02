@@ -15,8 +15,9 @@ honest: it is the shared memory of the project.
 - [x] **Application deployment** (doc 07): verified on the test hostname.
 - [x] **Real visitor IP** (doc 07, section 7): verified. Web ports are Cloudflare-only and
   the app records the real address.
-- [ ] **Test end to end on the test site**: contact form email arrives, newsletter signup
-  email, Redis rate limiting actually blocks after the limit. Do before the cut-over.
+- [x] **Test end to end on the test site** (doc 07): contact and newsletter emails arrive,
+  rate limiting blocks (after a bug fix), repeat signups no longer re-send. Still worth a
+  look by hand: a repeat signup with the same email sends nothing.
 - [ ] **Monitoring** (doc 08): Prometheus and Grafana. Watch node memory (about 57% used
   before monitoring); a larger server type may be needed.
 - [ ] **Cut over the real domain**: point the root domain at the new site, redirect the
