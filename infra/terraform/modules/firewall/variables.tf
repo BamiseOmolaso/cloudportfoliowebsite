@@ -13,6 +13,17 @@ variable "admin_cidrs" {
   }
 }
 
+variable "web_source_ips" {
+  description = "Addresses allowed to reach ports 80 and 443. Defaults to everyone; production passes Cloudflare's ranges."
+  type        = list(string)
+  default     = ["0.0.0.0/0", "::/0"]
+
+  validation {
+    condition     = length(var.web_source_ips) > 0
+    error_message = "web_source_ips must not be empty (an empty list would make Terraform fail or, worse, be read as 'nobody')."
+  }
+}
+
 variable "apply_to_label" {
   description = "Label selector; servers with this label get the firewall."
   type        = string

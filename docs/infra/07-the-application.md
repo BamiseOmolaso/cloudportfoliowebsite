@@ -183,13 +183,43 @@ Secrets or SOPS, so secrets can live encrypted in git (see the TODO list).
 > The old `hello` test page used the same hostname, so it is removed in the same change.
 > Two Ingresses cannot share one hostname.
 
-## 7. Known limit: the visitor's IP address
+## 7. The visitor's IP address
 
-Behind Cloudflare, Traefik and the built-in load balancer, the app sees the cluster's
-internal address (`10.42.0.1`) instead of the visitor's. The app's rate limiting counts
-requests per address, so right now every visitor looks like the same one. This is a
-separate, planned change (trust Cloudflare's `CF-Connecting-IP` header and only accept
-traffic from Cloudflare). It **must** be done before the real domain is switched over.
+**The problem.** Behind Cloudflare, Traefik and the built-in load balancer, the app saw
+the cluster's internal address (`10.42.0.1`) for every visitor. The app's rate limiting
+counts requests per address, so all visitors shared one allowance, and audit logs
+recorded a proxy chain instead of a person.
+
+**The fix has two halves that only work together:**
+
+```mermaid
+flowchart LR
+  V["Visitor<br/>203.0.113.7"] --> CF["Cloudflare<br/>sets CF-Connecting-IP<br/>= 203.0.113.7"]
+  CF -->|"only Cloudflare's<br/>ranges get through"| FW["Hetzner firewall"]
+  FW --> APP["App reads<br/>CF-Connecting-IP"]
+  X["Anyone else<br/>(forged header)"] -.-x|"dropped"| FW
+```
+
+| Half | Where | What it does |
+|---|---|---|
+| App | `src/lib/client-ip.ts` | One helper, used by the rate limiter and every audit log. It reads `CF-Connecting-IP` first. Cloudflare overwrites this header, so a visitor cannot forge it *through* Cloudflare |
+| Firewall | `modules/firewall`, prod env | Ports 80 and 443 accept only Cloudflare's published ranges, so a visitor cannot skip Cloudflare and send the header themselves |
+
+**Why not `X-Forwarded-For`?** Cloudflare *appends* the real address to that header, so
+a visitor can put a fake one first (`1.2.3.4, <real>`). Taking the first entry would let
+anyone pick their own rate-limit bucket. It is kept only as a fallback for running the
+app without Cloudflare (local development).
+
+**Consequences to remember**
+- Every DNS record that points at this server must be **proxied** (orange cloud).
+  A DNS-only (grey cloud) record would now be unreachable.
+- Cloudflare's address list is read when you run `terraform plan/apply`. If Cloudflare
+  adds a range, the next plan shows it. Run a plan occasionally.
+- Visiting the server's IP address directly no longer works. That is intended.
+
+> **Status: written, to be verified after `terraform apply`.** Verification (section 9)
+> will show: a request through the domain records the real address, and a request
+> straight to the server IP times out.
 
 ## 8. When things go wrong
 
