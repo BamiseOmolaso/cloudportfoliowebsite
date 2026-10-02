@@ -211,6 +211,14 @@ ansible-playbook playbooks/02-lock-ssh.yml -u bamise
   should print `passwordauthentication no` and `permitrootlogin no`.
 - `systemctl is-active fail2ban` prints `active`.
 
+**You will see this when you log in:** `New release '26.04.1 LTS' available. Run
+'do-release-upgrade'`. **Ignore it.** Ubuntu 24.04 is a long-term release that
+keeps getting security fixes (and our automatic updates apply them). A full OS
+upgrade on a server that runs a cluster is a planned job, never a casual one.
+
+**Result of our run:** `sshd -T` showed `permitrootlogin no` and
+`passwordauthentication no`, and fail2ban was `active`.
+
 ### Run it again
 
 Run step A or C a second time. The recap should show `changed=0`: that is
