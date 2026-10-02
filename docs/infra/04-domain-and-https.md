@@ -266,6 +266,10 @@ test pod. The `--resolve` flag means "connect to this IP but use this name".
 3. Run the same `curl` as in step E (without `-k` this time). The issuer should now be
    a real Let's Encrypt one, with no STAGING in it.
 
+**What we saw:** the staging check showed `(STAGING) Ersatz Emmer YR2` with `HTTP/2
+200`; after switching, the issuer was `CN=YR2` with `SSL certificate verify ok` and
+`HTTP/2 200`. Section 7.1 decodes those lines.
+
 ### Step G: tell Cloudflare to verify the server's certificate
 
 In the Cloudflare dashboard → your domain → **SSL/TLS**:
@@ -307,7 +311,150 @@ sequenceDiagram
   P-->>B: The page
 ```
 
-## 7. When things go wrong
+## 7. Reading the output: what the codes mean
+
+Most of working with infrastructure is reading output and knowing what it is telling
+you. This section decodes everything we saw, plus the errors you will meet.
+
+### 7.1 Our real results, line by line
+
+This is the production check from step F:
+
+```
+* Hostname test.oluwabamiseomolaso.com.ng was found in DNS cache
+* (304) (IN), TLS handshake, CERT verify (15):
+*  issuer: C=US; O=Let's Encrypt; CN=YR2
+*  SSL certificate verify ok.
+* using HTTP/2
+> GET / HTTP/2
+< HTTP/2 200
+Hostname: hello-6c55b69558-ccgms
+```
+
+| Line | What it means |
+|---|---|
+| `Hostname ... was found in DNS cache` | curl already knows which IP to use for that name. We forced it with `--resolve`, so it never asked DNS |
+| `TLS handshake, CERT verify (15)` | Part of setting up the encrypted connection: the server proved it owns the certificate's private key. The `(15)` and `(304)` are internal message numbers; you can ignore them |
+| `issuer: C=US; O=Let's Encrypt; CN=YR2` | Who signed the certificate. `C` is the country, `O` the organisation, `CN` the name of the signing certificate (Let's Encrypt's name for it changes over time). If `CN` contains **STAGING**, it is the test authority |
+| `SSL certificate verify ok.` | curl traced the certificate up to an authority it trusts, and the name matches. This is what `-k` skips |
+| `using HTTP/2` | The protocol version both sides agreed on (HTTP/2 is the modern one) |
+| `> GET / HTTP/2` | A line starting with `>` is what **curl sent**: ask for the page `/` |
+| `< HTTP/2 200` | A line starting with `<` is what **the server answered**. `200` means success (see 7.3) |
+| `Hostname: hello-...` | The body of the reply. It is the name of the pod that answered, which proves the request reached our app |
+| Lines starting with `*` | curl's own notes about what it is doing |
+
+The `[HTTP/2] [1] [:authority: test....]` lines are the request headers. `:method` is
+GET, `:scheme` is https, `:path` is `/`, and `:authority` is the host name you asked
+for (that is how Traefik knows which Ingress rule applies).
+
+And the staging result, for contrast:
+
+```
+*  issuer: C=US; O=Let's Encrypt; CN=(STAGING) Ersatz Emmer YR2
+*  SSL certificate verify result: unable to get local issuer certificate (20), continuing anyway.
+```
+
+`(20)` means "I cannot trace this certificate to an authority I trust". That is correct
+for staging, and `-k` ("continuing anyway") told curl to carry on regardless.
+
+### 7.2 The curl flags we used
+
+| Flag | Meaning |
+|---|---|
+| `-v` | Verbose: show the conversation (the `*`, `>`, `<` lines) |
+| `-k` | Do not verify the certificate. Only for testing a staging certificate |
+| `-I` | Ask for the headers only, not the page |
+| `-s` | Silent: no progress meter |
+| `-o /dev/null` | Throw the page body away |
+| `-w "%{http_code}\n"` | Print just the status code afterwards |
+| `-L` | Follow redirects |
+| `--resolve name:443:IP` | "Use this IP for that name", skipping DNS. We use it to talk to the server directly, bypassing Cloudflare |
+
+### 7.3 HTTP status codes (the number after `HTTP/2`)
+
+The first digit tells you whose problem it is.
+
+| Code | Name | Meaning |
+|---|---|---|
+| **200** | OK | Success |
+| **301** | Moved permanently | Go to another address (our HTTP to HTTPS redirect) |
+| **302** | Found (temporary redirect) | Go elsewhere for now |
+| **304** | Not modified | Your cached copy is still good |
+| **400** | Bad request | The request was malformed. (R2 answered `400` to our bare check: it reached R2, which just did not like an empty request, so it is a good sign.) |
+| **401** | Unauthorized | You must log in |
+| **403** | Forbidden | Logged in or not, you may not have this |
+| **404** | Not found | No such page |
+| **429** | Too many requests | Rate limited |
+| **500** | Internal server error | The app crashed |
+| **502** | Bad gateway | A proxy (Traefik) got no valid answer from the app |
+| **503** | Service unavailable | Nothing healthy is behind the proxy right now |
+| **504** | Gateway timeout | The app took too long |
+
+Rule of thumb: **2xx** worked, **3xx** go elsewhere, **4xx** the request was the
+problem, **5xx** the server was the problem.
+
+### 7.4 Cloudflare's own error codes (52x)
+
+When Cloudflare is in front, a failure between Cloudflare and your server shows as a
+Cloudflare page with a 52x code. These all mean "Cloudflare is fine, the problem is
+between it and your server (the origin)".
+
+| Code | Meaning | Usual cause here |
+|---|---|---|
+| **520** | Empty or unknown response from the origin | The app or Traefik replied with garbage or nothing |
+| **521** | Web server is down | Connection refused: Traefik not listening, or the firewall blocks 443 |
+| **522** | Connection timed out | Server unreachable: firewall, wrong IP, or the server is off |
+| **523** | Origin is unreachable | Wrong IP in the DNS record |
+| **524** | A timeout occurred | The app connected but took too long to answer |
+| **525** | SSL handshake failed | Traefik is not serving HTTPS for that host (check the Ingress `tls` block) |
+| **526** | Invalid SSL certificate | Mode is Full (strict) but the origin certificate is staging, expired, or for another name |
+
+### 7.5 curl's own errors (when there is no HTTP code at all)
+
+If curl cannot even get an answer, it prints `curl: (N) ...` and the number tells you
+the stage that failed. This is also why `000` appeared as the status code earlier.
+
+| `curl: (N)` | Meaning | Where to look |
+|---|---|---|
+| **(6)** | Could not resolve host | DNS (this is the problem we had with the R2 address) |
+| **(7)** | Failed to connect | Nothing is listening, or a firewall blocks the port |
+| **(28)** | Timed out | Firewall silently dropping, or the server is down |
+| **(35)** | TLS handshake failure | The server is not speaking HTTPS on that port |
+| **(60)** | Certificate problem | The certificate cannot be verified (the cause is in the line above it) |
+
+Certificate verify codes in brackets, such as `(20)`: **20** cannot trace to a trusted
+authority, **18** self-signed certificate, **10** certificate has expired.
+
+### 7.6 Kubernetes status words
+
+From `kubectl get pods`, `kubectl get certificate` and friends.
+
+| What you see | Meaning |
+|---|---|
+| `READY 1/1` | 1 of 1 containers in the pod is ready. `0/1` is not ready yet |
+| `Pending` | Waiting to be placed or started (often waiting for resources or an image) |
+| `ContainerCreating` | Pulling the image and starting |
+| `Running` | The container is up |
+| `Completed` | A one-time job that finished successfully (the `helm-install-*` pods) |
+| `CrashLoopBackOff` | The container keeps crashing; Kubernetes waits longer between restarts. Read `kubectl logs` |
+| `ImagePullBackOff` / `ErrImagePull` | It cannot download the image: wrong name or tag, or no access |
+| `RESTARTS 2` | How many times the container has restarted |
+| Certificate `READY True` | The certificate was issued and is stored in its Secret |
+| Certificate `READY False` | Not issued yet or failing: `kubectl describe certificate ...` |
+
+cert-manager works through a chain of objects, and when a certificate is stuck you
+walk down it to find where it stopped:
+
+```
+Certificate  ->  CertificateRequest  ->  Order  ->  Challenge
+```
+
+```bash
+kubectl -n hello get certificate,certificaterequest,order,challenge
+kubectl -n hello describe challenge <name>      # the reason is at the bottom, under Events
+```
+
+## 8. When things go wrong
 
 | Symptom | Likely cause and fix |
 |---|---|
@@ -323,7 +470,7 @@ sequenceDiagram
 | Terraform: `record already exists` | A record with that name is already in Cloudflare. Delete it in the dashboard or import it into Terraform |
 | `terraform plan` shows more than 1 change | Stop. Something drifted; read it before applying |
 
-## 8. Security notes
+## 9. Security notes
 
 - Both API tokens are limited to **one zone** and **DNS only**. They cannot reach
   billing, other domains or account settings.
@@ -333,11 +480,11 @@ sequenceDiagram
 - Revoke and re-create a token whenever you are unsure who has seen it.
 - Full (strict) is on; Flexible is never used.
 
-## 9. Cost
+## 10. Cost
 
 Nothing. Let's Encrypt, Cloudflare's free plan and cert-manager are free.
 
-## 10. What comes next
+## 11. What comes next
 
 `05` PostgreSQL on the data disk (with backups), then the app, then the cut-over of
 the real domain, then ArgoCD and monitoring.
