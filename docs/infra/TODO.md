@@ -12,9 +12,10 @@ honest: it is the shared memory of the project.
 - [x] **Postgres verified** (doc 06): backup to R2, restore test, crash survival and the
   network policy all confirmed. Still to rehearse: a restore into the live database, and
   a restore after a full server rebuild.
-- [ ] **Application deployment** (doc 07): build the image, push it to a registry (GitHub's
-  container registry), deploy through ArgoCD into a `portfolio` namespace, connect to
-  Postgres, set up the real client-IP header from Cloudflare.
+- [x] **Application deployment** (doc 07): verified on the test hostname.
+- [ ] **Real visitor IP** (doc 07, section 7): app change and Cloudflare-only firewall are
+  written; verify after `terraform apply`, then fill in doc 07 section 9. Still to test:
+  contact form email and Redis rate limiting end to end. Must be done before the cut-over.
 - [ ] **Monitoring** (doc 08): Prometheus and Grafana. Watch node memory (about 57% used
   before monitoring); a larger server type may be needed.
 - [ ] **Cut over the real domain**: point the root domain at the new site, redirect the

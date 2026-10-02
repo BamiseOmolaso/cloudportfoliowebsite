@@ -37,11 +37,17 @@ module "network" {
   labels = local.labels
 }
 
+# Cloudflare's published address ranges (read live from Cloudflare, no token
+# permission needed). Web ports are opened to these only, so visitors cannot
+# bypass Cloudflare. If Cloudflare adds a range, the next plan shows it.
+data "cloudflare_ip_ranges" "this" {}
+
 module "firewall" {
   source = "../../modules/firewall"
 
   name           = local.name
   admin_cidrs    = var.admin_cidrs
+  web_source_ips = concat(data.cloudflare_ip_ranges.this.ipv4_cidrs, data.cloudflare_ip_ranges.this.ipv6_cidrs)
   apply_to_label = "role=k8s-node"
   labels         = local.labels
 }

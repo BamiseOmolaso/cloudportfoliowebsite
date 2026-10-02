@@ -97,7 +97,7 @@ sequenceDiagram
   D-->>B: Cloudflare's address (the real server IP stays hidden)
   B->>C: HTTPS request (encrypted hop 1)
   C->>F: HTTPS request (encrypted hop 2)
-  F->>T: Allowed: port 443 is open to everyone
+  F->>T: Allowed: port 443 is open to Cloudflare's addresses only
   T->>A: Routes by hostname (an Ingress rule)
   A-->>T: The page
   T-->>C: The page
@@ -163,8 +163,8 @@ idea is called **GitOps**.
 
 ```mermaid
 flowchart LR
-  I["The whole internet"] -->|"80 and 443"| S["Server"]
-  I -->|"ping"| S
+  CFL["Cloudflare's address ranges only"] -->|"80 and 443"| S["Server"]
+  I["The whole internet"] -->|"ping"| S
   M["Your IP only"] -->|"22 SSH"| S
   M -->|"6443 Kubernetes API"| S
   X["Everyone else, on any other port"] -.-x|"dropped"| S
@@ -172,14 +172,21 @@ flowchart LR
 
 | Port | Used for | Who may reach it |
 |---|---|---|
-| 80 | Web (redirected to HTTPS) | Everyone |
-| 443 | Web over HTTPS | Everyone |
+| 80 | Web (redirected to HTTPS) | Cloudflare only |
+| 443 | Web over HTTPS | Cloudflare only |
 | 22 | SSH (key only, no root, no passwords) | Your IP only |
 | 6443 | Kubernetes API (`kubectl`) | Your IP only |
 | Everything else | Nothing | Dropped |
 
 A second layer exists on the server itself: SSH accepts keys only, and fail2ban bans
 addresses that keep failing. Layers matter: if one fails, another still protects.
+
+> **Why web ports are Cloudflare-only:** visitors must come through Cloudflare, so
+> nobody can talk to the server directly and the visitor-address header
+> (`CF-Connecting-IP`) can only come from Cloudflare (doc 07, section 7). Terraform
+> reads Cloudflare's published ranges, so they stay current when you run it. **Every
+> DNS record for this server must stay proxied (orange cloud)**: a grey-cloud
+> record would be unreachable.
 
 > **Consequence of "your IP only":** if your home IP changes, SSH and `kubectl` stop
 > working until you update `admin_cidrs` in Terraform and apply.

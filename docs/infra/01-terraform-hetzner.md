@@ -28,7 +28,7 @@ exists and works out the difference.
 
 ```
 Internet ──► Cloud firewall ──► Server (Ubuntu 24.04)
- (80, 443 open to all;            ├─ root disk
+ (80, 443 Cloudflare only;            ├─ root disk
   22 and 6443 only from you)      └─ data volume (for Postgres)
                                   Private network 10.0.0.0/16
 ```
@@ -105,6 +105,11 @@ that backend's names. Check its documentation for the current list.
 
 - **Admin-only SSH and Kubernetes API.** The firewall module refuses to accept
   `0.0.0.0/0` for these: the validation fails the plan.
+- **Web ports only from Cloudflare.** The prod environment reads Cloudflare's
+  published address ranges (`data "cloudflare_ip_ranges"`) and gives them to the
+  firewall module (`web_source_ips`), so the server cannot be reached except through
+  Cloudflare. The module's default is still "everyone", so other environments are not
+  affected by accident.
 - **Delete and rebuild protection** on the server and volume, so a stray
   `destroy` cannot remove them. Turn it off on purpose (`protect = false`) when
   you really want to tear down.

@@ -161,8 +161,8 @@ cluster's internal network.
 **Notice `X-Real-Ip` is not your own IP.** Traffic enters through the built-in
 load balancer (ServiceLB), which hides the visitor's real address. This matters
 for the app: its rate limiting counts requests per client IP. Behind Cloudflare
-the real address arrives in a header (`CF-Connecting-IP`), and Traefik must be told
-to trust it. We handle that when the app is deployed (doc 04/05).
+the real address arrives in a header (`CF-Connecting-IP`), which the app now reads
+(doc 07, section 7).
 
 **The `helm-install-*` pods show `Completed` with a few restarts.** That is
 normal: they are one-time jobs that install Traefik, and they retry while the

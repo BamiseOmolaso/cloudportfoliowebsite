@@ -27,14 +27,16 @@ resource "hcloud_firewall" "this" {
     source_ips  = var.admin_cidrs
   }
 
-  # Web traffic. Open to everyone for now; once Cloudflare proxies the site
-  # we can narrow these to Cloudflare's published IP ranges.
+  # Web traffic. The caller decides who may connect: in production only
+  # Cloudflare's published ranges, so every visitor must come through
+  # Cloudflare and nobody can reach the server directly (which also makes the
+  # CF-Connecting-IP header trustworthy: only Cloudflare can send it).
   rule {
     description = "HTTP"
     direction   = "in"
     protocol    = "tcp"
     port        = "80"
-    source_ips  = ["0.0.0.0/0", "::/0"]
+    source_ips  = var.web_source_ips
   }
 
   rule {
@@ -42,7 +44,7 @@ resource "hcloud_firewall" "this" {
     direction   = "in"
     protocol    = "tcp"
     port        = "443"
-    source_ips  = ["0.0.0.0/0", "::/0"]
+    source_ips  = var.web_source_ips
   }
 
   # Ping, so basic reachability checks work.
