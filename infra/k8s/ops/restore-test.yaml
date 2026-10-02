@@ -1,0 +1,96 @@
+# A RESTORE TEST: proves the newest backup in R2 can actually be restored. A backup that
+# has never been restored is only a hope. Run on demand (not synced by ArgoCD):
+#   kubectl apply -f infra/k8s/ops/restore-test.yaml
+#   kubectl -n postgres logs -f job/restore-test -c restore
+#   kubectl -n postgres delete job restore-test
+#
+# It restores into a scratch database called "restore_test" (never the live one),
+# counts the tables and rows, then drops the scratch database.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: restore-test
+  namespace: postgres
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 1800
+  template:
+    metadata:
+      labels:
+        app: db-backup
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: backup
+          emptyDir:
+            sizeLimit: 2Gi
+        - name: tmp
+          emptyDir: {}
+      initContainers:
+        - name: fetch-latest
+          image: amazon/aws-cli:2.37.8
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              key="$(aws s3api list-objects-v2 --bucket "${BUCKET}" --prefix daily/portfolio- \
+                --endpoint-url "${R2_ENDPOINT}" \
+                --query 'sort_by(Contents,&LastModified)[-1].Key' --output text)"
+              echo "Restoring from: ${key}"
+              aws s3 cp "s3://${BUCKET}/${key}" /backup/latest.dump --endpoint-url "${R2_ENDPOINT}"
+              ls -l /backup
+          env:
+            - { name: HOME, value: /tmp }
+            - { name: AWS_DEFAULT_REGION, value: auto }
+            - { name: AWS_REQUEST_CHECKSUM_CALCULATION, value: when_required }
+            - { name: AWS_RESPONSE_CHECKSUM_VALIDATION, value: when_required }
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom: { secretKeyRef: { name: r2-backup, key: access-key-id } }
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom: { secretKeyRef: { name: r2-backup, key: secret-access-key } }
+            - name: R2_ENDPOINT
+              valueFrom: { secretKeyRef: { name: r2-backup, key: endpoint } }
+            - name: BUCKET
+              valueFrom: { secretKeyRef: { name: r2-backup, key: bucket } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          volumeMounts:
+            - { name: backup, mountPath: /backup }
+            - { name: tmp, mountPath: /tmp }
+      containers:
+        - name: restore
+          image: postgres:17.11-bookworm
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              export PGHOST=postgres PGUSER=postgres
+              psql -d postgres -c 'DROP DATABASE IF EXISTS restore_test;'
+              psql -d postgres -c 'CREATE DATABASE restore_test;'
+              # --no-owner: the scratch database does not need the original owner role.
+              pg_restore --dbname=restore_test --no-owner --exit-on-error /backup/latest.dump
+              echo "--- tables restored into restore_test:"
+              psql -d restore_test -At -c "SELECT count(*) || ' tables in schema public' FROM information_schema.tables WHERE table_schema='public';"
+              psql -d restore_test -At -c "SELECT relname || ': ~' || n_live_tup || ' rows' FROM pg_stat_user_tables ORDER BY relname;"
+              psql -d postgres -c 'DROP DATABASE restore_test;'
+              echo "RESTORE TEST PASSED"
+          env:
+            - name: PGPASSWORD
+              valueFrom: { secretKeyRef: { name: postgres-credentials, key: postgres-password } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { memory: 256Mi }
+          volumeMounts:
+            - { name: backup, mountPath: /backup, readOnly: true }

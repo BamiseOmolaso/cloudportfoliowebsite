@@ -6,6 +6,11 @@ admin_public_key: "{{ lookup('ansible.builtin.file', admin_public_key_file) }}"
 # Where the Postgres data disk is mounted.
 data_mount_path: /srv/data
 
+# The database container runs as this user and group (the "postgres" user inside
+# the official image). Its data folder on the host must be owned by them.
+postgres_uid: 999
+postgres_gid: 999
+
 # Addresses fail2ban must never ban (your own IP, as plain addresses).
 fail2ban_ignore_ips: []
 

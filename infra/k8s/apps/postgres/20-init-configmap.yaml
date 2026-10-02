@@ -1,0 +1,19 @@
+# Runs ONCE, the first time the database starts with an empty data directory (an
+# official-image feature). It creates an application login and database, so the app
+# never uses the all-powerful `postgres` account. No passwords here: the app password
+# comes from the Secret, through the environment.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  namespace: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+data:
+  10-create-app-db.sh: |
+    #!/bin/sh
+    set -eu
+    psql -v ON_ERROR_STOP=1 --username "$POSTGRES_USER" --dbname postgres <<-EOSQL
+      CREATE ROLE portfolio_app LOGIN PASSWORD '${APP_PASSWORD}';
+      CREATE DATABASE portfolio OWNER portfolio_app;
+    EOSQL

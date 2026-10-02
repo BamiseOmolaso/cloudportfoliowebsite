@@ -1,0 +1,86 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgres
+  namespace: postgres
+spec:
+  serviceName: postgres
+  replicas: 1 # one database. More copies would need replication, which this does not set up.
+  selector:
+    matchLabels:
+      app: postgres
+  template:
+    metadata:
+      labels:
+        app: postgres
+    spec:
+      terminationGracePeriodSeconds: 60 # time to shut down cleanly
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 999 # the "postgres" user inside the official image
+        runAsGroup: 999
+        fsGroup: 999
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: postgres
+          image: postgres:17.11-bookworm # pinned: never "latest" for a database
+          args: ["-c", "max_connections=50", "-c", "shared_buffers=128MB"]
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials # created by hand: see docs/infra/06
+                  key: postgres-password
+            - name: APP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: postgres-credentials
+                  key: app-password
+          securityContext:
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+            # The image writes a socket and temp files outside the data directory, so
+            # the root filesystem stays writable for now. Tightening this (read-only
+            # root plus small writable folders) is a later improvement.
+            readOnlyRootFilesystem: false
+          resources:
+            requests:
+              cpu: 100m
+              memory: 256Mi
+            limits:
+              memory: 512Mi # a hard ceiling so one pod cannot starve the 4 GB server
+          startupProbe: # allow time for the first-run setup
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-h", "127.0.0.1"]
+            periodSeconds: 5
+            failureThreshold: 30
+          readinessProbe: # "ready" = accept traffic
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-h", "127.0.0.1"]
+            periodSeconds: 10
+          livenessProbe: # "alive" = restart me if this fails
+            exec:
+              command: ["pg_isready", "-U", "postgres", "-h", "127.0.0.1"]
+            periodSeconds: 30
+            failureThreshold: 6
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-data
+        - name: init
+          configMap:
+            name: postgres-init
+            defaultMode: 0555
