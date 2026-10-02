@@ -329,9 +329,10 @@ Repository → Settings:
 | SSH times out | Your IP changed; update `admin_cidrs` and apply |
 | `Error acquiring the state lock` | Another run is in progress, or one was killed; wait, then investigate before forcing |
 
-**State locking on R2:** `use_lockfile` relies on S3 conditional writes. We have
-not yet confirmed R2 behaves identically, so the first `plan` is also the test.
-If locking errors, tell me, and we will adjust.
+**State locking on R2:** `use_lockfile` relies on S3 conditional writes. On our
+first `plan` and `apply` Terraform printed "Releasing state lock", so locking
+works with R2. (To see it yourself, run a `plan` and look for a `.tflock` file
+next to the state file in the bucket while it runs.)
 
 ### Problems we actually hit (and what each one really meant)
 
