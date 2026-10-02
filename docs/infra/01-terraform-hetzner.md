@@ -116,6 +116,22 @@ read -rsp "Paste R2 access key ID: " AWS_ACCESS_KEY_ID; echo; export AWS_ACCESS_
 read -rsp "Paste R2 secret access key: " AWS_SECRET_ACCESS_KEY; echo; export AWS_SECRET_ACCESS_KEY
 ```
 
+**What does that line mean?** Take the first one and read it in pieces. The
+`;` just separates commands that run one after another.
+
+| Piece | What it does |
+|---|---|
+| `read` | Waits for you to type or paste something, then stores it |
+| `-r` | Take what I type literally (don't treat a backslash as special) |
+| `-s` | Silent: don't show what I type, so the secret isn't on screen |
+| `-p "Paste Hetzner token: "` | Show this message first, so you know it is waiting |
+| `HCLOUD_TOKEN` | The name of the box the secret is stored in |
+| `echo` | Prints a blank line (the silent mode doesn't add one) |
+| `export HCLOUD_TOKEN` | Makes that box visible to programs started from this terminal, like Terraform. Without `export`, only the terminal itself would know about it |
+
+The other two lines do exactly the same, just with different names and
+messages.
+
 Check one is set without showing it:
 
 ```bash
@@ -123,6 +139,19 @@ Check one is set without showing it:
 ```
 
 You should see `set`. If you see nothing, it is not set.
+
+The check line works like this:
+
+| Piece | What it does |
+|---|---|
+| `$HCLOUD_TOKEN` | Means "the value stored in that box" |
+| `-n` | Is true when the thing after it is **not empty** |
+| `[ ... ]` | A yes/no test |
+| `&&` | Only run the next command if the test says yes |
+| `echo set` | Print the word `set` |
+
+So it reads: "if the box is not empty, print `set`". It never prints the
+secret itself.
 
 Things to know:
 
