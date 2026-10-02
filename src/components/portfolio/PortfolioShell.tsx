@@ -46,28 +46,38 @@ function NavLink({
  * Wrapper for the redesigned home page: scopes the `.pf` styles, owns the
  * theme (dark by default; the choice is remembered), and renders the fixed
  * header with its phone menu.
+ *
+ * `variant="bar"` renders ONLY the header, for the older pages (blog,
+ * projects, ...). Those are styled for dark, so the bar stays dark and hides
+ * the theme switch; its "#section" links point back at the home page.
  */
 export default function PortfolioShell({
   className,
+  variant = "page",
   children,
 }: {
   /** Font CSS-variable classes from next/font (see app/fonts.ts). */
   className: string;
-  children: React.ReactNode;
+  variant?: "page" | "bar";
+  children?: React.ReactNode;
 }) {
+  const bar = variant === "bar";
+  const hrefFor = (href: string) =>
+    bar && href.startsWith("#") ? `/${href}` : href;
   const [theme, setTheme] = useState<Theme>("dark");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuBtn = useRef<HTMLButtonElement>(null);
   const menu = useRef<HTMLElement>(null);
 
   useEffect(() => {
+    if (bar) return; // the older pages are dark only
     try {
       const saved = window.localStorage.getItem(STORAGE_KEY);
       if (saved === "dark" || saved === "light") setTheme(saved);
     } catch {
       // Storage can be blocked (private mode); the theme just isn't remembered.
     }
-  }, []);
+  }, [bar]);
 
   // While the phone menu is open: Escape closes it (and returns focus to its
   // button), widening the screen closes it, and focus starts on the first link.
@@ -101,9 +111,13 @@ export default function PortfolioShell({
   };
 
   return (
-    <div id="top" className={`pf ${className}`} data-theme={theme}>
-      <a className="skip" href="#proof">
-        Skip the intro
+    <div
+      id={bar ? undefined : "top"}
+      className={`pf ${bar ? "pf-bar " : ""}${className}`}
+      data-theme={theme}
+    >
+      <a className="skip" href={bar ? "#main" : "#proof"}>
+        {bar ? "Skip to content" : "Skip the intro"}
       </a>
       <div
         className={`menu-backdrop${menuOpen ? " open" : ""}`}
@@ -112,37 +126,39 @@ export default function PortfolioShell({
       />
       <header className="bar">
         <div className="bar-in">
-          <a className="brand" href="#top">
+          <a className="brand" href={bar ? "/" : "#top"}>
             <span className="mark">OO</span>
             Bamise Omolaso
           </a>
           <nav aria-label="Primary">
             {NAV.map((l) => (
-              <NavLink className="link" href={l.href} key={l.label}>
+              <NavLink className="link" href={hrefFor(l.href)} key={l.label}>
                 {l.label}
               </NavLink>
             ))}
-            <button
-              className="icon-btn"
-              type="button"
-              onClick={toggleTheme}
-              aria-label="Switch colour theme"
-              title="Switch colour theme"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="2"
-                strokeLinecap="round"
-                aria-hidden="true"
+            {!bar && (
+              <button
+                className="icon-btn"
+                type="button"
+                onClick={toggleTheme}
+                aria-label="Switch colour theme"
+                title="Switch colour theme"
               >
-                <circle cx="12" cy="12" r="4.5" />
-                <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
-              </svg>
-            </button>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="4.5" />
+                  <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+                </svg>
+              </button>
+            )}
             <button
               ref={menuBtn}
               className="icon-btn menu-btn"
@@ -180,7 +196,7 @@ export default function PortfolioShell({
         >
           {NAV.map((l) => (
             <NavLink
-              href={l.href}
+              href={hrefFor(l.href)}
               key={l.label}
               onClick={() => setMenuOpen(false)}
             >

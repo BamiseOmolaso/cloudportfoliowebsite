@@ -2122,3 +2122,17 @@
     display: none;
   }
 }
+
+/* The older pages (blog, projects, ...) get only the header and the footer.
+   These two wrappers drop the page-sized background and padding of the full
+   home page so the old content between them is untouched. */
+.pf.pf-bar {
+  min-height: 0;
+  padding: 0;
+  background: none;
+}
+.pf.pf-end {
+  min-height: 0;
+  background: none;
+  padding-block: 2rem;
+}
