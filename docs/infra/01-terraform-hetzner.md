@@ -361,6 +361,42 @@ Repository → Settings:
 | Variables | `CLOUDFLARE_ZONE_ID` | the domain's zone ID (not secret); see doc 04 |
 | Environments | `hetzner-production` | add yourself under **Required reviewers** |
 
+### The first CI run: what we saw
+
+We opened a pull request and the pipeline ran for the first time. In order:
+
+1. **Format and validate: passed straight away.** It needs no secrets. This also
+   proved the provider lock file works on Linux (we had added hashes for Linux,
+   Intel Macs and Apple Silicon Macs, because a lock file made on a Mac alone is
+   rejected by the Linux runner).
+2. **Plan: failed**, with every secret shown empty in the log. That is expected on
+   a first run: the repository secrets did not exist yet. Terraform could not read
+   the state bucket.
+3. After adding the secrets (`gh secret set NAME`), `init` passed, but the plan
+   failed with `Authentication failed (code 9106)` from Cloudflare. The Hetzner
+   token and R2 keys were right; only the **`CLOUDFLARE_API_TOKEN` secret was wrong**
+   (a hand-pasted value differed from the working one).
+4. **Fix:** copy the working token from the Keychain straight into GitHub, with no
+   hand-pasting and nothing printed:
+   ```bash
+   security find-generic-password -a "$USER" -s portfolio-cf-terraform-token -w \
+     | gh secret set CLOUDFLARE_API_TOKEN --repo <owner>/<repo>
+   ```
+5. **Plan passed and said `No changes. Your infrastructure matches the
+   configuration.`** That is the result you want on a pull request that changes no
+   infrastructure: the code, the saved state and the real servers all agree.
+6. **Apply was skipped**, as designed: it only runs from `main`.
+
+**Lesson:** a secret that is copied by hand can be subtly wrong, and the error you
+see (`Authentication failed`) does not say which character. Piping it from where it
+is already stored removes the guesswork. Also, the plan step proves more than
+formatting does: it checks the code against the real world.
+
+**Before the first merge to `main`: create the approval gate.** In the repository:
+Settings, then Environments, then New environment, named `hetzner-production`, and
+add yourself under Required reviewers. Without it the apply job would run with no
+approval after a merge.
+
 ## 9. When things go wrong
 
 | Symptom | Likely cause |
@@ -371,6 +407,8 @@ Repository → Settings:
 | `server type … not found` / deprecated | Re-run the API call in 6.2 and pick a current type |
 | `admin_cidrs must be a non-empty list…` | You used `0.0.0.0/0` or left it empty |
 | SSH times out | Your IP changed; update `admin_cidrs` and apply |
+| CI plan: `Authentication failed (code 9106)` from Cloudflare | The `CLOUDFLARE_API_TOKEN` secret in GitHub is wrong or has a stray character. Re-set it from the Keychain (see "The first CI run") |
+| CI plan: every secret empty in the log | The repository secrets and variables are not set yet |
 | `Error acquiring the state lock` | Another run is in progress, or one was killed; wait, then investigate before forcing |
 
 **State locking on R2:** `use_lockfile` relies on S3 conditional writes. On our
