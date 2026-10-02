@@ -221,4 +221,5 @@ Check current Hetzner prices in the console; we do not quote numbers from memory
 5. **04** Domain and HTTPS: DNS, certificates, Cloudflare
 6. **05** ArgoCD and GitOps: git becomes the only way a change reaches the cluster
 7. **06** PostgreSQL on the data disk, with nightly backups to R2 and a tested restore
-8. Next: **07** the application, then monitoring and the cut-over of the main domain
+8. **07** the application: images, migrations, secrets, deploy (written, not yet verified)
+9. Next: monitoring and the cut-over of the main domain

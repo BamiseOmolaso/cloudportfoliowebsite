@@ -1,0 +1,47 @@
+# Applies database migrations (creates or updates the tables) BEFORE the new app version
+# starts. It is an ArgoCD "hook": a Job ArgoCD runs during a sync, in wave order.
+#  - Sync-wave 0 runs after the namespace/config (waves -2, -1) and before the
+#    Deployment (wave 1), so the app never starts against an out-of-date database.
+#  - BeforeHookCreation deletes the previous run's Job first, so the name can be reused.
+#  - Running it twice is safe: with nothing new to apply it does nothing.
+# Why `backoffLimit: 6`: a brand-new pod can be blocked from the database for a second
+# or two by the network policy (see docs/infra/06). A failed try is retried.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: portfolio-migrate
+  namespace: portfolio
+  annotations:
+    argocd.argoproj.io/hook: Sync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+    argocd.argoproj.io/sync-wave: "0"
+spec:
+  backoffLimit: 6
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: portfolio-migrate
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: migrate
+          image: ghcr.io/bamiseomolaso/cloudportfoliowebsite-migrator:sha-f52a990
+          securityContext:
+            runAsUser: 1000 # the image's built-in "node" user
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: DATABASE_URL
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }

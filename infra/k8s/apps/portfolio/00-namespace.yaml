@@ -1,0 +1,11 @@
+# A namespace is a folder for everything that belongs to the website. The label makes
+# Kubernetes refuse any pod here that runs as root or has extra powers.
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: portfolio
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2" # created first
+  labels:
+    pod-security.kubernetes.io/enforce: restricted
+    app.kubernetes.io/part-of: portfolio
