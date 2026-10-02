@@ -411,6 +411,23 @@ unrelated but had one root cause.
 - A half-typed line such as `ACCESS_KEY_ID; echo; ...` just gives
   `command not found`. Harmless; paste the whole line.
 
+**5. `dial tcp: lookup <id>.r2.cloudflarestorage.com: no such host`**
+- *What it says:* the Mac could not turn the R2 address into an IP.
+- *What it really meant:* a network problem, not Terraform and not our secrets. The
+  same address had worked earlier. Our check: `dig` resolved it (it uses its own
+  resolver path) but `curl` and `dscacheutil` failed (they use the system resolver,
+  like Terraform does). The Mac's DNS servers (provider and phone-hotspot ones) were
+  failing on that one name.
+- *Fix:* use public DNS servers, then re-run `init`:
+  ```bash
+  networksetup -setdnsservers Wi-Fi 1.1.1.1 8.8.8.8
+  # undo later: networksetup -setdnsservers Wi-Fi Empty
+  ```
+  A quick test of the system resolver: `curl -s -o /dev/null -w "%{http_code}\n" https://<account-id>.r2.cloudflarestorage.com/`
+  (any number except `000` means the name resolved).
+- *Lesson:* when "no such host" appears, test the name with `curl` (system resolver)
+  and compare with `dig`, before touching any code.
+
 **What finally worked:**
 ```bash
 export AWS_ACCESS_KEY_ID AWS_SECRET_ACCESS_KEY HCLOUD_TOKEN
