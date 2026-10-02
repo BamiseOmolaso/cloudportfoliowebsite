@@ -168,6 +168,23 @@ ansible-playbook playbooks/01-bootstrap.yml -u root
 
 At the end it prints a recap. `failed=0` is what you want.
 
+**Reboot once.** The first run installs a new kernel and core libraries (our run
+listed about 100 upgraded packages). They only take effect after a restart. Do it
+now, while nothing runs on the server:
+
+```bash
+ansible all -u root -m reboot
+```
+
+It waits until the server is back. Then check with `ssh -i ~/.ssh/hetzner_portfolio root@<server-ip> uname -r`
+that it reports the new kernel (for us, `6.8.0-146`).
+
+**Another dry-run limit we hit:** `Either user must exist or you must provide full
+path to key file in check mode`. In a dry run the admin user is only pretended, so
+it has no home directory for its key. That one task is set to tolerate failure in
+dry runs only (`ignore_errors: "{{ ansible_check_mode }}"`); in a real run it is
+strict.
+
 ### Step B: test the admin login (do not skip)
 
 Open a **second** terminal and log in as the new user:

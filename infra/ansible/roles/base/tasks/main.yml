@@ -27,6 +27,9 @@
     user: "{{ admin_user }}"
     key: "{{ admin_public_key }}"
     state: present
+  # In a dry run (--check) the user above is only pretended, so it has no home
+  # directory yet and this task cannot run. Tolerate that, in dry runs only.
+  ignore_errors: "{{ ansible_check_mode }}"
 
 # The account has no password, so sudo cannot ask for one. This is the usual
 # trade-off for a single-admin server: anyone holding your key is effectively
