@@ -10,8 +10,9 @@ Read this first. It explains the whole system in pictures, then each numbered do
 
 **Legend.** A solid box is **built and verified**. A dashed box is **planned or in
 progress**, not yet seen working. We only call something "working" once we have
-actually seen it work. (Today: the firewall, server, disk, k3s and Traefik are
-verified; Cloudflare routing and cert-manager are what doc 04 builds.)
+actually seen it work. (Today: the firewall, server, disk, k3s, Traefik, Cloudflare
+routing and cert-manager are verified, on a test hostname. The app, database and
+monitoring are still to come.)
 
 ---
 
@@ -43,7 +44,7 @@ The same thing as a diagram:
 
 ```mermaid
 flowchart LR
-  V["Visitor's browser"] -->|"HTTPS"| CF["Cloudflare<br/>DNS, CDN, TLS"]:::planned
+  V["Visitor's browser"] -->|"HTTPS"| CF["Cloudflare<br/>DNS, CDN, TLS"]
   CF -->|"HTTPS, ports 80 and 443"| FW["Hetzner cloud firewall"]
 
   subgraph HZ["Hetzner Cloud project: portfolio"]
@@ -51,7 +52,7 @@ flowchart LR
     subgraph NODE["Server: portfolio-prod-node, Ubuntu 24.04"]
       subgraph K3S["k3s, a small Kubernetes"]
         TR["Traefik<br/>the front door"]
-        CM["cert-manager<br/>HTTPS certificates"]:::planned
+        CM["cert-manager<br/>HTTPS certificates"]
         APP["Next.js app"]:::planned
         PG["PostgreSQL"]:::planned
         MON["Prometheus and Grafana"]:::planned
@@ -103,8 +104,10 @@ sequenceDiagram
   C-->>B: The page
 ```
 
-Steps 2 to 9 happen in a fraction of a second. We have proven steps 5 to 7 so far
-(a test page answered through Traefik); the Cloudflare steps are built in doc 04.
+Steps 2 to 9 happen in a fraction of a second. We have proven the whole path with a
+test page on `test.oluwabamiseomolaso.com.ng`: Cloudflare in front, a real Let's
+Encrypt certificate on the server, and a pod answering (doc 04). The real app
+replaces the test page later.
 
 ## 3. How the system gets built: who creates what
 

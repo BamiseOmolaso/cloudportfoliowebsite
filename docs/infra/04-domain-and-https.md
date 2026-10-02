@@ -425,6 +425,31 @@ the stage that failed. This is also why `000` appeared as the status code earlie
 Certificate verify codes in brackets, such as `(20)`: **20** cannot trace to a trusted
 authority, **18** self-signed certificate, **10** certificate has expired.
 
+### 7.5b Response headers (what `curl -I` printed through Cloudflare)
+
+`curl -I` asks for the headers only. These came back from `https://test...`:
+
+| Header | What it means |
+|---|---|
+| `HTTP/2 200` | Success, over HTTP/2 |
+| `server: cloudflare` | **Proof Cloudflare answered**, not your server directly. The proxy is in the path |
+| `content-type: text/plain` / `content-length: 587` | The kind and size (in bytes) of the page: our test pod's plain-text reply |
+| `cf-cache-status: DYNAMIC` | Cloudflare did not cache it (dynamic pages are not cached by default). `HIT` would mean it served a saved copy |
+| `cf-ray: a4452d37...-LAX` | A unique ID for this request, ending with the three-letter code of the Cloudflare data centre that handled it (`LAX` is Los Angeles). Quote it when asking Cloudflare support about a request |
+| `alt-svc: h3=":443"` | "I also speak HTTP/3 on this port": an offer to use the newest protocol next time |
+| `report-to` and `nel` | Cloudflare's network-error reporting for browsers. You can ignore them |
+| `date` | When the answer was produced |
+
+And from `http://test...` (plain HTTP):
+
+| Header | What it means |
+|---|---|
+| `HTTP/1.1 301 Moved Permanently` | "This has moved for good" |
+| `Location: https://test.../` | **Where to go instead.** This is **Always Use HTTPS** at work: Cloudflare turns every plain-HTTP request into a redirect to HTTPS, before it ever reaches your server |
+
+Two good habits: `curl -I` to see how a site is set up without downloading it, and
+checking `server:` to know who answered.
+
 ### 7.6 Kubernetes status words
 
 From `kubectl get pods`, `kubectl get certificate` and friends.
