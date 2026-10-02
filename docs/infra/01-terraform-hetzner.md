@@ -441,5 +441,32 @@ holds nothing you can't recreate. The data volume is not deleted by this.
    ```
 6. Check you can log in: `ssh -i ~/.ssh/hetzner_portfolio root@<new-ip>`.
 
+**What the two plans should look like (from our real run)**
+
+Step 3 (`-var protect=false`), summary `1 to add, 2 to change, 1 to destroy`:
+- the server and the volume are *updated in place* (delete and rebuild
+  protection go from `true` to `false`). Neither is destroyed.
+- the SSH key is *replaced*: the old key record is destroyed and one with the new
+  key is created. This is only a record in Hetzner; it does not touch the server.
+
+Step 4 (`-replace=...`), summary `2 to add, 1 to change, 2 to destroy`:
+- the server is replaced (`-/+`), with `ssh_keys` changing to the new key's ID
+  and protection going back to `true`.
+- the volume attachment is replaced, because it points at the server.
+- the volume is only *updated in place* (protection back to `true`). It is not
+  destroyed. If a plan ever shows the volume being destroyed, **stop**.
+- the server's IPv4 and IPv6 addresses change (`(known after apply)`).
+
+**A harmless oddity:** the plan shows the server's `network { ... }` and
+`public_net { ... }` blocks removed and added back with the same values. That is
+how the Hetzner provider lists those blocks and is not a real change. It does not
+create or delete anything.
+
+**Why replace instead of fixing the old server?** The alternative is to reset the
+root password in the Hetzner web console and add the new key by hand. That works
+but changes the server in a way Terraform does not know about, so the code would
+no longer describe reality. Replacing keeps the code as the single source of
+truth, and it costs nothing while the server is empty.
+
 **Prevent it next time:** store the passphrase in a password manager the moment
 you create it, and test the login once before building anything on the server.
