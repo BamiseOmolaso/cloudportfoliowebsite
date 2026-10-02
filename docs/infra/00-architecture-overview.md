@@ -11,8 +11,8 @@ Read this first. It explains the whole system in pictures, then each numbered do
 **Legend.** A solid box is **built and verified**. A dashed box is **planned or in
 progress**, not yet seen working. We only call something "working" once we have
 actually seen it work. (Today: the firewall, server, disk, k3s, Traefik, Cloudflare
-routing, cert-manager, ArgoCD and PostgreSQL with backups are verified. The app and
-monitoring are still to come.)
+routing, cert-manager, ArgoCD, PostgreSQL with backups, and the website itself are
+verified, on a test hostname. Monitoring and the Redis connection are still to come.)
 
 ---
 
@@ -53,7 +53,7 @@ flowchart LR
       subgraph K3S["k3s, a small Kubernetes"]
         TR["Traefik<br/>the front door"]
         CM["cert-manager<br/>HTTPS certificates"]
-        APP["Next.js app"]:::planned
+        APP["Next.js app"]
         PG["PostgreSQL"]
         MON["Prometheus and Grafana"]:::planned
         TR --> APP
@@ -221,5 +221,5 @@ Check current Hetzner prices in the console; we do not quote numbers from memory
 5. **04** Domain and HTTPS: DNS, certificates, Cloudflare
 6. **05** ArgoCD and GitOps: git becomes the only way a change reaches the cluster
 7. **06** PostgreSQL on the data disk, with nightly backups to R2 and a tested restore
-8. **07** the application: images, migrations, secrets, deploy (written, not yet verified)
+8. **07** the application: images, migrations, secrets, deploy (verified on the test hostname)
 9. Next: monitoring and the cut-over of the main domain
