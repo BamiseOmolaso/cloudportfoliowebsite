@@ -275,3 +275,53 @@ Seen working on 2 October 2026:
 `/api/newsletter/subscribe`, read the newest `failed_attempts` row, compare its
 `ip_address` to `curl -4 https://ifconfig.me`, then delete the row. (Do not paste your
 own address into the docs: this repository is public.)
+
+### End-to-end tests on the test site (3 October 2026)
+
+Testing the real site by hand found three problems the automated tests had not.
+
+| Test | Result |
+|---|---|
+| Contact form email | Arrives |
+| Newsletter signup email | Arrives |
+| Rate limit on the contact form (limit: 5 per hour) | **Never blocked.** 15 real submissions and then 8 more test requests all went through |
+| Signing up the same email again | **Sent a new welcome email every time**, and quietly replaced the person's unsubscribe links |
+| Contact form on the home page | There was none: the section only offered a copy-email button and social links |
+
+**Bug 1: the rate limiter never blocked (found by testing the live site).**
+The limiter keeps its counts in Redis. After each request it asked Redis how many
+recent requests this visitor had made, and read the answer as `results[1]?.[1]`. That is
+how a *different* Redis library (`ioredis`) formats its answer, as `[error, value]`
+pairs. This app uses the `redis` package, which returns the plain values:
+`[removed, count, added, expire]`. So `results[1]` was a number, `number[1]` is
+`undefined`, and the count was always 0: every visitor was always "under the limit".
+The unit tests had been written with the same wrong format, so they passed.
+*Fix:* read `results[1]` directly, change the tests to the real format. *How to know
+the test is honest:* the over-limit test fails against the old code.
+
+**Bug 2: repeat newsletter signups.** The route always did an "upsert" and then sent
+emails. For an email already on the list that meant another welcome email, another
+notification to you, a counter bump, and, worst, **new tokens**, which invalidated the
+unsubscribe and preferences links in the email the person had already received. With
+bug 1 as well, anyone could flood a stranger's inbox through the form. *Fix:* look the
+email up first. If it is active, return the same success reply as a new signup (so the
+form cannot be used to find out who is subscribed) and do nothing else. People who
+unsubscribed before can still re-subscribe.
+
+**Bug 3 (a design gap): no visible contact form.** The redesigned home page offered only
+"Copy email". We added a **Send a message** button to the existing `/contact` page.
+
+**Verified after the fix:** 7 of 8 rapid contact requests were answered `429 Too Many
+Requests` with `retry-after: 3600` (the eighth line printed nothing, a display hiccup in
+the test script). Before the fix none were blocked.
+
+**Lessons**
+1. *A mock that copies your own wrong assumption proves nothing.* The tests passed
+   because they mocked the shape the code expected, not the shape the library returns.
+   When you mock a library, take the shape from its documentation or a real response.
+2. *Test the behaviour, not just the wiring.* "Send 8 requests, expect some to be
+   blocked" found in a minute what the unit tests missed.
+3. *Blocked requests still count.* The limiter records every attempt, including
+   rejected ones, so hammering the form keeps you blocked longer. After testing it you
+   may be locked out of your own form for up to an hour.
+
