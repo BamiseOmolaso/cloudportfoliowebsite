@@ -1,0 +1,4 @@
+# Reviewed false positives (2026-10-02). Each fingerprint is commit:file:rule:line,
+# so it only silences that exact historical finding, never a new one.
+ce6af69e5456f6381791acab902bdf4d27ed7705:scripts/setup-docker.sh:generic-api-key:48
+ce6af69e5456f6381791acab902bdf4d27ed7705:scripts/setup-docker.sh:generic-api-key:49
