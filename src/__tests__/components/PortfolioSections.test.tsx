@@ -60,9 +60,7 @@ describe("PipelineDemo", () => {
   it("lists every pipeline stage", () => {
     render(<PipelineDemo />);
     for (const stage of pipeline.stages) {
-      expect(
-        screen.getAllByText(new RegExp(stage.name, "i")).length,
-      ).toBeGreaterThan(0);
+      expect(screen.getAllByText(stage.title).length).toBeGreaterThan(0);
     }
   });
 
