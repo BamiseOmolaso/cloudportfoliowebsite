@@ -161,6 +161,11 @@ Things to know:
 - **Keep the name `HCLOUD_TOKEN` exactly.** The code never contains the token;
   the Hetzner provider looks for a variable with that exact name. You only
   supply the value.
+- **Check the key lengths.** The R2 key ID is 32 characters and the secret is
+  64. Check with `echo ${#AWS_ACCESS_KEY_ID} ${#AWS_SECRET_ACCESS_KEY}`: you
+  should see `32 64`. A 20-character key is a real Amazon key, which means an old
+  value is loaded or the wrong one was pasted. The error looks like
+  `Credential access key has length 20, should be 32`.
 - **Why do the R2 keys have "AWS" in their names?** Terraform stores its state
   using a method originally built for Amazon's storage (S3), and it looks for
   login details under those names. Cloudflare R2 copies that method, so we
