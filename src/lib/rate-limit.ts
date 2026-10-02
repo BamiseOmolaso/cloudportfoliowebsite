@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getRedisClient } from "./redis-client";
+import { getClientIp } from "@/lib/client-ip";
 
 interface RateLimiterConfig {
   maxRequests: number;
@@ -225,24 +226,13 @@ export const adminLimiter = new RateLimiter({
   prefix: "admin:",
 });
 
-function getClientIp(req: NextRequest): string {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
-  }
-  const realIp = req.headers.get("x-real-ip");
-  if (realIp) return realIp;
-  return "unknown";
-}
-
 export function withRateLimit(
   limiter: RateLimiter,
   identifier: string,
   handler: (req: NextRequest) => Promise<NextResponse>,
 ) {
   return async (req: NextRequest) => {
-    const key = `${identifier}:${getClientIp(req)}`;
+    const key = `${identifier}:${getClientIp(req.headers) ?? "unknown"}`;
     const result = await limiter.check(key);
 
     if (!result.success) {

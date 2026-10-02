@@ -5,6 +5,7 @@ import {
   handleError,
   addSecurityHeaders,
 } from "@/lib/api-security";
+import { getClientIp } from "@/lib/client-ip";
 
 export const dynamic = "force-dynamic";
 
@@ -36,10 +37,7 @@ export const GET = secureAdminRoute(async (request: NextRequest, user) => {
       resourceType: "NewsletterSubscriber",
       resourceId: null,
       details: { count: subscribers.length },
-      ipAddress:
-        request.headers.get("x-forwarded-for") ||
-        request.headers.get("x-real-ip") ||
-        null,
+      ipAddress: getClientIp(request.headers),
       userAgent: request.headers.get("user-agent") || null,
       timestamp: new Date().toISOString(),
     });

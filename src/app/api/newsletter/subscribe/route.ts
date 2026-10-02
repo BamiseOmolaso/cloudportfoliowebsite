@@ -10,6 +10,7 @@ import {
   verifyCaptcha,
 } from '@/lib/security';
 import crypto from 'crypto';
+import { getClientIp } from "@/lib/client-ip";
 
 function sanitizeInput(input: string): string {
   return input.trim().replace(/[<>]/g, '');
@@ -27,9 +28,7 @@ function validateInputs(email: string, name: string): { isValid: boolean; error?
 }
 
 export const POST = withRateLimit(apiLimiter, 'newsletter-subscribe', async (req: Request) => {
-  const ip = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
-            req.headers.get('x-real-ip') || 
-            'unknown';
+  const ip = getClientIp(req.headers) || 'unknown';
   const userAgent = req.headers.get('user-agent') || 'unknown';
 
   if (await isIPBlacklisted(ip)) {

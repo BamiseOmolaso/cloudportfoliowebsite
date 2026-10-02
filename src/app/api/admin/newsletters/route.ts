@@ -3,6 +3,7 @@ import { db } from '@/lib/db';
 import { secureAdminRoute, handleError, mapPrismaError, sanitizeContent } from '@/lib/api-security';
 import { newsletterCreateSchema } from '@/lib/validation-schemas';
 import { z } from 'zod';
+import { getClientIp } from "@/lib/client-ip";
 
 export const dynamic = 'force-dynamic';
 
@@ -71,7 +72,7 @@ export const POST = secureAdminRoute(async (request: NextRequest, user) => {
       resourceType: 'Newsletter',
       resourceId: newsletter.id,
       details: { subject: newsletter.subject },
-      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+      ipAddress: getClientIp(request.headers),
       userAgent: request.headers.get('user-agent') || null,
       timestamp: new Date().toISOString(),
     });
