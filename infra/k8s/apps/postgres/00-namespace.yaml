@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: "-2" # created first
+  labels:
+    # Kubernetes refuses any pod here that is not locked down (no root, no extra powers).
+    pod-security.kubernetes.io/enforce: restricted
+    app.kubernetes.io/part-of: portfolio

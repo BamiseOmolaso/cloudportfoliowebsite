@@ -15,3 +15,14 @@
     fstype: ext4
     opts: discard,nofail,defaults
     state: mounted
+
+# The database's folder on the disk. Kubernetes cannot fix the ownership of a plain
+# host folder for us, and Postgres refuses to start unless its data folder belongs to
+# the user it runs as and is private (mode 0700).
+- name: Create the Postgres data folder with the right owner
+  ansible.builtin.file:
+    path: "{{ data_mount_path }}/postgres"
+    state: directory
+    owner: "{{ postgres_uid }}"
+    group: "{{ postgres_gid }}"
+    mode: "0700"

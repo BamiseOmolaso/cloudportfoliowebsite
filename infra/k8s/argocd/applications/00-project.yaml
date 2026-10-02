@@ -16,7 +16,12 @@ spec:
   destinations:
     - server: https://kubernetes.default.svc # this cluster
       namespace: hello
-  # Applications may create Namespaces (and nothing else cluster-wide).
+    - server: https://kubernetes.default.svc
+      namespace: postgres
+  # Applications may create Namespaces and PersistentVolumes (and nothing else
+  # cluster-wide). The database storage is a PersistentVolume.
   clusterResourceWhitelist:
     - group: ""
       kind: Namespace
+    - group: ""
+      kind: PersistentVolume
