@@ -311,10 +311,12 @@ Repository → Settings:
 | Secrets | `R2_ACCESS_KEY_ID` | from 6.1 |
 | Secrets | `R2_SECRET_ACCESS_KEY` | from 6.1 |
 | Secrets | `R2_ENDPOINT` | `https://<ACCOUNT_ID>.r2.cloudflarestorage.com` |
+| Secrets | `CLOUDFLARE_API_TOKEN` | the `terraform-dns` token from doc 04 (DNS edit, one zone only) |
 | Secrets | `TF_VAR_SSH_PUBLIC_KEY` | contents of the `.pub` file |
 | Secrets | `TF_VAR_ADMIN_CIDRS` | `["x.x.x.x/32"]` (with the brackets and quotes) |
 | Variables | `SERVER_TYPE` | the type you picked |
 | Variables | `HCLOUD_LOCATION` | e.g. `fsn1` |
+| Variables | `CLOUDFLARE_ZONE_ID` | the domain's zone ID (not secret); see doc 04 |
 | Environments | `hetzner-production` | add yourself under **Required reviewers** |
 
 ## 9. When things go wrong

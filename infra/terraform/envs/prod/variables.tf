@@ -30,3 +30,8 @@ variable "protect" {
   type        = bool
   default     = true
 }
+
+variable "cloudflare_zone_id" {
+  description = "Cloudflare zone ID for the domain (not a secret). Found on the domain's overview page."
+  type        = string
+}
