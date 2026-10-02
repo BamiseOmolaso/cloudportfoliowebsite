@@ -9,11 +9,9 @@ honest: it is the shared memory of the project.
 
 ## Infrastructure: next up
 
-- [~] **Postgres: finish verifying** (doc 06): first backup lands in R2, restore test
-  passes, data survives a pod crash, the network policy blocks other namespaces.
-  The first manual backup failed with `Connection refused` (a new-pod network-policy gap);
-  fixed by making the jobs wait for the database. Re-run the backup and the restore test
-  to confirm.
+- [x] **Postgres verified** (doc 06): backup to R2, restore test, crash survival and the
+  network policy all confirmed. Still to rehearse: a restore into the live database, and
+  a restore after a full server rebuild.
 - [ ] **Application deployment** (doc 07): build the image, push it to a registry (GitHub's
   container registry), deploy through ArgoCD into a `portfolio` namespace, connect to
   Postgres, set up the real client-IP header from Cloudflare.
@@ -76,4 +74,4 @@ honest: it is the shared memory of the project.
 - [x] Domain and HTTPS with Cloudflare and Let's Encrypt, tested on a test hostname (doc 04)
 - [x] ArgoCD and GitOps, with a tested change, revert and self-heal (doc 05)
 - [x] CI pipeline for infrastructure changes, with a first full run
-- [x] PostgreSQL deployed through ArgoCD, init script and app login verified (doc 06)
+- [x] PostgreSQL deployed through ArgoCD with nightly R2 backups and a passing restore test (doc 06)
