@@ -1,4 +1,15 @@
 #!/usr/bin/env sh
 . "$(dirname -- "$0")/_/husky.sh"
 
+# Block the commit if the staged changes contain a secret. Skipped with a
+# warning when gitleaks is not installed (brew install gitleaks).
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git --pre-commit --staged --redact --no-banner || {
+    echo "Commit blocked: gitleaks found what looks like a secret." >&2
+    exit 1
+  }
+else
+  echo "warning: gitleaks not installed, secret check skipped" >&2
+fi
+
 npx lint-staged
