@@ -14,7 +14,10 @@
 #
 # Safe to run again: it never replaces an existing key (a new key would need the server
 # updated too).
-set -euo pipefail
+set -eu
+
+# Written to run on the old bash that ships with macOS (3.2) as well as newer ones, so it
+# uses plain `[ ]` tests and no subshell around a here-document.
 
 DIR="${HOME}/.config/wireguard-hetzner"
 CLIENT_ADDRESS="${CLIENT_ADDRESS:-10.8.0.2/32}"   # this laptop's address inside the tunnel
@@ -31,11 +34,16 @@ fi
 mkdir -p "$DIR"
 chmod 700 "$DIR"
 
-# 1. The key pair, made once. umask 077 makes the files readable by you alone.
-if [[ ! -f "$DIR/private.key" ]]; then
-  (umask 077; wg genkey > "$DIR/private.key")
+# 1. The key pair, made once. umask 077 makes new files readable by you alone.
+umask 077
+if [ ! -f "$DIR/private.key" ]; then
+  wg genkey > "$DIR/private.key"
   wg pubkey < "$DIR/private.key" > "$DIR/public.key"
   echo "Created a new key pair in $DIR"
+fi
+# A previous run may have stopped before the public key was written.
+if [ ! -s "$DIR/public.key" ]; then
+  wg pubkey < "$DIR/private.key" > "$DIR/public.key"
 fi
 
 echo
@@ -43,7 +51,7 @@ echo "Your PUBLIC key (safe to share; this is what goes in the Ansible peers lis
 cat "$DIR/public.key"
 
 # 2. The config, only when we know the server's key and address.
-if [[ -z "${SERVER_PUBLIC_KEY:-}" || -z "${SERVER_ENDPOINT:-}" ]]; then
+if [ -z "${SERVER_PUBLIC_KEY:-}" ] || [ -z "${SERVER_ENDPOINT:-}" ]; then
   echo
   echo "Next: add that key to wireguard_peers, run playbooks/04-wireguard.yml, then run this"
   echo "script again with SERVER_PUBLIC_KEY and SERVER_ENDPOINT set (see the top of this file)."
@@ -51,11 +59,18 @@ if [[ -z "${SERVER_PUBLIC_KEY:-}" || -z "${SERVER_ENDPOINT:-}" ]]; then
 fi
 
 CONF="$DIR/hetzner.conf"
-(umask 077; cat > "$CONF" <<CONF_EOF
+PRIVATE_KEY=$(cat "$DIR/private.key")
+MTU_LINE=""
+if [ -n "$WG_MTU" ]; then
+  MTU_LINE="MTU = ${WG_MTU}"
+fi
+
+# The umask above already makes this file readable by you alone.
+cat > "$CONF" <<CONF_EOF
 [Interface]
-PrivateKey = $(cat "$DIR/private.key")
+PrivateKey = ${PRIVATE_KEY}
 Address = ${CLIENT_ADDRESS}
-${WG_MTU:+MTU = ${WG_MTU}}
+${MTU_LINE}
 
 [Peer]
 PublicKey = ${SERVER_PUBLIC_KEY}
@@ -66,7 +81,8 @@ AllowedIPs = ${SERVER_TUNNEL_IP}/32
 # Keeps the connection alive through home routers and phone networks.
 PersistentKeepalive = 25
 CONF_EOF
-)
+chmod 600 "$CONF"
+
 echo
 echo "Wrote $CONF (readable by you only)."
 echo "Bring the tunnel up:   sudo wg-quick up $CONF"
