@@ -7,10 +7,10 @@ changed, you were locked out and had to edit the list (see
 connect to the server through an encrypted line that only your laptop's key can open, and
 nothing depends on your IP.
 
-> **Status: the code is written and checked, but not applied yet.** The Ansible role, the
-> firewall rule and the laptop script all pass their syntax and template checks. Section 8
-> ("Verified results") is filled in after the first real run. Follow section 5 in order:
-> it is built so that a mistake cannot lock you out.
+> **Status: rolled out and working (3 October 2026).** See section 8 for what was seen
+> working and what went wrong on the way. Follow section 5 in order when adding another
+> device or rebuilding: it is built so that a mistake cannot lock you out. The public
+> `admin_cidrs` doors are still open as a fallback (section 6).
 
 ---
 
@@ -217,8 +217,24 @@ server saw.
 
 ## 8. Verified results
 
-*To be filled in after the first real run: the handshake, the `ping`, `kubectl` through the
-tunnel from a second network, and the date.*
+Seen working on 3 October 2026:
+
+| Step | Result |
+|---|---|
+| Firewall | `terraform plan` showed no changes at the end because the UDP 51820 rule had already been applied in the same apply that added the owner's address |
+| Server (`04-wireguard.yml`) | Ran for real with `failed=0`: installed WireGuard, created the server key on the server, wrote `wg0.conf` with one device, started the tunnel and reloaded it |
+| Laptop | `wg-quick up` created `utun6` with `10.8.0.2/32` and a route for `10.8.0.1/32` only |
+| Tunnel | `ping 10.8.0.1`: 2 of 2 replies, no loss, about 150 to 190 ms |
+| `kubectl` | With the kubeconfig pointed at `https://10.8.0.1:6443`, `kubectl -n portfolio get pods` and the seed Job ran normally through the tunnel |
+| Second network | The owner reports repeating SSH and `kubectl` over a phone hotspot (not independently verified) |
+
+Things that went wrong on the way, so they are not repeated:
+
+- **Wrong inventory indentation.** `wireguard_peers` was indented outside the host and missing its `-`, so Ansible could not read the file at all. Check with `ansible-inventory -i inventory/hosts.yml --host <node>`.
+- **SSH key with a passphrase.** Ansible cannot type a passphrase, so it connected with no key (`Permission denied (publickey)`). Fix: `ssh-add --apple-use-keychain ~/.ssh/hetzner_portfolio`.
+- **Dry runs failed on steps that need the previous step's result** (reading a key that a dry run never creates, starting a service whose package was never installed). The role now tolerates both, in dry runs only.
+- **The laptop script failed on macOS's old bash (3.2).** It was rewritten to use only simple tests and no subshell around a here-document, and to recover a missing public key.
+- **A different VPN changed the address the firewall saw**, which looked like a dead cluster (`i/o timeout`) but was the allow-list. The tunnel removes this whole class of problem.
 
 ## 9. Glossary
 
