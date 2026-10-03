@@ -404,8 +404,9 @@ Also:
 - **Git:** work on a feature branch (`feat/...`, `fix/...`, `docs/...`), never on `main`.
   Commit messages are short and say what and why; end them with the attribution line the
   tooling asks for. **Ask before opening a pull request or merging**, and bundle related
-  changes into one PR. Flow: feature branch -> `develop` -> release PR that updates the image
-  tag -> ArgoCD deploys (docs 05 and 07).
+  changes into one PR. Flow: feature branch -> `develop` -> **release PR to `main`** that updates
+  the image tag -> ArgoCD deploys from `main` (docs 05 and 07). Docs-only and infrastructure-only
+  pull requests skip the website CI jobs and build no image; website changes run everything.
 - Do not take shortcuts that skip hooks or checks. If a check fails, fix the cause.
 - Never delete or overwrite something you have not looked at. Look first.
 - Report honestly: say what was tested and what was not, and what the owner must do (for

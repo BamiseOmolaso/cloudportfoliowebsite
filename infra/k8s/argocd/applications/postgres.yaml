@@ -9,7 +9,7 @@ spec:
   project: portfolio
   source:
     repoURL: https://github.com/BamiseOmolaso/cloudportfoliowebsite.git
-    targetRevision: develop
+    targetRevision: main
     path: infra/k8s/apps/postgres
   destination:
     server: https://kubernetes.default.svc

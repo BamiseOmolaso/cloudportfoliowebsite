@@ -114,20 +114,37 @@ In `hello.yaml`:
 
 ## 4. Which branch does ArgoCD watch?
 
-Each Application has a `targetRevision`: the branch ArgoCD follows. Ours says
-`develop`, and that deserves an honest explanation.
+Each Application has a `targetRevision`: the branch ArgoCD follows. **Ours says `main`**
+(since 3 October 2026). The history, because it explains the shape of the workflow:
 
-- The normal choice is `main`, with changes promoted `develop` → `staging` → `main`.
-- Our `main` still holds the old AWS site and its old pipeline, which would try to apply
-  AWS infrastructure on a merge. We are not ready to merge this work into `main`.
-- So for now ArgoCD follows `develop`: **merging to `develop` deploys.** That is fine
-  while we build, but treat a merge to `develop` as a deployment.
-- When the Hetzner setup is promoted to `main`, change `targetRevision` in
-  `root-app.yaml` and each application to `main` (one reviewed commit).
+- While the Hetzner setup was being built, `main` still held the old AWS site and its old
+  pipeline, which would have applied AWS infrastructure on a merge. So ArgoCD followed
+  `develop`, and a merge to `develop` was a deployment.
+- Before moving, the old pipelines were switched off as automatic steps (the AWS deploy and
+  AWS Terraform workflows now run only by hand), and `develop` was promoted to `main` in one
+  pull request that also changed `targetRevision` in `root-app.yaml` and each application
+  to `main`.
+- **Now:** a change reaches the live site only by a merge to `main`. `develop` is the place
+  where work is collected and tested.
+
+**The release flow today**
+
+1. Feature branch -> pull request -> `develop` (CI runs).
+2. When a website change is merged to `develop`, GitHub builds two images tagged with that
+   commit (`sha-<7 letters>`). Docs-only and infrastructure-only merges build nothing.
+3. A small **release pull request to `main`** changes the image tag in
+   `infra/k8s/apps/portfolio/30-deployment.yaml` and `20-migrate-job.yaml` to the newest
+   commit that has an image. Merging it is the deployment.
+4. A later pull request brings `main` back into `develop` so the two do not drift.
+
+**Moving `root` itself.** `root-app.yaml` is the one thing applied by hand, so changing its
+`targetRevision` in git changes nothing until it is applied again:
+`kubectl apply -f infra/k8s/argocd/root-app.yaml`. Do this only **after** the change is on
+`main`, or `root` will look for files that are not there yet.
 
 **ArgoCD can only see what is pushed.** It reads the repository on GitHub, not your
-laptop. So the files in this doc must be merged to `develop` before the bootstrap in
-section 6 will find anything.
+laptop. So the files in this doc must be merged to the branch named in `targetRevision`
+(`main` now) before the bootstrap in section 6 will find anything.
 
 ## 5. Install ArgoCD (you do these)
 
@@ -346,7 +363,7 @@ crashing), or Healthy but OutOfSync (working, but not what git says).
 - **The project fence** (`portfolio`) limits damage from a mistaken change.
 - Changing the password and deleting the initial secret (section 6) removes a
   well-known default.
-- **Merging to `develop` deploys** (section 4): review pull requests with that in mind.
+- **Merging to `main` deploys** (section 4): review release pull requests with that in mind.
 
 ## 13. Cost
 
