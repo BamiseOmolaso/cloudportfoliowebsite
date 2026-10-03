@@ -6,8 +6,11 @@ import { hero, homeHero, profile } from "@/content/portfolio";
  */
 export default function Hero({
   content = { hero, homeHero, role: profile.role },
+  workHref = "#work",
 }: {
   content?: { hero: typeof hero; homeHero: typeof homeHero; role: string };
+  /** Where the main button goes: the Projects section, or the projects page when that section is hidden. */
+  workHref?: string;
 }) {
   const { hero: h, homeHero: hh, role } = content;
   return (
@@ -20,7 +23,7 @@ export default function Hero({
       </h1>
       <p>{hh.intro}</p>
       <div className="ctas">
-        <a className="btn primary" href="#work">
+        <a className="btn primary" href={workHref}>
           {hh.primaryCta}
         </a>
         <a

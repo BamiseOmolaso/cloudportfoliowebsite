@@ -9,7 +9,9 @@ import {
   terraformJourney,
 } from "@/content/portfolio";
 import { withOverrides } from "@/content/editable";
-import { getOverrides } from "@/lib/site-content";
+import { isShown } from "@/content/sections";
+import { getOverrides, layoutFor } from "@/lib/site-content";
+import { Fragment } from "react";
 import { fontVars } from "../fonts";
 
 export const metadata = {
@@ -24,16 +26,35 @@ export const dynamic = "force-dynamic";
 
 export default async function LearningPage() {
   const o = await getOverrides();
+  const layout = layoutFor("learning", o);
+  const homeContact = isShown(layoutFor("home", o), "contact");
+
+  const parts: Record<string, React.ReactNode> = {
+    journey: (
+      <TerraformJourney
+        content={withOverrides("terraformJourney", terraformJourney, o)}
+      />
+    ),
+    patterns: (
+      <Patterns
+        section={withOverrides("patternsSection", patternsSection, o)}
+        items={withOverrides("patterns", patterns, o)}
+      />
+    ),
+  };
+
   return (
-    <PortfolioShell className={fontVars} onHome={false}>
+    <PortfolioShell
+      className={fontVars}
+      onHome={false}
+      contactHref={homeContact ? undefined : "/contact"}
+    >
       <div className="wrap" id="main">
-        <TerraformJourney
-          content={withOverrides("terraformJourney", terraformJourney, o)}
-        />
-        <Patterns
-          section={withOverrides("patternsSection", patternsSection, o)}
-          items={withOverrides("patterns", patterns, o)}
-        />
+        {layout
+          .filter((s) => s.visible)
+          .map((s) => (
+            <Fragment key={s.id}>{parts[s.id]}</Fragment>
+          ))}
         <SiteFooter newsletter={withOverrides("newsletter", newsletter, o)} />
       </div>
     </PortfolioShell>

@@ -22,7 +22,9 @@ import {
   work,
 } from "@/content/portfolio";
 import { withOverrides } from "@/content/editable";
-import { getOverrides } from "@/lib/site-content";
+import { isShown } from "@/content/sections";
+import { getOverrides, layoutFor } from "@/lib/site-content";
+import { Fragment } from "react";
 import { fontVars } from "./fonts";
 
 export const metadata = { alternates: { canonical: "/" } };
@@ -43,31 +45,53 @@ export const dynamic = "force-dynamic";
 //   /about             where I've worked and why a doctor (in the menu, not repeated here)
 export default async function HomePage() {
   const o = await getOverrides();
+  const layout = layoutFor("home", o);
+  const shown = (id: string) => isShown(layout, id);
+
+  // Each section as it has always been drawn; only the order and which ones appear change.
+  const parts: Record<string, React.ReactNode> = {
+    hero: (
+      <Hero
+        workHref={shown("work") ? "#work" : "/projects"}
+        content={{
+          hero: withOverrides("hero", hero, o),
+          homeHero: withOverrides("homeHero", homeHero, o),
+          role: withOverrides("profile", profile, o).role,
+        }}
+      />
+    ),
+    tools: <ToolsStrip />,
+    results: <Results />,
+    work: <Work content={withOverrides("work", work, o)} />,
+    platform: (
+      <PlatformFeature
+        content={withOverrides("platformFeature", platformFeature, o)}
+      />
+    ),
+    pipeline: <PipelineDemo />,
+    patterns: (
+      <Patterns
+        limit={2}
+        section={withOverrides("patternsSection", patternsSection, o)}
+        items={withOverrides("patterns", patterns, o)}
+      />
+    ),
+    posts: <LivePosts />,
+    youtube: <YouTube />,
+    contact: <Contact content={withOverrides("contact", contact, o)} />,
+  };
+
   return (
-    <PortfolioShell className={fontVars}>
+    <PortfolioShell
+      className={fontVars}
+      contactHref={shown("contact") ? undefined : "/contact"}
+    >
       <div className="wrap">
-        <Hero
-          content={{
-            hero: withOverrides("hero", hero, o),
-            homeHero: withOverrides("homeHero", homeHero, o),
-            role: withOverrides("profile", profile, o).role,
-          }}
-        />
-        <ToolsStrip />
-        <Results />
-        <Work content={withOverrides("work", work, o)} />
-        <PlatformFeature
-          content={withOverrides("platformFeature", platformFeature, o)}
-        />
-        <PipelineDemo />
-        <Patterns
-          limit={2}
-          section={withOverrides("patternsSection", patternsSection, o)}
-          items={withOverrides("patterns", patterns, o)}
-        />
-        <LivePosts />
-        <YouTube />
-        <Contact content={withOverrides("contact", contact, o)} />
+        {layout
+          .filter((s) => s.visible)
+          .map((s) => (
+            <Fragment key={s.id}>{parts[s.id]}</Fragment>
+          ))}
         <SiteFooter newsletter={withOverrides("newsletter", newsletter, o)} />
       </div>
     </PortfolioShell>

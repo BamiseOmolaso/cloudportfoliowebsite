@@ -53,6 +53,7 @@ export default function PortfolioShell({
   className,
   variant = "page",
   onHome = true,
+  contactHref,
   children,
 }: {
   /** Font CSS-variable classes from next/font (see app/fonts.ts). */
@@ -60,13 +61,19 @@ export default function PortfolioShell({
   variant?: "page" | "bar";
   /** False on pages other than "/", whose "#section" links must lead back home. */
   onHome?: boolean;
+  /** Where the "Contact" link goes. Defaults to the home page's contact section; the contact page when that section is hidden. */
+  contactHref?: string;
   children?: React.ReactNode;
 }) {
   const bar = variant === "bar";
   // Away from the home page, "#contact" has to become "/#contact".
   const away = bar || !onHome;
   const hrefFor = (href: string) =>
-    away && href.startsWith("#") ? `/${href}` : href;
+    href === "#contact" && contactHref
+      ? contactHref
+      : away && href.startsWith("#")
+        ? `/${href}`
+        : href;
   const [theme, setTheme] = useState<Theme>("dark");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuBtn = useRef<HTMLButtonElement>(null);

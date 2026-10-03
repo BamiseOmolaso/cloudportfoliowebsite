@@ -17,6 +17,9 @@ interface PageSummary {
   description: string;
   fields: number;
   edited: number;
+  sections: number;
+  hidden: number;
+  arranged: boolean;
 }
 
 export default function AdminPagesIndex() {
@@ -46,17 +49,26 @@ export default function AdminPagesIndex() {
           <Card key={p.id} className="flex flex-col p-5">
             <div className="flex items-start justify-between gap-3">
               <h2 className="text-lg font-semibold text-white">{p.title}</h2>
-              {p.edited > 0 && (
-                <StatusBadge status="edited" label={`${p.edited} edited`} />
-              )}
+              <span className="flex flex-wrap justify-end gap-1">
+                {p.hidden > 0 && (
+                  <StatusBadge status="draft" label={`${p.hidden} hidden`} />
+                )}
+                {p.arranged && (
+                  <StatusBadge status="scheduled" label="reordered" />
+                )}
+                {p.edited > 0 && (
+                  <StatusBadge status="edited" label={`${p.edited} edited`} />
+                )}
+              </span>
             </div>
             <p className="mt-2 flex-1 text-sm text-gray-400">{p.description}</p>
             <p className="mt-3 text-xs text-gray-500">
               {p.fields} pieces of text
+              {p.sections > 0 && ` · ${p.sections} sections`}
             </p>
             <div className="mt-4 flex gap-2">
               <Link href={`/admin/pages/${p.id}`} className={button("primary")}>
-                Edit text
+                Edit
               </Link>
               <Link href={p.href} target="_blank" className={button("ghost")}>
                 View ↗

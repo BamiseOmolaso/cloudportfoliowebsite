@@ -241,6 +241,36 @@ Unsubscribe links in newsletters no longer expire (the old 30-day limit would ha
 the link in older emails). Scheduling a newsletter for later was removed from the form:
 nothing sent it at the chosen time, so the option would have been misleading.
 
+### Showing, hiding and moving sections
+
+On **Pages → Home / About / Learning**, the first card is **Sections on this page**: every
+section in its current order, with a switch (shown / hidden) and up / down arrows. Change
+them and press **Save changes** (the same button as for text). The look of each section is
+not touched: only which ones appear and in what order. This follows the wedding site's
+"page section order" idea.
+
+| Page | Sections you can arrange |
+|---|---|
+| Home | Technical tools, Numbers, Projects, The platform, Commit to production, Infrastructure patterns, Latest posts, YouTube, Contact. The **Hero** is always first and always shown |
+| About | Experience and certifications, Why a doctor, Contact |
+| Learning | Terraform journey, Infrastructure patterns |
+
+The newsletter box and footer stay at the bottom of every page, and the **Contact** page has
+no sections.
+
+| Piece | Job |
+|---|---|
+| `src/content/sections.ts` | The sections of each page in their default order, and `resolveSections`, which applies a saved choice: pinned first, unknown or repeated ids dropped, a section added to the site later appears at the end, shown |
+| `site_content` row `layout.<page>` | The choice, as JSON: `[{"id":"work","visible":false}, ...]`. No row means the default; arranging back to the default deletes the row |
+| `GET/PUT /api/admin/pages/[page]` | Return the sections with their labels, and save `layout` along with any text edits in one transaction. Unknown ids are refused |
+| The three public pages | Build every section, then render only the visible ones in the saved order, so the markup and styles are exactly what they were |
+
+Links that would break are handled: if **Projects** is hidden the hero's main button goes to
+`/projects` instead of `#work`; if **Contact** is hidden on Home, the menu's Contact link
+goes to the `/contact` page. One limit: the older pages (blog, projects, contact) draw
+their own menu bar, which cannot read the saved choice, so there the Contact link still
+points at `/#contact` and does nothing if the Home contact section is hidden.
+
 ### First names and subscriber dates
 
 | What | How |

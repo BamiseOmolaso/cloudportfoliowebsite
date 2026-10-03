@@ -15,3 +15,16 @@ export const getOverrides = cache(async (): Promise<Record<string, string>> => {
     return {};
   }
 });
+
+import {
+  layoutKey,
+  resolveSections,
+  type PageKey,
+  type SectionState,
+} from "@/content/sections";
+
+/** A page's sections in the order the admin chose, from the edits already read for this request. */
+export const layoutFor = (
+  page: PageKey,
+  overrides: Record<string, string>,
+): SectionState[] => resolveSections(page, overrides[layoutKey(page)]);

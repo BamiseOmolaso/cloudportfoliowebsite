@@ -11,7 +11,9 @@ import {
   record,
 } from "@/content/portfolio";
 import { withOverrides } from "@/content/editable";
-import { getOverrides } from "@/lib/site-content";
+import { isShown } from "@/content/sections";
+import { getOverrides, layoutFor } from "@/lib/site-content";
+import { Fragment } from "react";
 import { fontVars } from "../fonts";
 
 export const metadata = {
@@ -25,16 +27,33 @@ export const dynamic = "force-dynamic";
 
 export default async function AboutPage() {
   const o = await getOverrides();
+  const layout = layoutFor("about", o);
+  const homeContact = isShown(layoutFor("home", o), "contact");
+
+  const parts: Record<string, React.ReactNode> = {
+    record: (
+      <Record
+        content={withOverrides("record", record, o)}
+        jobs={withOverrides("experience", experience, o)}
+        certs={withOverrides("certifications", certifications, o)}
+      />
+    ),
+    clinical: <Clinical content={withOverrides("clinical", clinical, o)} />,
+    contact: <Contact content={withOverrides("contact", contact, o)} />,
+  };
+
   return (
-    <PortfolioShell className={fontVars} onHome={false}>
+    <PortfolioShell
+      className={fontVars}
+      onHome={false}
+      contactHref={homeContact ? undefined : "/contact"}
+    >
       <div className="wrap page-top" id="main">
-        <Record
-          content={withOverrides("record", record, o)}
-          jobs={withOverrides("experience", experience, o)}
-          certs={withOverrides("certifications", certifications, o)}
-        />
-        <Clinical content={withOverrides("clinical", clinical, o)} />
-        <Contact content={withOverrides("contact", contact, o)} />
+        {layout
+          .filter((s) => s.visible)
+          .map((s) => (
+            <Fragment key={s.id}>{parts[s.id]}</Fragment>
+          ))}
         <SiteFooter newsletter={withOverrides("newsletter", newsletter, o)} />
       </div>
     </PortfolioShell>

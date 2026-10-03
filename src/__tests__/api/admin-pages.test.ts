@@ -83,7 +83,7 @@ describe("PUT /api/admin/pages/[page]", () => {
   it("saves changed text", async () => {
     const res = await put("home", { "homeHero.intro": "  A new intro  " });
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ saved: 1, reset: 0 });
+    expect(await res.json()).toEqual({ saved: 1, reset: 0, layout: false });
     expect(upsert).toHaveBeenCalledWith({
       where: { key: "homeHero.intro" },
       update: { value: "A new intro" },
@@ -96,7 +96,7 @@ describe("PUT /api/admin/pages/[page]", () => {
       "homeHero.intro": "",
       "homeHero.primaryCta": "See my work",
     });
-    expect(await res.json()).toEqual({ saved: 0, reset: 2 });
+    expect(await res.json()).toEqual({ saved: 0, reset: 2, layout: false });
     expect(deleteMany).toHaveBeenCalledWith({
       where: { key: { in: ["homeHero.intro", "homeHero.primaryCta"] } },
     });
@@ -116,5 +116,96 @@ describe("PUT /api/admin/pages/[page]", () => {
 
   it("answers 404 for a page that does not exist", async () => {
     expect((await put("nope", {})).status).toBe(404);
+  });
+
+  it("saves the order and visibility of sections", async () => {
+    const res = await PUT(
+      new Request("http://x/api", {
+        method: "PUT",
+        body: JSON.stringify({
+          layout: [
+            { id: "work", visible: true },
+            { id: "tools", visible: false },
+          ],
+        }),
+      }) as never,
+      ctx("home"),
+    );
+    expect(res.status).toBe(200);
+    const call = upsert.mock.calls[0][0] as {
+      where: { key: string };
+      update: { value: string };
+    };
+    expect(call.where.key).toBe("layout.home");
+    const stored = JSON.parse(call.update.value) as {
+      id: string;
+      visible: boolean;
+    }[];
+    expect(stored[0]).toEqual({ id: "hero", visible: true });
+    expect(stored.slice(1, 3)).toEqual([
+      { id: "work", visible: true },
+      { id: "tools", visible: false },
+    ]);
+  });
+
+  it("removes the stored layout when it is the default again", async () => {
+    await PUT(
+      new Request("http://x/api", {
+        method: "PUT",
+        body: JSON.stringify({ layout: [] }),
+      }) as never,
+      ctx("home"),
+    );
+    expect(deleteMany).toHaveBeenCalledWith({ where: { key: "layout.home" } });
+    expect(upsert).not.toHaveBeenCalled();
+  });
+
+  it("refuses unknown or repeated sections, and pages without sections", async () => {
+    const send = (page: string, layout: unknown) =>
+      PUT(
+        new Request("http://x/api", {
+          method: "PUT",
+          body: JSON.stringify({ layout }),
+        }) as never,
+        ctx(page),
+      );
+    expect((await send("home", [{ id: "nope", visible: true }])).status).toBe(
+      400,
+    );
+    expect(
+      (
+        await send("home", [
+          { id: "work", visible: true },
+          { id: "work", visible: false },
+        ])
+      ).status,
+    ).toBe(400);
+    expect(
+      (await send("contact", [{ id: "contact", visible: true }])).status,
+    ).toBe(400);
+    expect(transaction).not.toHaveBeenCalled();
+  });
+
+  it("returns the sections in their saved order on GET", async () => {
+    findMany.mockResolvedValue([
+      {
+        key: "layout.home",
+        value: JSON.stringify([{ id: "contact", visible: false }]),
+      },
+    ]);
+    const body = await (
+      await GET(new Request("http://x") as never, ctx("home"))
+    ).json();
+    expect(body.sections[0]).toMatchObject({
+      id: "hero",
+      pinned: true,
+      visible: true,
+    });
+    expect(body.sections[1]).toMatchObject({ id: "contact", visible: false });
+    findMany.mockResolvedValue([]);
+    const contact = await (
+      await GET(new Request("http://x") as never, ctx("contact"))
+    ).json();
+    expect(contact.sections).toBeNull();
   });
 });
