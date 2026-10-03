@@ -85,6 +85,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   return {
     title: post.meta_title || post.title,
     description: post.meta_description || post.excerpt,
+    alternates: { canonical: `/blog/${encodeURIComponent(slug)}` },
     openGraph: {
       title: post.meta_title || post.title,
       description: post.meta_description || post.excerpt,

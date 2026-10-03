@@ -20,6 +20,8 @@ import { fontVars } from "./fonts";
 // The scroll story, then the sections below it. Posts and projects added in
 // the admin panel appear on their own (LiveFeeds); testimonials stay hidden
 // in production until a real one is added.
+export const metadata = { alternates: { canonical: "/" } };
+
 export default function HomePage() {
   return (
     <PortfolioShell className={fontVars}>

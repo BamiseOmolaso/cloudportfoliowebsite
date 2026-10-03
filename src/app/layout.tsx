@@ -41,7 +41,9 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: TITLE,
   description: DESCRIPTION,
-  alternates: { canonical: "/" },
+  // No site-wide canonical here: a layout value is inherited by EVERY page, so each
+  // page would call the home page its canonical address (and search engines would
+  // treat the blog, projects and so on as copies of it). Pages set their own.
   openGraph: {
     type: "website",
     url: "/",
