@@ -1,10 +1,14 @@
-import { db } from '@/lib/db';
-import { notFound } from 'next/navigation';
-import Link from 'next/link';
-import Image from 'next/image';
-import { format } from 'date-fns';
-import { sanitizeHtmlServer } from '@/lib/sanitize-server';
-import type { Metadata } from 'next';
+import { db } from "@/lib/db";
+import ProjectView from "@/components/portfolio/ProjectView";
+import FlowStrip from "@/components/portfolio/FlowStrip";
+import BrandIcon from "@/components/portfolio/BrandIcon";
+import { projectSlug, projects } from "@/content/portfolio";
+import { notFound } from "next/navigation";
+import Link from "next/link";
+import Image from "next/image";
+import { format } from "date-fns";
+import { sanitizeHtmlServer } from "@/lib/sanitize-server";
+import type { Metadata } from "next";
 
 interface Project {
   id: string;
@@ -22,7 +26,7 @@ interface Project {
   created_at: string;
   updated_at: string;
   published_at: string | null;
-  status: 'draft' | 'published' | 'scheduled';
+  status: "draft" | "published" | "scheduled";
 }
 
 async function getProject(slug: string): Promise<Project | null> {
@@ -30,7 +34,7 @@ async function getProject(slug: string): Promise<Project | null> {
     const project = await db.project.findFirst({
       where: {
         slug,
-        status: 'published',
+        status: "published",
       },
       select: {
         id: true,
@@ -61,33 +65,37 @@ async function getProject(slug: string): Promise<Project | null> {
       id: project.id,
       title: project.title,
       slug: project.slug,
-      excerpt: project.excerpt || '',
+      excerpt: project.excerpt || "",
       content: project.content,
-      cover_image: project.coverImage || '',
-      meta_title: project.metaTitle || '',
-      meta_description: project.metaDescription || '',
+      cover_image: project.coverImage || "",
+      meta_title: project.metaTitle || "",
+      meta_description: project.metaDescription || "",
       technologies: project.technologies,
-      github_url: project.githubUrl || '',
-      live_url: project.liveUrl || '',
+      github_url: project.githubUrl || "",
+      live_url: project.liveUrl || "",
       author: project.author,
       created_at: project.createdAt.toISOString(),
       updated_at: project.updatedAt.toISOString(),
-      status: project.status as 'draft' | 'published' | 'scheduled',
+      status: project.status as "draft" | "published" | "scheduled",
       published_at: project.publishedAt?.toISOString() || null,
     };
   } catch (error) {
-    console.error('Error fetching project:', error);
+    console.error("Error fetching project:", error);
     return null;
   }
 }
 
-export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
   const { slug } = await params;
   const project = await getProject(slug);
 
   if (!project) {
     return {
-      title: 'Project Not Found',
+      title: "Project Not Found",
     };
   }
 
@@ -99,13 +107,13 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
       title: project.meta_title || project.title,
       description: project.meta_description || project.excerpt,
       images: project.cover_image ? [project.cover_image] : [],
-      type: 'article',
+      type: "article",
       publishedTime: project.created_at,
       modifiedTime: project.updated_at,
       authors: [project.author],
     },
     twitter: {
-      card: 'summary_large_image',
+      card: "summary_large_image",
       title: project.meta_title || project.title,
       description: project.meta_description || project.excerpt,
       images: project.cover_image ? [project.cover_image] : [],
@@ -113,7 +121,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   };
 }
 
-export default async function ProjectPage({ params }: { params: Promise<{ slug: string }> }) {
+export default async function ProjectPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
   const { slug } = await params;
   const project = await getProject(slug);
 
@@ -123,9 +135,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
 
   // Handle content - check if it's a JSON string or HTML/Markdown
   let content = project.content;
-  
+
   // If content looks like a JSON object string, try to parse it
-  if (typeof content === 'string' && content.trim().startsWith('{')) {
+  if (typeof content === "string" && content.trim().startsWith("{")) {
     try {
       const parsed = JSON.parse(content);
       // If it's the entire project object, extract the content field
@@ -138,6 +150,8 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
       // Not valid JSON, use as-is
     }
   }
+
+  const flow = projects.find((p) => projectSlug(p.title) === slug)?.flow;
 
   // Sanitize content (server-safe sanitization)
   const sanitizedContent = sanitizeHtmlServer(content);
@@ -163,7 +177,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             <div className="mb-8">
               <Link
                 href="/projects"
-                className="inline-flex items-center text-purple-400 hover:text-purple-300 mb-6 transition-colors group"
+                className="group mb-6 inline-flex items-center justify-center gap-2 rounded-md bg-purple-500/15 px-4 py-2 text-sm font-medium text-purple-100 ring-1 ring-inset ring-purple-500/50 transition-colors hover:bg-purple-500/25"
               >
                 <svg
                   className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1"
@@ -180,37 +194,45 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
                 </svg>
                 Back to Projects
               </Link>
-              
+
               <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-4 leading-tight">
                 {project.title}
               </h1>
-              
+
               <div className="flex flex-wrap items-center text-gray-400 text-sm mb-4 gap-2">
                 <span className="font-medium">{project.author}</span>
                 <span>•</span>
                 <time dateTime={project.created_at}>
-                  {format(new Date(project.created_at), 'MMMM d, yyyy')}
+                  {format(new Date(project.created_at), "MMMM d, yyyy")}
                 </time>
                 {project.updated_at !== project.created_at && (
                   <>
                     <span>•</span>
                     <span className="text-gray-500">
-                      Updated {format(new Date(project.updated_at), 'MMMM d, yyyy')}
+                      Updated{" "}
+                      {format(new Date(project.updated_at), "MMMM d, yyyy")}
                     </span>
                   </>
                 )}
               </div>
-              
+
               {project.technologies.length > 0 && (
                 <div className="flex flex-wrap gap-2 mb-6">
-                  {project.technologies.map(tech => (
+                  {project.technologies.map((tech) => (
                     <span
                       key={tech}
-                      className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20 hover:bg-purple-500/20 transition-colors"
                     >
+                      <BrandIcon name={tech} size={14} />
                       {tech}
                     </span>
                   ))}
+                </div>
+              )}
+
+              {flow && (
+                <div className="mb-6 text-gray-400">
+                  <FlowStrip steps={flow} />
                 </div>
               )}
 
@@ -265,7 +287,7 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
             </div>
 
             {/* Project Content */}
-            <div 
+            <div
               className="prose prose-invert prose-lg max-w-none 
                 prose-headings:text-white prose-headings:font-bold
                 prose-h1:text-3xl prose-h2:text-2xl prose-h3:text-xl
@@ -279,10 +301,13 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
                 prose-ul:text-gray-300 prose-ol:text-gray-300 prose-ul:my-4 prose-ol:my-4
                 prose-li:marker:text-purple-400 prose-li:my-2
                 prose-hr:border-gray-700 prose-hr:my-8"
-              dangerouslySetInnerHTML={{ __html: sanitizedContent }} 
+              dangerouslySetInnerHTML={{ __html: sanitizedContent }}
             />
           </div>
         </article>
+
+        {/* The curated projects have an architecture view. */}
+        <ProjectView slug={slug} />
       </div>
     </div>
   );

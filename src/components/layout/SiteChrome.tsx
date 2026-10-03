@@ -6,14 +6,14 @@ import Footer from "@/components/layout/Footer";
 import PortfolioShell from "@/components/portfolio/PortfolioShell";
 import SiteFooter from "@/components/portfolio/SiteFooter";
 
-// "/" brings its own header, footer and full-bleed layout, so nothing may wrap
-// it. It matches the home page only: the startsWith check below adds a
-// trailing slash, so "//" matches nothing.
-const BARE_ROUTES = ["/"];
+// These pages bring their own header, footer and full-bleed layout, so nothing
+// may wrap them. "/" matches the home page only: the startsWith check below
+// adds a trailing slash, so "//" matches nothing.
+const BARE_ROUTES = ["/", "/about", "/learning", "/admin"];
 
-// The admin tool keeps the plain header and footer: it is a working screen,
-// not part of the public look.
-const LEGACY_ROUTES = ["/admin", "/login"];
+// The sign-in screen keeps the plain header and footer. The admin panel (above) has
+// its own sidebar layout.
+const LEGACY_ROUTES = ["/login"];
 
 const matches = (routes: string[], pathname: string) =>
   routes.some((r) => pathname === r || pathname.startsWith(`${r}/`));

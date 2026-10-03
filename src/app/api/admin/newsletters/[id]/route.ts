@@ -80,6 +80,13 @@ async function putHandler(request: NextRequest, user: { id: string; email: strin
       );
     }
 
+    if (existing.status === 'sending') {
+      return NextResponse.json(
+        { error: 'This newsletter is being sent. Wait until it finishes to edit it.' },
+        { status: 409 }
+      );
+    }
+
     const updateData: NewsletterUpdateData = {
       updatedAt: new Date(),
     };
@@ -141,4 +148,32 @@ export async function PUT(
 ) {
   const { id } = await params;
   return secureAdminRoute((req, user) => putHandler(req, user, id))(request);
+}
+
+/** Delete a newsletter that has not been sent. Sent ones are kept as a record. */
+async function deleteHandler(id: string) {
+  try {
+    const newsletter = await db.newsletter.findUnique({ where: { id }, select: { status: true } });
+    if (!newsletter) {
+      return NextResponse.json({ error: 'Newsletter not found' }, { status: 404 });
+    }
+    if (newsletter.status === 'sent' || newsletter.status === 'sending') {
+      return NextResponse.json(
+        { error: 'A newsletter that is sending or has been sent cannot be deleted' },
+        { status: 409 }
+      );
+    }
+    await db.newsletter.delete({ where: { id } });
+    return NextResponse.json({ ok: true });
+  } catch (error) {
+    return handleError(error, 'Failed to delete newsletter');
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  return secureAdminRoute(() => deleteHandler(id))(request);
 }

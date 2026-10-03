@@ -16,6 +16,14 @@
   body {
     @apply bg-gray-950 text-white antialiased;
   }
+
+  /* The redesign's display font for headings on every page. The home page's own
+     styles (.pf) take precedence there. */
+  h1,
+  h2 {
+    font-family: var(--pf-font-display), var(--pf-font-body), system-ui, sans-serif;
+    letter-spacing: -0.02em;
+  }
 }
 
 @layer components {

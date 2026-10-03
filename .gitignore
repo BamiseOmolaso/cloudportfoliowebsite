@@ -80,3 +80,6 @@ infra/terraform/envs/*/*.tfplan
 
 # Ansible: the real inventory holds the server address
 infra/ansible/inventory/hosts.yml
+
+# images uploaded while developing without a bucket
+/public/uploads/

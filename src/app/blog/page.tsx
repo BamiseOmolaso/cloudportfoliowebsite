@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
+import Lessons from '@/components/portfolio/Lessons';
 
 interface BlogPost {
   id: string;
@@ -158,7 +159,7 @@ const BlogPage = () => {
         >
           <h1 className="text-4xl font-bold mb-4">Blog</h1>
           <p className="text-gray-400 text-lg">
-            Insights and thoughts on healthcare data science, cloud technology, and AI.
+            Write-ups on cloud, DevSecOps and what broke in production, and how I fixed it.
           </p>
         </motion.div>
 
@@ -266,7 +267,7 @@ const BlogPage = () => {
                 )}
                 <Link
                   href={`/blog/${post.slug}`}
-                  className="inline-flex items-center text-purple-400 hover:text-purple-300 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-500"
                 >
                   Read more
                   <svg
@@ -309,6 +310,9 @@ const BlogPage = () => {
             </button>
           </div>
         )}
+
+        {/* What broke and what I learnt while building this site. */}
+        <Lessons />
       </div>
     </div>
   );

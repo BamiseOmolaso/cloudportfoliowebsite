@@ -35,6 +35,7 @@ let blacklistIP: SecurityModule['blacklistIP'];
 let trackFailedAttempt: SecurityModule['trackFailedAttempt'];
 let isCaptchaRequired: SecurityModule['isCaptchaRequired'];
 let verifyCaptcha: SecurityModule['verifyCaptcha'];
+let captchaGate: SecurityModule['captchaGate'];
 let cleanupOldRecords: SecurityModule['cleanupOldRecords'];
 
 beforeAll(async () => {
@@ -44,6 +45,7 @@ beforeAll(async () => {
     trackFailedAttempt,
     isCaptchaRequired,
     verifyCaptcha,
+    captchaGate,
     cleanupOldRecords,
   } = await import('@/lib/security'));
 });
@@ -235,6 +237,47 @@ describe('verifyCaptcha', () => {
 
     const result = await verifyCaptcha('token');
     expect(result).toBe(false);
+  });
+});
+
+describe('verifyCaptcha request body', () => {
+  it('encodes the token, so a crafted one cannot add or replace fields', async () => {
+    process.env.RECAPTCHA_SECRET_KEY = 'real-secret';
+    mockFetch.mockResolvedValue(createMockResponse({ success: false }));
+
+    await verifyCaptcha('x&secret=attacker&remoteip=1.1.1.1');
+
+    const body = new URLSearchParams(String(mockFetch.mock.calls[0]?.[1]?.body));
+    expect(body.get('secret')).toBe('real-secret');
+    expect(body.get('response')).toBe('x&secret=attacker&remoteip=1.1.1.1');
+    expect(body.getAll('secret')).toHaveLength(1);
+    expect(body.get('remoteip')).toBeNull();
+  });
+});
+
+describe('captchaGate', () => {
+  const saved = { secret: process.env.RECAPTCHA_SECRET_KEY, env: process.env.NODE_ENV };
+  afterEach(() => {
+    if (saved.secret === undefined) delete process.env.RECAPTCHA_SECRET_KEY;
+    else process.env.RECAPTCHA_SECRET_KEY = saved.secret;
+    (process.env as Record<string, string | undefined>).NODE_ENV = saved.env;
+  });
+
+  it('checks every token when the secret is set', () => {
+    process.env.RECAPTCHA_SECRET_KEY = 's';
+    expect(captchaGate()).toBe('verify');
+  });
+
+  it('lets local development through without a secret', () => {
+    delete process.env.RECAPTCHA_SECRET_KEY;
+    (process.env as Record<string, string | undefined>).NODE_ENV = 'development';
+    expect(captchaGate()).toBe('skip');
+  });
+
+  it('refuses in production without a secret, rather than run unprotected', () => {
+    delete process.env.RECAPTCHA_SECRET_KEY;
+    (process.env as Record<string, string | undefined>).NODE_ENV = 'production';
+    expect(captchaGate()).toBe('unavailable');
   });
 });
 

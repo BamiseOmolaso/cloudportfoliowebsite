@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { motion } from 'framer-motion';
 import DOMPurify from 'dompurify';
 import { useRouter } from 'next/navigation';
@@ -29,7 +30,13 @@ export default function ContactPage() {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+  const captchaRef = useRef<ReCAPTCHA>(null);
+  const [captchaToken, setCaptchaToken] = useState('');
   const [success, setSuccess] = useState(false);
+  const [successText, setSuccessText] = useState('Message sent successfully!');
+  // Hidden from people; bots that fill every field give themselves away.
+  const [website, setWebsite] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const validateForm = (): boolean => {
@@ -110,15 +117,25 @@ export default function ContactPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(sanitizedData),
+        body: JSON.stringify({ ...sanitizedData, website, captchaToken }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
+        // A CAPTCHA answer can be used once, so a failed try needs a fresh one.
+        captchaRef.current?.reset();
+        setCaptchaToken('');
         throw new Error(data.error || 'Failed to send message');
       }
 
+      captchaRef.current?.reset();
+      setCaptchaToken('');
+      setSuccessText(
+        data.duplicate
+          ? 'We already have this message. I will reply soon.'
+          : 'Message sent successfully!'
+      );
       setSuccess(true);
       setFormData({
         name: '',
@@ -163,7 +180,7 @@ export default function ContactPage() {
 
           {success && (
             <div className="mb-6 p-4 bg-green-500/10 border border-green-500 text-green-500 rounded">
-              Message sent successfully! Redirecting to home page...
+              {successText} Redirecting to home page...
             </div>
           )}
 
@@ -174,6 +191,19 @@ export default function ContactPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Honeypot: invisible to people and to screen readers, tempting to bots. */}
+            <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+              <label htmlFor="website">Leave this empty</label>
+              <input
+                id="website"
+                name="website"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+              />
+            </div>
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
                 Name
@@ -242,10 +272,21 @@ export default function ContactPage() {
               {errors.message && <p className="mt-1 text-sm text-red-500">{errors.message}</p>}
             </div>
 
+            {siteKey && (
+              <div className="flex justify-center">
+                <ReCAPTCHA
+                  ref={captchaRef}
+                  sitekey={siteKey}
+                  onChange={(token) => setCaptchaToken(token || '')}
+                  onExpired={() => setCaptchaToken('')}
+                />
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={loading}
-              className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || (Boolean(siteKey) && !captchaToken)}
+              className="inline-flex w-full items-center justify-center rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? 'Sending...' : 'Send Message'}
             </button>

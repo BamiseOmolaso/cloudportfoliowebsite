@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { summarize } from '@/lib/newsletter-stats';
 import { secureAdminRoute, handleError, mapPrismaError, sanitizeContent } from '@/lib/api-security';
 import { newsletterCreateSchema } from '@/lib/validation-schemas';
 import { z } from 'zod';
@@ -16,6 +17,10 @@ export const GET = secureAdminRoute(async (request: NextRequest) => {
           select: {
             id: true,
             status: true,
+            deliveredAt: true,
+            openedAt: true,
+            bouncedAt: true,
+            complainedAt: true,
           },
         },
       },
@@ -31,6 +36,7 @@ export const GET = secureAdminRoute(async (request: NextRequest) => {
         subject: newsletter.subject,
         status: newsletter.status,
         recipients_count: totalCount,
+        stats: summarize(newsletter.newsletterSends),
         sent_count: sentCount,
         failed_count: failedCount,
         created_at: newsletter.createdAt.toISOString(),

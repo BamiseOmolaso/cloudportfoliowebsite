@@ -11,7 +11,7 @@ export default function NotFound() {
           </p>
           <Link
             href="/blog"
-            className="inline-flex items-center text-purple-400 hover:text-purple-300"
+            className="inline-flex items-center justify-center gap-2 rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-500"
           >
             <svg
               className="w-4 h-4 mr-2"

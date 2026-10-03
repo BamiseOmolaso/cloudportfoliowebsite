@@ -9,12 +9,10 @@ const STORAGE_KEY = "pf-theme";
 
 /** One list drives both the desktop bar and the phone menu. */
 const NAV = [
-  { label: "Work", href: "#work" },
-  { label: "Stack", href: "#stack" },
-  { label: "Pipeline", href: "#pipeline" },
-  { label: "YouTube", href: "#youtube" },
-  { label: "Blog", href: "/blog" },
+  { label: "Home", href: "/" },
   { label: "Projects", href: "/projects" },
+  { label: "Blog", href: "/blog" },
+  { label: "Learning", href: "/learning" },
   { label: "About", href: "/about" },
   { label: "Contact", href: "#contact" },
 ] as const;
@@ -54,16 +52,28 @@ function NavLink({
 export default function PortfolioShell({
   className,
   variant = "page",
+  onHome = true,
+  contactHref,
   children,
 }: {
   /** Font CSS-variable classes from next/font (see app/fonts.ts). */
   className: string;
   variant?: "page" | "bar";
+  /** False on pages other than "/", whose "#section" links must lead back home. */
+  onHome?: boolean;
+  /** Where the "Contact" link goes. Defaults to the home page's contact section; the contact page when that section is hidden. */
+  contactHref?: string;
   children?: React.ReactNode;
 }) {
   const bar = variant === "bar";
+  // Away from the home page, "#contact" has to become "/#contact".
+  const away = bar || !onHome;
   const hrefFor = (href: string) =>
-    bar && href.startsWith("#") ? `/${href}` : href;
+    href === "#contact" && contactHref
+      ? contactHref
+      : away && href.startsWith("#")
+        ? `/${href}`
+        : href;
   const [theme, setTheme] = useState<Theme>("dark");
   const [menuOpen, setMenuOpen] = useState(false);
   const menuBtn = useRef<HTMLButtonElement>(null);
@@ -112,12 +122,12 @@ export default function PortfolioShell({
 
   return (
     <div
-      id={bar ? undefined : "top"}
+      id={away ? undefined : "top"}
       className={`pf ${bar ? "pf-bar " : ""}${className}`}
       data-theme={theme}
     >
-      <a className="skip" href={bar ? "#main" : "#proof"}>
-        {bar ? "Skip to content" : "Skip the intro"}
+      <a className="skip" href={away ? "#main" : "#proof"}>
+        {away ? "Skip to content" : "Skip the intro"}
       </a>
       <div
         className={`menu-backdrop${menuOpen ? " open" : ""}`}
@@ -126,7 +136,7 @@ export default function PortfolioShell({
       />
       <header className="bar">
         <div className="bar-in">
-          <a className="brand" href={bar ? "/" : "#top"}>
+          <a className="brand" href={away ? "/" : "#top"}>
             <span className="mark">OO</span>
             Bamise Omolaso
           </a>

@@ -1,13 +1,21 @@
 import Link from "next/link";
-import { footerLinks, profile } from "@/content/portfolio";
+import {
+  footerLinks,
+  newsletter as defaultNewsletter,
+  profile,
+} from "@/content/portfolio";
 import Newsletter from "./Newsletter";
 
 /** The newsletter, the site links (the header hides these on phones) and the sign-off. */
-export default function SiteFooter() {
+export default function SiteFooter({
+  newsletter = defaultNewsletter,
+}: {
+  newsletter?: typeof defaultNewsletter;
+}) {
   return (
     <footer className="site-foot">
       <div className="foot-grid">
-        <Newsletter />
+        <Newsletter content={newsletter} />
         <nav aria-label="Footer">
           {footerLinks.map((l) => (
             <Link key={l.href} href={l.href}>

@@ -11,7 +11,12 @@ type Status = "idle" | "sending" | "done" | "error" | "captcha";
  * asks for a CAPTCHA (it does after repeated attempts) the visitor is sent
  * to the newsletter page, where the CAPTCHA lives.
  */
-export default function Newsletter() {
+export default function Newsletter({
+  content = newsletter,
+}: {
+  content?: typeof newsletter;
+}) {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
@@ -24,7 +29,7 @@ export default function Newsletter() {
       const res = await fetch("/api/newsletter/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, name }),
       });
       const data = await res.json().catch(() => ({}));
       if (data?.requiresCaptcha) {
@@ -33,8 +38,17 @@ export default function Newsletter() {
       }
       if (!res.ok) throw new Error(data?.error || "Failed to subscribe");
       setStatus("done");
-      setMessage(newsletter.success);
+      setMessage(
+        data?.alreadySubscribed
+          ? content.already
+          : data?.pendingConfirmation
+            ? data.alreadySent
+              ? content.pendingSent
+              : content.pending
+            : content.success,
+      );
       setEmail("");
+      setName("");
     } catch (err) {
       setStatus("error");
       setMessage(err instanceof Error ? err.message : "Failed to subscribe");
@@ -43,9 +57,21 @@ export default function Newsletter() {
 
   return (
     <form className="news" onSubmit={submit}>
-      <h3>{newsletter.title}</h3>
-      <p>{newsletter.body}</p>
+      <h3>{content.title}</h3>
+      <p>{content.body}</p>
       <div className="news-row">
+        <label className="sr-only" htmlFor="pf-news-name">
+          First name
+        </label>
+        <input
+          id="pf-news-name"
+          type="text"
+          autoComplete="given-name"
+          maxLength={60}
+          placeholder="First name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
         <label className="sr-only" htmlFor="pf-news-email">
           Email address
         </label>
@@ -54,7 +80,7 @@ export default function Newsletter() {
           type="email"
           required
           autoComplete="email"
-          placeholder={newsletter.placeholder}
+          placeholder={content.placeholder}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -63,14 +89,14 @@ export default function Newsletter() {
           type="submit"
           disabled={status === "sending"}
         >
-          {status === "sending" ? "Subscribing…" : newsletter.button}
+          {status === "sending" ? "Subscribing…" : content.button}
         </button>
       </div>
       <p className="news-msg" role="status" aria-live="polite">
         {status === "captcha" ? (
           <>
-            {newsletter.captcha}{" "}
-            <Link href="/newsletter">{newsletter.captchaLink}</Link>
+            {content.captcha}{" "}
+            <Link href="/newsletter">{content.captchaLink}</Link>
           </>
         ) : (
           message

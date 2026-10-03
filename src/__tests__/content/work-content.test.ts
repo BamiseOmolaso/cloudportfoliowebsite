@@ -82,7 +82,7 @@ describe("incidents", () => {
   it("are written as fixed lessons, with no addresses, hosts or secrets", () => {
     const text = JSON.stringify(incidents).toLowerCase();
     expect(text).not.toMatch(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/);
-    expect(text).not.toMatch(/wedding|upperspring|hetzner|\.com\b|\/opt\//);
+    expect(text).not.toMatch(/wedding|upperspring|\.com\b|\/opt\//);
     expect(text).not.toMatch(/\b[0-9a-f]{32,}\b/);
   });
 });

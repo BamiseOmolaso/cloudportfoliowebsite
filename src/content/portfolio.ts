@@ -61,14 +61,27 @@ export interface Pattern {
 
 export type ProjectStatus = "Live" | "Built" | "In progress" | "Learning lab";
 
+/** The URL-safe name of a project, used by /projects/<slug> and the database seed. */
+export const projectSlug = (title: string) =>
+  title
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
 export interface Project {
   title: string;
+  /** Shown on the home page (two at most); the rest live on /projects. */
+  featured?: boolean;
   status: ProjectStatus;
   body: string;
   stack: string[];
   /** Public links only. Private repositories get `note` instead. */
   links: Link[];
   note?: string;
+  /** The path a request or a change takes, as a few named steps (drawn by FlowStrip). */
+  flow?: string[];
+  /** A shorter line for the home page card; the full `body` is on the project's own page. */
+  blurb?: string;
 }
 
 export interface TerraformStep {
@@ -153,7 +166,7 @@ export const profile = {
   role: "Cloud and DevSecOps engineer · former medical doctor",
   email: "davidbams3@gmail.com",
   location: "Alberta, Canada · Ile-Ife, Nigeria",
-  cv: "https://portfolio.oluwabamiseomolaso.com.ng/cv/Oluwabamise%20Omolaso_CV_2025.pdf",
+  cv: "https://oluwabamiseomolaso.com.ng/cv/Oluwabamise%20Omolaso_CV_2025.pdf",
   links: {
     linkedin: "https://www.linkedin.com/in/dr-bamise-omolaso/",
     github: "https://github.com/BamiseOmolaso",
@@ -167,9 +180,59 @@ export const hero = {
   headlineEmphasis: "secure,",
   headlineEnd: " repeatable and cheap to run.",
   intro:
-    "Dr. Bamise Omolaso. This is the AWS infrastructure I built for this portfolio, drawn the way I'd document it. It is paused while I move hosting. Scroll to follow one request through it.",
+    "This is the AWS infrastructure I built for this portfolio, drawn the way I'd document it. It is paused: the site now runs on a Hetzner server (see the VPS section below). Scroll to follow one request through it.",
   primaryCta: "Work with me",
   secondaryCta: "View CV",
+} as const;
+
+/** The home page's calm hero: who, what, and one way into the detail. */
+export const homeHero = {
+  intro:
+    "I'm a doctor turned cloud engineer. I build infrastructure as code, run it in production, and write down what breaks.",
+  primaryCta: "See my work",
+  secondaryCta: "View CV",
+} as const;
+
+/** The logo strip under the hero. */
+export const tools = {
+  label: "Technical tools",
+  items: [
+    "Terraform",
+    "Ansible",
+    "Kubernetes",
+    "Argo CD",
+    "Helm",
+    "Docker",
+    "AWS",
+    "GCP",
+    "Cloudflare",
+    "PostgreSQL",
+    "GitHub Actions",
+    "Prometheus",
+    "Grafana",
+    "Python",
+    "Go",
+    "Linux",
+    "Git",
+    "Next.js",
+  ],
+} as const;
+
+/** "See all" links from the home page into each full page. */
+export const seeAll = {
+  projects: { label: "See all projects", href: "/projects" },
+  patterns: { label: "See all patterns", href: "/learning#patterns" },
+  platform: {
+    label: "Read how I built it",
+    href: "/projects/production-platform-on-hetzner",
+  },
+} as const;
+
+/** The home page's showcase of the platform this site runs on. */
+export const platformFeature = {
+  title: "This site runs on a platform I built.",
+  intro:
+    "A hardened server, Kubernetes, deploys from Git and a database restore I have tested. Follow it in three steps, in order: how a visitor arrives, how I ship a change, and how the data stays safe.",
 } as const;
 
 /** The five scroll steps that follow the hero (edge → app → data → security → cost). */
@@ -251,7 +314,8 @@ export const stats: Stat[] = [
   },
   {
     value: "Under $5",
-    label: "monthly idle cost of this site, down from about $250",
+    label:
+      "monthly idle cost of the AWS version of this site (paused), down from about $250",
   },
   {
     value: "3",
@@ -427,7 +491,7 @@ export const writing = {
 export const contact = {
   label: "Contact",
   title: "Need someone who builds it right and can explain why?",
-  body: "Open to cloud engineering and DevSecOps roles, and to client work on security-conscious systems or healthcare data science.",
+  body: "Open to cloud engineering and DevSecOps roles, and to client work on security-conscious systems or healthcare data science. Tell me what you're building.",
   copyLabel: "Copy email",
   copiedLabel: "Copied",
   // The full contact form lives on its own page.
@@ -449,14 +513,37 @@ const repo = (name: string) => `https://github.com/BamiseOmolaso/${name}`;
 
 export const work = {
   label: "Selected work",
-  title: "Things I've built, run and learned from.",
+  title: "Projects, and the thinking behind them.",
   intro:
-    "A mix of production systems, open projects and labs. Where a repository is private, I say so rather than link to a dead end.",
+    "Real systems, with the architecture and the trade-offs written down. Where a repository is private, I say so.",
 };
 
 export const projects: Project[] = [
   {
+    title: "Production platform on Hetzner",
+    flow: ["Visitor", "Cloudflare", "Traefik", "Next.js", "PostgreSQL"],
+    status: "Live",
+    blurb:
+      "A hardened server, Kubernetes, GitOps deploys and a database restore I have tested, all built from code and documented.",
+    body: "The platform this site runs on, built and documented layer by layer: a hardened server created with Terraform and Ansible, Kubernetes (k3s) with deploys through ArgoCD, a self-hosted PostgreSQL with nightly backups and a restore I have tested, and web traffic accepted from Cloudflare only. Ten guides explain every layer, including what broke.",
+    stack: [
+      "Terraform",
+      "Ansible",
+      "k3s",
+      "Argo CD",
+      "PostgreSQL",
+      "Cloudflare",
+      "GitHub Actions",
+      "Next.js",
+    ],
+    links: [{ label: "Repository", href: repo("cloudportfoliowebsite") }],
+  },
+  {
     title: "Cloud portfolio on AWS",
+    flow: ["Visitor", "Load balancer", "ECS Fargate", "PostgreSQL"],
+    featured: true,
+    blurb:
+      "Containers on ECS Fargate behind a load balancer, PostgreSQL on RDS, and GitHub OIDC instead of access keys.",
     status: "Built",
     body: "The infrastructure this page was built to run on: containers on ECS Fargate behind a load balancer, PostgreSQL on RDS, three environments from shared Terraform modules, GitHub OIDC instead of access keys, and a pause script that takes the idle bill from about $250 to under $5 a month.",
     stack: [
@@ -471,6 +558,10 @@ export const projects: Project[] = [
   },
   {
     title: "Hotel booking platform",
+    flow: ["Guest", "Nginx", "Next.js", "PostgreSQL"],
+    featured: true,
+    blurb:
+      "A production booking app for a small hotel: timed holds, an admin panel and nightly backups, on one VPS with Docker Compose.",
     status: "Live",
     body: "A production booking app for a small hotel: multi-room bookings with timed holds, an admin panel, email notifications and bot protection. It runs on a single VPS with Docker Compose, deploys as an image tagged with the commit (so rollback is one command), and is backed up nightly.",
     stack: ["Next.js", "PostgreSQL", "Drizzle", "Docker", "Nginx"],
@@ -479,6 +570,10 @@ export const projects: Project[] = [
   },
   {
     title: "Self-hosted automation on a VPS",
+    flow: ["Visitor", "Cloudflare", "Nginx", "n8n"],
+    featured: true,
+    blurb:
+      "n8n behind Nginx and HTTPS, rebuildable from the docs, with encrypted off-server backups and a restore I have tested.",
     status: "Live",
     body: "A workflow-automation tool behind Nginx and HTTPS, with every step documented so it can be rebuilt from scratch: encrypted off-server backups with a tested restore, key-only SSH, and secrets kept out of git.",
     stack: [
@@ -494,6 +589,7 @@ export const projects: Project[] = [
   },
   {
     title: "DeployMentor",
+    flow: ["GitHub Actions", "API Gateway", "AWS Lambda", "Explanation"],
     status: "Built",
     body: "A serverless agent that reads a failed GitHub Actions run and explains the likely root cause and a fix. Lambda behind API Gateway, infrastructure in Terraform, CI/CD through OIDC, with a dev, staging and production promotion path.",
     stack: ["AWS Lambda", "API Gateway", "Python", "Terraform", "GitHub OIDC"],
@@ -501,6 +597,7 @@ export const projects: Project[] = [
   },
   {
     title: "infergate",
+    flow: ["Client", "Go", "OpenAI API"],
     status: "In progress",
     body: "An AI inference gateway in Go that speaks the OpenAI API and will sit in front of several model providers. Milestone 1 of 7 is done: a streaming reverse proxy that keeps tokens flowing as they arrive. Caching, rate limiting, routing and a Prometheus and Grafana observability stack are next.",
     stack: ["Go", "SSE streaming", "OpenAI API", "Prometheus"],
@@ -509,6 +606,7 @@ export const projects: Project[] = [
   },
   {
     title: "Kubernetes and GitOps labs",
+    flow: ["Docker", "Kubernetes", "Argo CD"],
     status: "Learning lab",
     body: "A real application, not a toy guestbook, moved from Docker Compose onto a local kind cluster stage by stage, plus GitOps practice with Argo CD using Kustomize and Helm.",
     stack: ["Kubernetes", "kind", "Argo CD", "Helm", "Kustomize"],
@@ -741,7 +839,7 @@ export const youtube = {
 
 export const livePosts = {
   label: "From the blog",
-  title: "Latest write-ups.",
+  title: "Latest from the blog.",
   all: "All posts →",
 };
 
@@ -791,8 +889,12 @@ export function visibleTestimonials(production: boolean): Testimonial[] {
 }
 
 export const newsletter = {
-  title: "New write-ups, by email.",
-  body: "Occasional posts on cloud, DevSecOps and what broke in production. No spam, and you can leave any time.",
+  already: "You're already subscribed. Nothing more to do.",
+  pending: "Almost done: check your inbox and click the link to confirm.",
+  pendingSent:
+    "We already sent you a confirmation email a moment ago. Check your inbox, and your spam folder.",
+  title: "Get the next write-up.",
+  body: "One email when I publish something new on cloud, DevSecOps or what broke in production. Leave any time.",
   placeholder: "you@example.com",
   button: "Subscribe",
   success: "Thank you for subscribing!",

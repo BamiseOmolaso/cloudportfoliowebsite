@@ -7,18 +7,26 @@ import {
 } from "@/content/portfolio";
 
 /** Experience, certifications and skills. */
-export function Record() {
+export function Record({
+  content = record,
+  jobs = experience,
+  certs = certifications,
+}: {
+  content?: typeof record;
+  jobs?: typeof experience;
+  certs?: typeof certifications;
+}) {
   return (
     <section className="block" id="record">
       <div className="sec-head rise">
-        <span className="label">{record.label}</span>
-        <h2>{record.title}</h2>
+        <span className="label">{content.label}</span>
+        <h2>{content.title}</h2>
       </div>
       <div className="cols rise">
         <div>
-          <p className="sub">{record.experienceHeading}</p>
+          <p className="sub">{content.experienceHeading}</p>
           <div className="tl">
-            {experience.map((e) => (
+            {jobs.map((e) => (
               <div className="tl-i" key={e.title}>
                 <span className="when">{e.when}</span>
                 <div>
@@ -31,9 +39,9 @@ export function Record() {
           </div>
         </div>
         <div>
-          <p className="sub">{record.certificationsHeading}</p>
+          <p className="sub">{content.certificationsHeading}</p>
           <div>
-            {certifications.map((c) => (
+            {certs.map((c) => (
               <div className="item" key={c.name}>
                 <span>{c.name}</span>
                 <span className="yr">{c.year}</span>
@@ -47,15 +55,19 @@ export function Record() {
 }
 
 /** Clinical habits that carry into operations. */
-export function Clinical() {
+export function Clinical({
+  content = clinical,
+}: {
+  content?: typeof clinical;
+}) {
   return (
     <section className="block" id="clinical">
       <div className="sec-head rise">
-        <span className="label">{clinical.label}</span>
-        <h2>{clinical.title}</h2>
+        <span className="label">{content.label}</span>
+        <h2>{content.title}</h2>
       </div>
       <div className="map rise">
-        {clinical.rows.map((r) => (
+        {content.rows.map((r) => (
           <div className="map-r" key={r.from}>
             <span className="a">{r.from}</span>
             <span className="ar" aria-hidden="true">

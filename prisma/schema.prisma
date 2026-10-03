@@ -57,6 +57,17 @@ model NewsletterSubscriber {
   unsubscribeReason         String?   @map("unsubscribe_reason") @db.VarChar(50)
   unsubscribeFeedback       String?   @map("unsubscribe_feedback")
   location                  String?
+  // When they most recently opted in (first-time or after unsubscribing) and, if they
+  // have left, when. "createdAt" stays the date they first signed up.
+  subscribedAt              DateTime  @default(now()) @map("subscribed_at") @db.Timestamptz
+  unsubscribedAt            DateTime? @map("unsubscribed_at") @db.Timestamptz
+  // Double opt-in: signing up only asks for confirmation. While a confirmation is waiting
+  // "confirmationTokenHash" is set (a hash, never the token itself) and isSubscribed is
+  // false; clicking the emailed link sets confirmedAt and isSubscribed.
+  confirmedAt               DateTime? @map("confirmed_at") @db.Timestamptz
+  confirmationTokenHash     String?   @unique @map("confirmation_token_hash") @db.VarChar(64)
+  confirmationExpiresAt     DateTime? @map("confirmation_expires_at") @db.Timestamptz
+  confirmationSentAt        DateTime? @map("confirmation_sent_at") @db.Timestamptz
   preferences               Json?     @default("{\"frequency\": \"weekly\", \"categories\": []}") // JSONB
   preferencesToken          String?   @map("preferences_token")
   preferencesTokenExpiresAt DateTime? @map("preferences_token_expires_at") @db.Timestamptz
@@ -109,6 +120,13 @@ model NewsletterSend {
   sentAt       DateTime @default(now()) @map("sent_at") @db.Timestamptz
   status       String   @default("pending") // pending, sent, failed
   errorMessage String?  @map("error_message")
+  // Filled in later from Resend's webhooks (see docs/infra/09-site-structure-and-content.md)
+  resendId       String?   @map("resend_id")
+  deliveredAt    DateTime? @map("delivered_at") @db.Timestamptz
+  openedAt       DateTime? @map("opened_at") @db.Timestamptz
+  bouncedAt      DateTime? @map("bounced_at") @db.Timestamptz
+  bounceReason   String?   @map("bounce_reason")
+  complainedAt   DateTime? @map("complained_at") @db.Timestamptz
 
   // Relations
   newsletter Newsletter           @relation(fields: [newsletterId], references: [id], onDelete: Cascade)
@@ -119,6 +137,7 @@ model NewsletterSend {
   @@index([newsletterId, status])
   @@index([subscriberId, status])
   @@index([sentAt])
+  @@index([resendId])
   @@map("newsletter_sends")
 }
 
@@ -294,4 +313,61 @@ model ContactMessage {
   @@index([read, replied])
   @@index([createdAt])
   @@map("contact_messages")
+}
+
+// ============================================
+// Site text edited in the admin panel
+// ============================================
+// One row per edited piece of text. "key" is a dotted path into the content file
+// (for example "homeHero.intro"); a missing row means "use the text in the code".
+
+model SiteContent {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("site_content")
+}
+
+// ============================================
+// Images uploaded from the admin panel
+// ============================================
+// The file itself is in object storage (Cloudflare R2); this row lets the Media screen
+// list it and delete it. "key" is the object's name in the bucket.
+
+model MediaAsset {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  url         String
+  filename    String
+  contentType String   @map("content_type")
+  size        Int
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([createdAt])
+  @@map("media_assets")
+}
+
+// ============================================
+// Site analytics (first-party, no cookies)
+// ============================================
+// One row per page view. No IP address and no cookie is stored: "visitor" is a hash of
+// the address and browser mixed with a secret and the date, so it cannot be traced back
+// to a person and changes every day. See docs/infra/09-site-structure-and-content.md.
+
+model PageView {
+  id        String   @id @default(uuid())
+  path      String
+  referrer  String?
+  country   String?  @db.VarChar(2)
+  device    String   @db.VarChar(10)
+  visitor   String   @db.VarChar(32)
+  loadMs    Int?     @map("load_ms")
+  lcpMs     Int?     @map("lcp_ms")
+  ttfbMs    Int?     @map("ttfb_ms")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([createdAt])
+  @@index([path, createdAt])
+  @@map("page_views")
 }
