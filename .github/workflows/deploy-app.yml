@@ -1,15 +1,11 @@
 name: Deploy Application
 
 on:
-  # Run after CI passes — restricted to main only. develop and staging
-  # branches exist as code-review stages and run CI but do not deploy.
-  # Keeping AWS infrastructure cost to a single environment (prod).
-  workflow_run:
-    workflows: ["CI Pipeline"]
-    types:
-      - completed
-    branches:
-      - main
+  # RETIRED AS AN AUTOMATIC STEP (October 2026). This used to deploy to AWS whenever CI passed on
+  # main. The site now runs on Hetzner and is deployed by ArgoCD from git (docs/infra/05), and the
+  # AWS stack is paused, so a push to main must not touch AWS. To bring the AWS version back, add
+  # the `workflow_run` trigger again (workflows: ["CI Pipeline"], types: [completed],
+  # branches: [main]) or run it by hand below.
   # Manual trigger (for emergency deployments or testing)
   workflow_dispatch:
     inputs:
