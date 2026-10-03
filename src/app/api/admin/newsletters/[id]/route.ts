@@ -80,6 +80,13 @@ async function putHandler(request: NextRequest, user: { id: string; email: strin
       );
     }
 
+    if (existing.status === 'sending') {
+      return NextResponse.json(
+        { error: 'This newsletter is being sent. Wait until it finishes to edit it.' },
+        { status: 409 }
+      );
+    }
+
     const updateData: NewsletterUpdateData = {
       updatedAt: new Date(),
     };
@@ -150,8 +157,11 @@ async function deleteHandler(id: string) {
     if (!newsletter) {
       return NextResponse.json({ error: 'Newsletter not found' }, { status: 404 });
     }
-    if (newsletter.status === 'sent') {
-      return NextResponse.json({ error: 'A sent newsletter cannot be deleted' }, { status: 409 });
+    if (newsletter.status === 'sent' || newsletter.status === 'sending') {
+      return NextResponse.json(
+        { error: 'A newsletter that is sending or has been sent cannot be deleted' },
+        { status: 409 }
+      );
     }
     await db.newsletter.delete({ where: { id } });
     return NextResponse.json({ ok: true });

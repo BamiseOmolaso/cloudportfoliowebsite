@@ -5,36 +5,34 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import RichEditor from "./RichEditor";
 import { Field, Panel } from "./forms";
+import NewsletterSend from "./NewsletterSend";
 import { ErrorBanner, PageHeader, button, inputClass } from "./ui";
 
-/** Write a newsletter: a subject, the body, and whether it is a draft or scheduled for later. */
+/**
+ * Write a newsletter: a subject and the message. Once it is saved, the side column has
+ * the Send box (choose recipients, send a test copy).
+ */
 export default function NewsletterForm({ id }: { id?: string }) {
   const router = useRouter();
   const [subject, setSubject] = useState("");
   const [content, setContent] = useState("");
-  const [status, setStatus] = useState<"draft" | "scheduled">("draft");
-  const [scheduledFor, setScheduledFor] = useState("");
   const [loaded, setLoaded] = useState(!id);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [sent, setSent] = useState(false);
+  const [status, setStatus] = useState("draft");
 
   useEffect(() => {
     if (!id) return;
     fetch(`/api/admin/newsletters/${id}`)
       .then((r) =>
-        r.ok
-          ? r.json()
-          : Promise.reject(new Error("Could not load the newsletter")),
+        r.ok ? r.json() : Promise.reject(new Error("Could not load the newsletter")),
       )
       .then((d) => {
         setSubject(d.subject ?? "");
         setContent(d.content ?? "");
-        setStatus(d.status === "scheduled" ? "scheduled" : "draft");
-        setSent(d.status === "sent");
-        setScheduledFor(d.scheduled_for ? d.scheduled_for.slice(0, 16) : "");
+        setStatus(d.status ?? "draft");
         setLoaded(true);
       })
       .catch((e: Error) => setError(e.message));
@@ -56,8 +54,6 @@ export default function NewsletterForm({ id }: { id?: string }) {
     if (!subject.trim()) return setError("Give the newsletter a subject.");
     if (!content.replace(/<[^>]*>/g, "").trim() && !/<img /.test(content))
       return setError("Write something first.");
-    if (status === "scheduled" && !scheduledFor)
-      return setError("Choose when it should go out.");
     setSaving(true);
     setError(null);
     try {
@@ -66,27 +62,21 @@ export default function NewsletterForm({ id }: { id?: string }) {
         {
           method: id ? "PUT" : "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            subject: subject.trim(),
-            content,
-            status,
-            scheduled_for:
-              status === "scheduled"
-                ? new Date(scheduledFor).toISOString()
-                : null,
-          }),
+          // The status is not sent: saving never changes whether it has been sent.
+          body: JSON.stringify(
+            id
+              ? { subject: subject.trim(), content }
+              : { subject: subject.trim(), content, status: "draft" },
+          ),
         },
       );
       const data = await res.json().catch(() => ({}));
-      if (!res.ok)
-        throw new Error(data.error || "Could not save the newsletter");
+      if (!res.ok) throw new Error(data.error || "Could not save the newsletter");
       setDirty(false);
       setSaved(true);
       if (!id && data.id) router.replace(`/admin/newsletters/edit/${data.id}`);
     } catch (e) {
-      setError(
-        e instanceof Error ? e.message : "Could not save the newsletter",
-      );
+      setError(e instanceof Error ? e.message : "Could not save the newsletter");
     } finally {
       setSaving(false);
     }
@@ -102,21 +92,20 @@ export default function NewsletterForm({ id }: { id?: string }) {
         </Link>
       </>
     ) : (
-      <div
-        className="h-96 animate-pulse rounded-xl bg-gray-900"
-        aria-busy="true"
-      />
+      <div className="h-96 animate-pulse rounded-xl bg-gray-900" aria-busy="true" />
     );
   }
+
+  const locked = status === "sending";
 
   return (
     <>
       <PageHeader
         title={id ? "Edit newsletter" : "New newsletter"}
         subtitle={
-          sent
-            ? "This one has already been sent."
-            : "Saving does not send it. Subscribers only receive it when it is sent."
+          id
+            ? "Saving does not send it. Use the Send box when you are ready."
+            : "Save it first, then choose who to send it to."
         }
         actions={
           <Link href="/admin/newsletters" className={button("ghost")}>
@@ -144,6 +133,7 @@ export default function NewsletterForm({ id }: { id?: string }) {
             <input
               id="subject"
               value={subject}
+              disabled={locked}
               onChange={(e) => {
                 setSubject(e.target.value);
                 touch();
@@ -159,48 +149,27 @@ export default function NewsletterForm({ id }: { id?: string }) {
                 setContent(html);
                 touch();
               }}
-              placeholder="Write the newsletter…"
+              placeholder="Write the newsletter… Use {name} to greet each person by name."
             />
           </div>
         </div>
         <aside className="space-y-5">
-          <Panel title="Delivery">
-            <div className="grid grid-cols-2 gap-2">
-              {(["draft", "scheduled"] as const).map((s) => (
-                <label
-                  key={s}
-                  className={`cursor-pointer rounded-md border px-3 py-2 text-center text-sm capitalize transition-colors ${status === s ? "border-purple-500 bg-purple-500/15 text-white" : "border-gray-700 text-gray-400 hover:border-gray-500"}`}
-                >
-                  <input
-                    type="radio"
-                    name="status"
-                    value={s}
-                    checked={status === s}
-                    onChange={() => {
-                      setStatus(s);
-                      touch();
-                    }}
-                    className="sr-only"
-                  />
-                  {s}
-                </label>
-              ))}
-            </div>
-            {status === "scheduled" && (
-              <Field label="Send on" htmlFor="scheduled_for">
-                <input
-                  id="scheduled_for"
-                  type="datetime-local"
-                  value={scheduledFor}
-                  onChange={(e) => {
-                    setScheduledFor(e.target.value);
-                    touch();
-                  }}
-                  className={inputClass}
-                />
-              </Field>
-            )}
-          </Panel>
+          {id ? (
+            <Panel title="Send">
+              <NewsletterSend
+                newsletterId={id}
+                subject={subject}
+                hasUnsavedChanges={dirty}
+              />
+            </Panel>
+          ) : (
+            <Panel title="Send">
+              <p className="text-sm text-gray-400">
+                Save the newsletter first. Then you can send yourself a test copy and
+                choose who receives it.
+              </p>
+            </Panel>
+          )}
         </aside>
       </div>
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-gray-800 bg-gray-900/95 px-4 py-3 backdrop-blur lg:left-64">
@@ -211,7 +180,7 @@ export default function NewsletterForm({ id }: { id?: string }) {
           <button
             type="button"
             className={button("primary")}
-            disabled={saving || (!dirty && Boolean(id))}
+            disabled={saving || locked || (!dirty && Boolean(id))}
             onClick={save}
           >
             {saving ? "Saving…" : id ? "Save changes" : "Save newsletter"}

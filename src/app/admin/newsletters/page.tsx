@@ -15,7 +15,7 @@ import {
 interface Newsletter {
   id: string;
   subject: string;
-  status: "draft" | "sent" | "scheduled";
+  status: "draft" | "sending" | "sent" | "scheduled";
   recipients_count: number;
   sent_count?: number;
   failed_count?: number;
@@ -25,7 +25,7 @@ interface Newsletter {
 }
 
 const badge = (s: Newsletter["status"]) =>
-  s === "sent" ? "published" : s === "scheduled" ? "scheduled" : "draft";
+  s === "sent" ? "published" : s === "sending" || s === "scheduled" ? "scheduled" : "draft";
 
 export default function NewslettersPage() {
   const [items, setItems] = useState<Newsletter[]>([]);
@@ -134,7 +134,7 @@ export default function NewslettersPage() {
                   >
                     {n.status === "sent" ? "View" : "Edit"}
                   </Link>
-                  {n.status !== "sent" && (
+                  {n.status !== "sent" && n.status !== "sending" && (
                     <button
                       type="button"
                       disabled={busy === n.id}

@@ -213,6 +213,34 @@ saved edit is live at once and the image build needs no database.
 **Messages** lists what the contact form saved: open one to read it (it is marked read),
 reply by email (marks it replied), or delete it.
 
+### Sending a newsletter
+
+Open a saved newsletter: the **Send** box on the right has two buttons.
+
+| Button | What it does |
+|---|---|
+| **Send me a test copy** | One email to your own admin address, subject starting `[Test]`. Nothing is recorded, so you can do it as often as you like. If it fails, the screen shows Resend's reason (for example "API key is invalid") |
+| **Choose recipients & send** | Opens a list of everyone currently subscribed. **Nothing is ticked at first**, so a send is always a decision. Search, tick people, or *Select all*; people who already received this issue are greyed out. Then a second confirmation, then it goes |
+
+| Piece | Job |
+|---|---|
+| `GET /api/admin/newsletters/[id]/recipients` | Active subscribers, and whether each already got this issue |
+| `POST /api/admin/newsletters/[id]/send` | `{ test: true }` or `{ subscriberIds: [...] }`. Skips anyone unsubscribed or already sent, marks the newsletter `sending`, answers `202` at once and carries on in the background |
+| `src/lib/newsletter-send.ts` | Builds one email per person (their own unsubscribe link, `{name}` filled in, picture addresses made absolute, message sanitised) and sends them one at a time, 0.6 s apart, because Resend allows about two requests a second. Every attempt is saved in `newsletter_sends`, which the database keeps to one row per newsletter and person |
+
+Why in the background: Cloudflare gives up on a web request after 100 seconds, and a long
+list takes longer than that. The screen shows a progress bar (it polls every two seconds)
+and you can leave the page. When it finishes the newsletter is **Sent** if anyone received
+it; if every email failed it goes back to **Draft** so you can retry (failed people can be
+chosen again; successful ones cannot be sent a duplicate). While sending, editing and
+deleting are blocked. If the server restarts mid-send, the newsletter stays `sending`: set
+it back with `update newsletters set status='draft' where id=...;` and send to the
+remaining people.
+
+Unsubscribe links in newsletters no longer expire (the old 30-day limit would have broken
+the link in older emails). Scheduling a newsletter for later was removed from the form:
+nothing sent it at the chosen time, so the option would have been misleading.
+
 ## 11. Flow strips
 
 Each curated project has a `flow` (in `portfolio.ts`): a short chain of named steps such
