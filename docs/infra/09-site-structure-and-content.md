@@ -251,7 +251,7 @@ Both forms are public, so each has layers. A request must pass all of them.
 | Per **address**, from any number of visitors | 3 an hour (`perEmailLimiter`), so one inbox cannot be hammered from many places | 3 an hour, same limiter |
 | The same thing twice | An address already on the list gets **"You're already subscribed. Nothing more to do."** and nothing else happens: no second email, no new tokens | An identical message from the same address within 24 hours gets "We already have this message" and is **not saved or emailed again** |
 | Mail the site sends to a stranger | One welcome email per sign-up, never a repeat | The auto-reply goes only to an address's **first** message of the day |
-| Bots | A repeated-failure tracker and a CAPTCHA step (existing) | A hidden "website" field that people never see; a bot that fills it gets a fake success and nothing is stored |
+| Bots | A repeated-failure tracker, then a CAPTCHA step (existing) | A hidden "website" field that people never see (a bot that fills it gets a fake success and nothing is stored) **and** Google's "I'm not a robot" tick on every message, checked on the server |
 | Capital letters | `Ada@X.com` and `ada@x.com` are the same inbox (one row, not two) | Matched without regard to case |
 | Errors | Plain messages | The real reason stays in the log, never sent to the visitor |
 
@@ -260,9 +260,25 @@ address is on the list. For a public newsletter that is a fair price for being c
 visitors, and the limits above (10 tries an hour per visitor, 3 per address) slow down
 anyone trying to check a list of addresses.
 
+**The contact form's CAPTCHA.** The "I'm not a robot" tick appears on `/contact`, the Send
+button stays off until it is ticked, and the server asks Google to confirm the answer
+(`captchaGate` and `verifyCaptcha` in `src/lib/security.ts`). It uses the same two keys as
+the newsletter page: `NEXT_PUBLIC_RECAPTCHA_SITE_KEY` (a repository variable, built into the
+page) and `RECAPTCHA_SECRET_KEY` (in the `portfolio-secrets` Secret), so there is nothing new
+to set up. Three states: **secret set**, every message must pass; **no secret in local
+development**, the check is skipped so you can work; **no secret in production**, the form
+refuses everything rather than run unprotected. Two fixes came with it:
+
+- The site's content-security policy did not allow Google's script or frame, so the tick
+  could not appear anywhere (the newsletter page's escalation step could never have worked
+  either). `src/middleware.ts` now allows Google's `recaptcha` paths only, in `script-src`
+  and `frame-src`, and a test guards that nothing wider is opened.
+- The call to Google put the visitor's answer into the request unescaped, so a crafted
+  answer could add fields to it. It is now encoded.
+
 Still open, and worth doing: **double opt-in** (a confirmation link, so nobody can sign up
 or re-subscribe someone else's address; today a stranger can re-subscribe a person who had
-unsubscribed) and a **CAPTCHA on the contact form** (it has none).
+unsubscribed).
 
 ### Showing, hiding and moving sections
 

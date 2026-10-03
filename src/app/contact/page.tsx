@@ -1,6 +1,7 @@
 'use client';
 
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import ReCAPTCHA from 'react-google-recaptcha';
 import { motion } from 'framer-motion';
 import DOMPurify from 'dompurify';
 import { useRouter } from 'next/navigation';
@@ -29,6 +30,9 @@ export default function ContactPage() {
   });
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
+  const siteKey = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY;
+  const captchaRef = useRef<ReCAPTCHA>(null);
+  const [captchaToken, setCaptchaToken] = useState('');
   const [success, setSuccess] = useState(false);
   const [successText, setSuccessText] = useState('Message sent successfully!');
   // Hidden from people; bots that fill every field give themselves away.
@@ -113,15 +117,20 @@ export default function ContactPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ ...sanitizedData, website }),
+        body: JSON.stringify({ ...sanitizedData, website, captchaToken }),
       });
 
       const data = await response.json();
 
       if (!response.ok) {
+        // A CAPTCHA answer can be used once, so a failed try needs a fresh one.
+        captchaRef.current?.reset();
+        setCaptchaToken('');
         throw new Error(data.error || 'Failed to send message');
       }
 
+      captchaRef.current?.reset();
+      setCaptchaToken('');
       setSuccessText(
         data.duplicate
           ? 'We already have this message. I will reply soon.'
@@ -263,10 +272,21 @@ export default function ContactPage() {
               {errors.message && <p className="mt-1 text-sm text-red-500">{errors.message}</p>}
             </div>
 
+            {siteKey && (
+              <div className="flex justify-center">
+                <ReCAPTCHA
+                  ref={captchaRef}
+                  sitekey={siteKey}
+                  onChange={(token) => setCaptchaToken(token || '')}
+                  onExpired={() => setCaptchaToken('')}
+                />
+              </div>
+            )}
+
             <button
               type="submit"
-              disabled={loading}
-              className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={loading || (Boolean(siteKey) && !captchaToken)}
+              className="inline-flex w-full items-center justify-center rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-500 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {loading ? 'Sending...' : 'Send Message'}
             </button>

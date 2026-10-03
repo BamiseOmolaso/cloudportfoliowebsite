@@ -12,6 +12,8 @@ import {
 } from "@/lib/sanitize-text";
 import { sanitizeHtmlServer } from "@/lib/sanitize-server";
 import { db } from "@/lib/db";
+import { captchaGate, verifyCaptcha } from "@/lib/security";
+import { getClientIp } from "@/lib/client-ip";
 
 export const dynamic = "force-dynamic";
 
@@ -20,7 +22,8 @@ export const POST = withRateLimit(
   "contact-form",
   async (request: Request) => {
     try {
-      const { name, email, subject, message, website } = await request.json();
+      const { name, email, subject, message, website, captchaToken } =
+        await request.json();
 
       // A hidden field no person sees or fills. A bot that fills every field gives itself
       // away: answer as if it worked, and do nothing.
@@ -49,6 +52,40 @@ export const POST = withRateLimit(
           { error: "Invalid email format" },
           { status: 400 },
         );
+      }
+
+      // "I am not a robot": always required here, since the form has no other proof.
+      const gate = captchaGate();
+      if (gate === "unavailable") {
+        console.error("RECAPTCHA_SECRET_KEY is not set: contact form refused");
+        return NextResponse.json(
+          { error: "The contact form is temporarily unavailable." },
+          { status: 503 },
+        );
+      }
+      if (gate === "verify") {
+        if (typeof captchaToken !== "string" || captchaToken === "") {
+          return NextResponse.json(
+            {
+              error: "Please tick \"I'm not a robot\" before sending.",
+              requiresCaptcha: true,
+            },
+            { status: 400 },
+          );
+        }
+        const human = await verifyCaptcha(
+          captchaToken,
+          getClientIp(request.headers) ?? undefined,
+        );
+        if (!human) {
+          return NextResponse.json(
+            {
+              error: "The check did not pass. Please try again.",
+              requiresCaptcha: true,
+            },
+            { status: 400 },
+          );
+        }
       }
 
       // The same address again and again, from any number of visitors.

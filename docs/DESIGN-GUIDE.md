@@ -342,8 +342,9 @@ placeholders (`<record-id>`, `example.com`).
   names; server-side only.
 - **Analytics is cookie-free and stores no IP address.** Do not add cookies or third-party
   scripts without updating the privacy policy and the cookie banner.
-- The Content-Security-Policy allows only this site, `data:` and `https:` images. Do not
-  add external fonts, scripts or embeds without a deliberate CSP change.
+- The Content-Security-Policy allows only this site, `data:` and `https:` images, and Google's
+  reCAPTCHA script and frame (from its `recaptcha` paths only). Do not
+  add other external fonts, scripts or embeds without a deliberate CSP change (and a test).
 - Cloudflare is the only thing allowed to reach the web ports; the real visitor address
   comes from `CF-Connecting-IP` (see `src/lib/client-ip.ts`).
 
