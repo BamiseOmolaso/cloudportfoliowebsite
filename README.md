@@ -34,8 +34,8 @@ this repository. Every layer is documented, including what broke.
 
 ```mermaid
 flowchart LR
-  DEV["Feature branch"] -->|"pull request"| DEVELOP["develop"]
-  DEVELOP -->|"website files changed?"| CI{"CI decides"}
+  DEV["Feature branch"] -->|"pull request"| STAGING["staging"]
+  STAGING -->|"website files changed?"| CI{"CI decides"}
   CI -->|"yes"| TEST["lint, types, tests, build"]
   CI -->|"docs or infra only"| SKIP["quick checks only"]
   TEST --> IMG["Two images built and<br/>published, tagged with the commit"]
@@ -48,7 +48,7 @@ flowchart LR
   MIG --> ROLL["Rolling update, no downtime"]
 ```
 
-- **A merge to `main` is the deployment.** `develop` is where work is collected and tested.
+- **A merge to `main` is the deployment.** `staging` is where work is collected and tested.
 - Docs-only and infrastructure-only changes skip the website jobs and build no image.
 - A database migration runs first, as an ArgoCD hook, before the new version starts.
 - Rollback is reverting the release pull request.

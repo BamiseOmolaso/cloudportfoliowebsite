@@ -4,7 +4,7 @@ name: Hetzner Infrastructure
 # an apply that only runs from main after a human approves it.
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main, staging]
     paths:
       - 'infra/terraform/**'
       - '.github/workflows/infra.yml'

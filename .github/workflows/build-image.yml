@@ -4,11 +4,11 @@ name: Build and publish images
 #   app      -> the Next.js website        (Dockerfile target "runner")
 #   migrator -> applies database migrations (Dockerfile target "migrator")
 # On a pull request we only BUILD (proves the Dockerfile works).
-# On a push to develop we also PUSH to GitHub's registry (GHCR), tagged with
+# On a push to staging we also PUSH to GitHub's registry (GHCR), tagged with
 # the commit, so the cluster can pull exactly that version.
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main, staging]
     paths:
       - 'Dockerfile'
       - '.dockerignore'
@@ -24,7 +24,7 @@ on:
   # "Run workflow": workflow_dispatch below.) A release then names the newest commit that HAS an
   # image, which is the last one that changed the website.
   push:
-    branches: [develop]
+    branches: [staging]
     paths:
       - 'Dockerfile'
       - '.dockerignore'
@@ -48,6 +48,7 @@ jobs:
     permissions:
       contents: read
       packages: write # lets this job push to ghcr.io with the built-in token
+      security-events: write # lets the scan below publish its findings to the Security tab
     strategy:
       fail-fast: false
       matrix:
@@ -90,7 +91,7 @@ jobs:
           tags: |
             type=sha,prefix=sha-,format=short
 
-      - name: Build (and push on develop)
+      - name: Build (and push on staging)
         uses: docker/build-push-action@v6
         with:
           context: .
@@ -107,3 +108,28 @@ jobs:
             NEXT_PUBLIC_GA_ID=${{ vars.NEXT_PUBLIC_GA_ID }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+      # Scan the image that was just published (the one that will run), not a copy. Findings
+      # appear under Security > Code scanning. This reports and does not block: a newly found
+      # weakness in a base image must not stop a release. Only HIGH and CRITICAL issues that
+      # have a fix are shown.
+      - name: Scan the published image for known vulnerabilities (Trivy)
+        if: github.event_name != 'pull_request'
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8  # v0.36.0
+        with:
+          image-ref: ${{ steps.img.outputs.name }}:${{ steps.meta.outputs.version }}
+          format: 'sarif'
+          output: 'trivy-${{ matrix.name }}.sarif'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+        env:
+          TRIVY_USERNAME: ${{ github.actor }}
+          TRIVY_PASSWORD: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: true
+
+      - name: Upload the scan results to GitHub Security
+        if: github.event_name != 'pull_request' && hashFiles(format('trivy-{0}.sarif', matrix.name)) != ''
+        uses: github/codeql-action/upload-sarif@52485aec7be33610227643b0fe83936b8b5f061a  # v3
+        with:
+          sarif_file: 'trivy-${{ matrix.name }}.sarif'
+          category: 'trivy-${{ matrix.name }}'

@@ -16,7 +16,7 @@ to read each manifest file.
 
 ```mermaid
 flowchart LR
-  DEV["You: git push"] --> GH["GitHub: develop branch"]
+  DEV["You: git push"] --> GH["GitHub: staging branch"]
   GH --> CI["GitHub Actions<br/>build-image.yml"]
   CI -->|"push images"| GHCR[("GHCR<br/>image registry")]
   GH -->|"watches"| ARGO["ArgoCD"]
@@ -65,7 +65,7 @@ cluster's settings. They are public by design, so they are GitHub repository
 ```mermaid
 sequenceDiagram
   autonumber
-  participant G as git (develop)
+  participant G as git (staging)
   participant A as ArgoCD
   participant N as Namespace and config
   participant J as Migrate Job
