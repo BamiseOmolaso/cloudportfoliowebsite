@@ -237,145 +237,11 @@ jobs:
           flags: unittests
 
   # ============================================
-  # Build
+  # Build and image
   # ============================================
-  
-  build:
-    name: Build Application
-    runs-on: ubuntu-latest
-    timeout-minutes: 15
-    needs: [changes, lint-and-typecheck, test]
-    if: needs.changes.outputs.app == 'true'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_VERSION }}
-          cache: 'npm'
-      
-      - name: Set up build environment variables
-        run: |
-          # Required for Prisma
-          echo "DATABASE_URL=postgresql://test:test@localhost:5432/test?schema=public" >> $GITHUB_ENV
-          
-          # Required for authentication
-          echo "JWT_SECRET=test-jwt-secret-key-min-32-characters-long-for-testing" >> $GITHUB_ENV
-          echo "ADMIN_EMAIL=admin@test.com" >> $GITHUB_ENV
-          echo "ADMIN_PASSWORD=test-password-123" >> $GITHUB_ENV
-          
-          # Required for email service (Resend)
-          echo "RESEND_API_KEY=re_test_key_for_build" >> $GITHUB_ENV
-          echo "RESEND_FROM_EMAIL=noreply@test.com" >> $GITHUB_ENV
-          echo "CONTACT_EMAIL=contact@test.com" >> $GITHUB_ENV
-          
-          # Optional but may be referenced
-          echo "RESEND_DOMAIN=test.com" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_SITE_URL=http://localhost:3000" >> $GITHUB_ENV
-          echo "NEXT_PUBLIC_RECAPTCHA_SITE_KEY=test-site-key" >> $GITHUB_ENV
-          echo "RECAPTCHA_SECRET_KEY=test-secret-key" >> $GITHUB_ENV
-          
-          # Redis not needed for build (optional)
-          # echo "REDIS_URL=" >> $GITHUB_ENV
-      
-      - name: Install dependencies
-        run: npm ci
-      
-      - name: Generate Prisma Client
-        run: npx prisma generate
-      
-      - name: Build application
-        run: npm run build
-        env:
-          NODE_ENV: production
-      
-      - name: Check build artifacts
-        run: |
-          if [ ! -d ".next" ]; then
-            echo "❌ Build directory not found"
-            exit 1
-          fi
-          echo "✅ Build completed successfully"
-      
-      - name: Check bundle size
-        run: |
-          if [ -d ".next" ]; then
-            echo "## Bundle Size Report" >> $GITHUB_STEP_SUMMARY
-            echo "| File | Size |" >> $GITHUB_STEP_SUMMARY
-            echo "|------|------|" >> $GITHUB_STEP_SUMMARY
-            find .next/static/chunks -name "*.js" -type f -exec du -h {} + 2>/dev/null | \
-              sort -rh | head -10 | \
-              awk '{print "| " $2 " | " $1 " |"}' >> $GITHUB_STEP_SUMMARY || true
-          fi
-      
-      - name: Upload build artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-artifacts
-          path: |
-            .next
-            node_modules/.prisma
-            node_modules/@prisma
-            prisma
-          retention-days: 1
-
-  # ============================================
-  # Docker Build & Security Scan
-  # ============================================
-  
-  docker-build:
-    name: Build Docker Image
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    needs: [changes, build]
-    if: needs.changes.outputs.app == 'true' && github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
-    permissions:
-      contents: read
-      security-events: write
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      
-      - name: Download build artifacts
-        uses: actions/download-artifact@v4
-        with:
-          name: build-artifacts
-      
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-      
-      - name: Build Docker image
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: false
-          tags: portfolio-app:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-          load: true
-      
-      - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8  # v0.36.0
-        with:
-          image-ref: portfolio-app:${{ github.sha }}
-          format: 'sarif'
-          output: 'trivy-results.sarif'
-          severity: 'CRITICAL,HIGH'
-        continue-on-error: true
-
-      - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@52485aec7be33610227643b0fe83936b8b5f061a  # v3
-        if: hashFiles('trivy-results.sarif') != ''
-        with:
-          sarif_file: 'trivy-results.sarif'
+  # There is no build or Docker job here any more. The website image is built, published and
+  # scanned by build-image.yml ("Image (app)" and "Image (migrator)"), which also proves on every
+  # website pull request that the app builds. Building it a second time here was duplicate work.
 
   # ============================================
   # Infrastructure Validation
@@ -456,7 +322,7 @@ jobs:
   ci-summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [changes, lint-and-typecheck, security-scan, test, build, docker-build, terraform-validate]
+    needs: [changes, lint-and-typecheck, security-scan, test, terraform-validate]
     if: always()
     
     steps:
@@ -469,8 +335,6 @@ jobs:
           echo "| Lint & Type Check | ${{ needs.lint-and-typecheck.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Security Scan | ${{ needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Tests | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Docker Build | ${{ needs.docker-build.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Terraform Validate | ${{ needs.terraform-validate.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "Website changed: ${{ needs.changes.outputs.app }}. Old AWS Terraform changed: ${{ needs.changes.outputs.terraform }}. A skipped job means nothing it checks was changed." >> $GITHUB_STEP_SUMMARY
