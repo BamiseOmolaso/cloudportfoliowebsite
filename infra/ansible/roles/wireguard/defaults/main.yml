@@ -1,0 +1,15 @@
+---
+# The tunnel's own private network. Pick a range that does not clash with your home network
+# (10.8.0.0/24 is unusual enough) or with k3s (10.42.0.0/16 and 10.43.0.0/16).
+wireguard_interface: wg0
+wireguard_port: 51820            # must match wireguard_port in infra/terraform/envs/prod
+wireguard_server_address: 10.8.0.1/24
+
+# One entry per device that may connect. A PUBLIC key is not a secret, so it is safe to list
+# here; the matching private key never leaves the device (see infra/scripts/wireguard-client.sh).
+# Put your real list in the git-ignored inventory/hosts.yml, for example:
+#   wireguard_peers:
+#     - name: macbook
+#       public_key: "<output of infra/scripts/wireguard-client.sh>"
+#       address: 10.8.0.2/32
+wireguard_peers: []

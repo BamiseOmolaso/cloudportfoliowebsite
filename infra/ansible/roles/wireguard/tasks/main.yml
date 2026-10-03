@@ -1,0 +1,68 @@
+---
+- name: Install WireGuard
+  ansible.builtin.apt:
+    name: wireguard
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Create the WireGuard folder (only root may enter)
+  ansible.builtin.file:
+    path: /etc/wireguard
+    state: directory
+    owner: root
+    group: root
+    mode: "0700"
+
+# The server's private key is made ON the server and never leaves it, so it is never in git,
+# in a variable or on your laptop. `creates` makes this run only once: running the playbook
+# again keeps the same key (a new key would disconnect every device).
+- name: Create the server's key pair (once)
+  ansible.builtin.shell: |
+    set -e
+    umask 077
+    wg genkey | tee /etc/wireguard/server.key | wg pubkey > /etc/wireguard/server.pub
+  args:
+    creates: /etc/wireguard/server.key
+    executable: /bin/bash
+
+- name: Read the server's private key (for the config file only)
+  ansible.builtin.slurp:
+    src: /etc/wireguard/server.key
+  register: wireguard_server_key
+  no_log: true
+  # In a dry run (--check) the key is not really created above, so there is nothing to read
+  # yet. Tolerate that in dry runs only; a real run must find it.
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Read the server's public key
+  ansible.builtin.slurp:
+    src: /etc/wireguard/server.pub
+  register: wireguard_server_pub
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Write the WireGuard config
+  ansible.builtin.template:
+    src: wg0.conf.j2
+    dest: "/etc/wireguard/{{ wireguard_interface }}.conf"
+    owner: root
+    group: root
+    mode: "0600"
+  no_log: true
+  notify: Reload WireGuard
+
+- name: Start the tunnel now and at every boot
+  ansible.builtin.service:
+    name: "wg-quick@{{ wireguard_interface }}"
+    state: started
+    enabled: true
+  # In a dry run the package is not really installed, so its service does not exist yet.
+  ignore_errors: "{{ ansible_check_mode }}"
+
+- name: Show what to put in your laptop's config
+  ansible.builtin.debug:
+    msg:
+      - "Server public key: {{ (wireguard_server_pub.content | default('') | b64decode | trim) or '(created during the real run)' }}"
+      - "Server tunnel address: {{ wireguard_server_address.split('/')[0] }}"
+      - "UDP port: {{ wireguard_port }}"
+      - "Devices allowed in: {{ wireguard_peers | map(attribute='name') | list }}"

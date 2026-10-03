@@ -13,6 +13,17 @@ variable "admin_cidrs" {
   }
 }
 
+variable "wireguard_port" {
+  description = "UDP port for the WireGuard tunnel, opened to everyone (WireGuard ignores unsigned packets). null means no tunnel rule."
+  type        = number
+  default     = null
+
+  validation {
+    condition     = var.wireguard_port == null || (var.wireguard_port >= 1024 && var.wireguard_port <= 65535)
+    error_message = "wireguard_port must be null or a port between 1024 and 65535."
+  }
+}
+
 variable "web_source_ips" {
   description = "Addresses allowed to reach ports 80 and 443. Defaults to everyone; production passes Cloudflare's ranges."
   type        = list(string)

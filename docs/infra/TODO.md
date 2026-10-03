@@ -28,8 +28,8 @@ honest: it is the shared memory of the project.
 
 ## Access and security
 
-- [ ] **WireGuard private tunnel** (replaces IP allow-listing; see
-  `docs/infra/runbooks/01-my-ip-changed.md`). Plan:
+- [~] **WireGuard private tunnel** (replaces IP allow-listing; see
+  `docs/infra/11-wireguard.md`). **Rolled out and working; remaining: narrow `admin_cidrs` to one break-glass address after a few weeks of use.** Plan (done unless noted):
   1. Ansible role installs WireGuard on the server and creates its keys.
   2. Open **UDP 51820** to the world in the Hetzner firewall (WireGuard ignores anything
      that is not from a known key, so it is safe to expose).

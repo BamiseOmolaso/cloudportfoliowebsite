@@ -8,6 +8,12 @@ variable "admin_cidrs" {
   type        = list(string)
 }
 
+variable "wireguard_port" {
+  description = "UDP port for the WireGuard tunnel (docs/infra/11-wireguard.md). Must match wireguard_port in the Ansible variables. null turns the rule off."
+  type        = number
+  default     = 51820
+}
+
 variable "server_type" {
   description = "Hetzner server type. List current options with the API call in docs/infra/01-terraform-hetzner.md."
   type        = string

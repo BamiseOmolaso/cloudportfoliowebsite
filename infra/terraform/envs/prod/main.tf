@@ -47,6 +47,7 @@ module "firewall" {
 
   name           = local.name
   admin_cidrs    = var.admin_cidrs
+  wireguard_port = var.wireguard_port
   web_source_ips = concat(data.cloudflare_ip_ranges.this.ipv4_cidrs, data.cloudflare_ip_ranges.this.ipv6_cidrs)
   apply_to_label = "role=k8s-node"
   labels         = local.labels
