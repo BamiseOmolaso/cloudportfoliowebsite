@@ -18,8 +18,8 @@ flowchart TD
   H -->|"the platform, drawn"| PS
   H -->|"3 featured, then See all"| P["/projects<br/>the full list"]
   H -->|"3 latest, then All posts"| B["/blog<br/>the full list"]
-  H -->|"nav: Continuous learning"| LR["/learning<br/>Terraform: one server to a production stack"]
-  H -->|"More about me"| AB["/about<br/>record and why a doctor"]
+  H -->|"nav: Learning"| LR["/learning<br/>Terraform: one server to a production stack"]
+  H -->|"nav: About"| AB["/about<br/>record and why a doctor"]
   H -->|"Send a message"| CF["/contact<br/>the full form"]
   P --> PS["/projects/slug<br/>one project, with its diagram"]
   PS --> PL["/projects/production-platform-on-hetzner<br/>the platform in full, with its diagram"]
@@ -27,7 +27,7 @@ flowchart TD
   B --> BS["/blog/slug"]
 ```
 
-The menu is **Home, Projects, Blog, Continuous learning, About, Contact**. "How it's built" is not in the menu:
+The menu is **Home, Projects, Blog, Learning, About, Contact**. "How it's built" is not in the menu:
 it is a **project** (the platform this site runs on). The home page draws that platform
 with its tabs and a "Read how I built it" link; the case study itself lives on the
 project's page under Projects. The old `/architecture` address redirects there (308,
@@ -39,7 +39,7 @@ permanent). What broke and what I learnt sits at the foot of the blog.
 | `/projects`, `/projects/slug` | Every project; a project page shows its architecture diagram | The **database**, plus the content file for the diagrams |
 | `/blog`, `/blog/slug` | Every post | The **database** |
 | `/projects/production-platform-on-hetzner` | The platform in full: its diagram, explained in three steps | The content file, below the project's own text |
-| `/learning` | Continuous learning: the Terraform journey from one EC2 instance to a production stack | The content file |
+| `/learning` | Learning: the Terraform journey from one EC2 instance to a production stack, then every infrastructure pattern (the home page shows two) | The content file |
 | `/blog` (foot of the page) | Lessons: incidents and what changed, plus the long-form write-ups | The content file |
 | `/about` | Where I've worked, what I hold, why a doctor | The content file |
 | `/contact` | The full contact form | Code (posts to `/api/contact`) |
@@ -53,7 +53,7 @@ changed this site:
 
 | Rule | What it changed |
 |---|---|
-| **AIDA**: Attention, Interest, Desire, Action | The home page order: hero and tools, then numbers and projects and posts, then "why a doctor" and the channel, then one contact action |
+| **AIDA**: Attention, Interest, Desire, Action | The home page order: hero and tools, then numbers and projects and posts, then the teaching channel, then one contact action. "Why a doctor" lives only on `/about` |
 | **The hero headline fits on two lines**, the text under it is 20 words or fewer, one main button | The hero was four lines of headline plus a long paragraph and three actions |
 | **Say each idea once** (impeccable "distill") | Removed the "how it's built" teaser (it is a project now), the skills chips on the home page (the logo strip replaces them), the writing cards on `/about` (moved to the case study) and the repeated idle-cost claim |
 | **Few eyebrows** (the small uppercase label above a heading) | Removed from the home sections; kept on the career pages |
@@ -104,7 +104,7 @@ one-colour silhouette.
 | `brandKey("Argo CD")` | Turns the name as written on the site into a logo key. A name with no logo returns nothing and is shown as plain text |
 | `BrandIcon` | Draws one logo |
 | `ToolChip` | A tool name with its logo, used on project cards |
-| `ToolsStrip` | The "Built with" row under the hero |
+| `ToolsStrip` | The "Technical tools" row (moving logos) under the hero |
 
 To add a logo: find it at simpleicons.org, copy its path into `brand-icons.ts`, and add an
 alias in `BrandIcon.tsx`.

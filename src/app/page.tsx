@@ -1,4 +1,3 @@
-import AboutTeaser from "@/components/portfolio/AboutTeaser";
 import Contact from "@/components/portfolio/Contact";
 import Hero from "@/components/portfolio/Hero";
 import { LivePosts } from "@/components/portfolio/LiveFeeds";
@@ -19,13 +18,13 @@ export const metadata = { alternates: { canonical: "/" } };
 //   Attention  the hero and the tools I build with
 //   Interest   the numbers, featured projects, the platform this site runs on, how a change
 //              ships, the patterns I use, then the latest posts
-//   Desire     why a doctor, and the teaching channel
+//   Desire     the teaching channel
 //   Action     one clear way to get in touch
 // Each section shows a few items and links to a full page, so nothing is said twice:
 //   /projects, /blog   the full lists (managed in the admin panel)
 //   /projects/production-platform-on-hetzner   the platform in full
 //   /learning          how my Terraform went from one server to a production stack
-//   /about             where I've worked and why a doctor
+//   /about             where I've worked and why a doctor (in the menu, not repeated here)
 export default function HomePage() {
   return (
     <PortfolioShell className={fontVars}>
@@ -36,9 +35,8 @@ export default function HomePage() {
         <Work />
         <PlatformFeature />
         <PipelineDemo />
-        <Patterns />
+        <Patterns limit={2} />
         <LivePosts />
-        <AboutTeaser />
         <YouTube />
         <Contact />
         <SiteFooter />

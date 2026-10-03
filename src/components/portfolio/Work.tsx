@@ -34,6 +34,7 @@ export default function Work() {
               <div className="proj-links">
                 {p.links.map((l) => (
                   <a
+                    className="btn primary"
                     key={l.href}
                     href={l.href}
                     target="_blank"
@@ -48,7 +49,9 @@ export default function Work() {
           ))}
       </div>
       <p className="more">
-        <Link href={seeAll.projects.href}>{seeAll.projects.label} →</Link>
+        <Link className="btn primary" href={seeAll.projects.href}>
+          {seeAll.projects.label} →
+        </Link>
       </p>
     </section>
   );

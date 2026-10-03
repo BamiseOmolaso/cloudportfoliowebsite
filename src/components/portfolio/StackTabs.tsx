@@ -62,7 +62,7 @@ export default function StackTabs({
           {tab < view.tabs.length - 1 && (
             <button
               type="button"
-              className="tab-next"
+              className="btn primary tab-next"
               onClick={() => setTab(tab + 1)}
             >
               Next step →

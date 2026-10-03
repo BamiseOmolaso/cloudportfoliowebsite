@@ -1,10 +1,11 @@
+import Patterns from "@/components/portfolio/Patterns";
 import PortfolioShell from "@/components/portfolio/PortfolioShell";
 import SiteFooter from "@/components/portfolio/SiteFooter";
 import TerraformJourney from "@/components/portfolio/TerraformJourney";
 import { fontVars } from "../fonts";
 
 export const metadata = {
-  title: "Continuous learning",
+  title: "Learning",
   description:
     "How my Terraform went from one EC2 instance to a production stack, one idea at a time.",
   alternates: { canonical: "/learning" },
@@ -16,6 +17,7 @@ export default function LearningPage() {
     <PortfolioShell className={fontVars} onHome={false}>
       <div className="wrap" id="main">
         <TerraformJourney />
+        <Patterns />
         <SiteFooter />
       </div>
     </PortfolioShell>

@@ -18,7 +18,9 @@ export default function PlatformFeature() {
         <StackTabs view={hetznerView} idPrefix="home-platform" />
       </div>
       <p className="more">
-        <Link href={seeAll.platform.href}>{seeAll.platform.label} →</Link>
+        <Link className="btn primary" href={seeAll.platform.href}>
+          {seeAll.platform.label} →
+        </Link>
       </p>
     </section>
   );

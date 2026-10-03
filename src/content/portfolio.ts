@@ -195,32 +195,33 @@ export const homeHero = {
 
 /** The logo strip under the hero. */
 export const tools = {
-  label: "Built with",
+  label: "Technical tools",
   items: [
     "Terraform",
     "Ansible",
     "Kubernetes",
     "Argo CD",
-    "PostgreSQL",
-    "Cloudflare",
-    "GitHub Actions",
-    "AWS",
+    "Helm",
     "Docker",
+    "AWS",
+    "GCP",
+    "Cloudflare",
+    "PostgreSQL",
+    "GitHub Actions",
+    "Prometheus",
+    "Grafana",
+    "Python",
+    "Go",
+    "Linux",
+    "Git",
     "Next.js",
   ],
-} as const;
-
-/** A short pointer from the home page to the full /about page. */
-export const aboutTeaser = {
-  title: "Why a doctor?",
-  body: "Triage, handover and differential diagnosis are habits I carried straight into operations: fix what matters first, leave a record the next person can use, and rule causes out in order.",
-  cta: "More about me",
-  href: "/about",
 } as const;
 
 /** "See all" links from the home page into each full page. */
 export const seeAll = {
   projects: { label: "See all projects", href: "/projects" },
+  patterns: { label: "See all patterns", href: "/learning#patterns" },
   platform: {
     label: "Read how I built it",
     href: "/projects/production-platform-on-hetzner",
