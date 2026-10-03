@@ -1,6 +1,6 @@
 // Headless-Chrome screenshot tool (Chrome DevTools Protocol, no dependencies).
 //   node shot.mjs <url> <out.png> [--w=1280] [--h=800] [--dark] [--scroll=Y] [--to="#css-selector"]
-//        [--wait=2500] [--settle=1800] [--eval="js before scrolling"] [--after="js after scrolling"] [--init="js before the page loads"] [--keys="Tab,Enter"] [--reduce] [--keep-cookie]
+//        [--wait=2500] [--settle=1800] [--eval="js before scrolling"] [--after="js after scrolling"] [--init="js before the page loads"] [--keys="Tab,Enter"] [--reduce] [--keep-cookie] [--cookie=name=value]
 // WebGL works through SwiftShader (software), so the 3D scene renders.
 import { spawn } from "node:child_process";
 import { mkdtempSync, writeFileSync, rmSync } from "node:fs";
@@ -99,6 +99,13 @@ try {
 
   if (opt.init) await send("Page.addScriptToEvaluateOnNewDocument", { source: opt.init });
   const loaded = new Promise((res) => listeners.push((d) => d.method === "Page.loadEventFired" && res()));
+  // --cookie=name=value sets a cookie (even HttpOnly ones) for the page's host before loading,
+  // e.g. a local admin session: --cookie=auth-token=...
+  if (opt.cookie) {
+    const [cname, ...cv] = String(opt.cookie).split("=");
+    await send("Network.enable");
+    await send("Network.setCookie", { name: cname, value: cv.join("="), url, httpOnly: true });
+  }
   await send("Page.navigate", { url });
   await Promise.race([loaded, sleep(30000)]);
   await sleep(+opt.wait || 2500);

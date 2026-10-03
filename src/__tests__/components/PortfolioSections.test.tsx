@@ -12,6 +12,7 @@ import Patterns from "@/components/portfolio/Patterns";
 import TerraformJourney from "@/components/portfolio/TerraformJourney";
 import PipelineDemo from "@/components/portfolio/PipelineDemo";
 import Contact from "@/components/portfolio/Contact";
+import PortfolioShell from "@/components/portfolio/PortfolioShell";
 import { pipeline } from "@/content/portfolio";
 
 beforeAll(() => {
@@ -91,5 +92,29 @@ describe("Contact", () => {
     expect(
       screen.getByRole("link", { name: "Send a message" }),
     ).toHaveAttribute("href", "/contact");
+  });
+});
+
+describe("PortfolioShell menu", () => {
+  it("links to the full pages, and 'Contact' leads home when away from it", () => {
+    const { rerender } = render(
+      <PortfolioShell className="f">
+        <p>x</p>
+      </PortfolioShell>,
+    );
+    const hrefs = (name: string) =>
+      screen.getAllByRole("link", { name }).map((a) => a.getAttribute("href"));
+    expect(hrefs("Projects")).toContain("/projects");
+    expect(hrefs("Blog")).toContain("/blog");
+    expect(hrefs("How it's built")).toContain("/architecture");
+    expect(hrefs("About")).toContain("/about");
+    expect(hrefs("Contact")).toContain("#contact");
+
+    rerender(
+      <PortfolioShell className="f" onHome={false}>
+        <p>x</p>
+      </PortfolioShell>,
+    );
+    expect(hrefs("Contact")).toContain("/#contact");
   });
 });

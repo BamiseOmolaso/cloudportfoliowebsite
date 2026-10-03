@@ -230,4 +230,5 @@ Check current Hetzner prices in the console; we do not quote numbers from memory
 7. **06** PostgreSQL on the data disk, with nightly backups to R2 and a tested restore
 8. **07** the application: images, migrations, secrets, deploy (verified on the test hostname)
 9. **08** the cut-over: moving the real domain to the new site (planned)
-10. Next: monitoring
+10. **09** how the site is organised and where each piece of content lives (built, not yet released)
+11. Next: monitoring

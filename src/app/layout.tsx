@@ -85,7 +85,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#1F2937" />
       </head>
       <body
-        className={`${inter.variable} ${inter.className} bg-gray-950 text-white`}
+        className={`${inter.variable} ${fontVars} font-sans bg-gray-950 text-white`}
       >
         <ErrorBoundary>
           <SiteChrome fontClass={fontVars}>{children}</SiteChrome>

@@ -43,7 +43,7 @@ function useFeed<T>(url: string, max: number): T[] {
 
 /** The latest published posts. Renders nothing until there is at least one. */
 export function LivePosts() {
-  const posts = useFeed<Post>("/api/blog?status=published", 3);
+  const posts = useFeed<Post>("/api/blog?status=published", 2);
   if (posts.length === 0) return null;
 
   return (

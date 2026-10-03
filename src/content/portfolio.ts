@@ -63,6 +63,8 @@ export type ProjectStatus = "Live" | "Built" | "In progress" | "Learning lab";
 
 export interface Project {
   title: string;
+  /** Shown on the home page (two at most); the rest live on /projects. */
+  featured?: boolean;
   status: ProjectStatus;
   body: string;
   stack: string[];
@@ -153,7 +155,7 @@ export const profile = {
   role: "Cloud and DevSecOps engineer · former medical doctor",
   email: "davidbams3@gmail.com",
   location: "Alberta, Canada · Ile-Ife, Nigeria",
-  cv: "https://portfolio.oluwabamiseomolaso.com.ng/cv/Oluwabamise%20Omolaso_CV_2025.pdf",
+  cv: "https://oluwabamiseomolaso.com.ng/cv/Oluwabamise%20Omolaso_CV_2025.pdf",
   links: {
     linkedin: "https://www.linkedin.com/in/dr-bamise-omolaso/",
     github: "https://github.com/BamiseOmolaso",
@@ -167,9 +169,35 @@ export const hero = {
   headlineEmphasis: "secure,",
   headlineEnd: " repeatable and cheap to run.",
   intro:
-    "Dr. Bamise Omolaso. This is the AWS infrastructure I built for this portfolio, drawn the way I'd document it. It is paused while I move hosting. Scroll to follow one request through it.",
+    "This is the AWS infrastructure I built for this portfolio, drawn the way I'd document it. It is paused: the site now runs on a Hetzner server (see the VPS section below). Scroll to follow one request through it.",
   primaryCta: "Work with me",
   secondaryCta: "View CV",
+} as const;
+
+/** The home page's calm hero: who, what, and one way into the detail. */
+export const homeHero = {
+  intro:
+    "I design, build and run cloud infrastructure with Terraform, Ansible and Kubernetes, and I document it in public. This site runs on a single Hetzner server I provision and deploy with code, and every change goes through a pull request.",
+  primaryCta: "Work with me",
+  secondaryCta: "View CV",
+  builtLabel: "See how this site is built",
+  builtHref: "/architecture",
+} as const;
+
+/** The home page's teaser for /architecture. */
+export const builtTeaser = {
+  label: "How it's built",
+  title: "The infrastructure behind this page.",
+  body: "From the AWS design I built first to the Hetzner setup it runs on now: the Terraform timeline, the deployment pipeline, the patterns I use, and the incidents that taught me the most.",
+  chips: ["Terraform", "Ansible", "k3s", "ArgoCD", "PostgreSQL", "Cloudflare"],
+  cta: "Read how it's built",
+  href: "/architecture",
+} as const;
+
+/** "See all" links from the home page into each full page. */
+export const seeAll = {
+  projects: { label: "All projects", href: "/projects" },
+  about: { label: "More about me", href: "/about" },
 } as const;
 
 /** The five scroll steps that follow the hero (edge → app → data → security → cost). */
@@ -457,6 +485,7 @@ export const work = {
 export const projects: Project[] = [
   {
     title: "Cloud portfolio on AWS",
+    featured: true,
     status: "Built",
     body: "The infrastructure this page was built to run on: containers on ECS Fargate behind a load balancer, PostgreSQL on RDS, three environments from shared Terraform modules, GitHub OIDC instead of access keys, and a pause script that takes the idle bill from about $250 to under $5 a month.",
     stack: [
@@ -471,6 +500,7 @@ export const projects: Project[] = [
   },
   {
     title: "Hotel booking platform",
+    featured: true,
     status: "Live",
     body: "A production booking app for a small hotel: multi-room bookings with timed holds, an admin panel, email notifications and bot protection. It runs on a single VPS with Docker Compose, deploys as an image tagged with the commit (so rollback is one command), and is backed up nightly.",
     stack: ["Next.js", "PostgreSQL", "Drizzle", "Docker", "Nginx"],

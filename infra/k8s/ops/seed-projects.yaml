@@ -1,0 +1,58 @@
+# One-off: adds the curated projects (prisma/seed-projects.sql) to the live database.
+#
+# NOT managed by ArgoCD: you run it by hand, once (and again only if you add projects
+# to the content file). It only INSERTS projects that are missing and never overwrites
+# one you have edited in the admin panel, so running it twice is harmless.
+#
+# The migrator image already contains the prisma folder (and so the SQL file), the
+# Prisma command line, and the database address comes from the same Secret as the app.
+#
+# Run it (from the repo root), using the SAME image tag as infra/k8s/apps/portfolio/20-migrate-job.yaml:
+#   TAG=$(grep -o 'migrator:sha-[0-9a-f]*' infra/k8s/apps/portfolio/20-migrate-job.yaml | head -1 | cut -d: -f2)
+#   sed "s/sha-REPLACE_ME/$TAG/" infra/k8s/ops/seed-projects.yaml | kubectl apply -f -
+#   kubectl -n portfolio logs -f job/seed-projects
+#   kubectl -n portfolio delete job seed-projects
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: seed-projects
+  namespace: portfolio
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        app: seed-projects
+    spec:
+      restartPolicy: Never
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: seed
+          image: ghcr.io/bamiseomolaso/cloudportfoliowebsite-migrator:sha-REPLACE_ME
+          command:
+            - npx
+            - prisma
+            - db
+            - execute
+            - --file
+            - prisma/seed-projects.sql
+            - --schema
+            - prisma/schema.prisma
+          securityContext:
+            runAsUser: 1000
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop: ["ALL"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: portfolio-secrets
+                  key: DATABASE_URL
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }

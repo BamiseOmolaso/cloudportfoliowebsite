@@ -2136,3 +2136,66 @@
   background: none;
   padding-block: 2rem;
 }
+
+/* The home page's calm hero (the scroll story moved to /architecture). */
+.pf .home-hero {
+  padding-top: clamp(6.5rem, 17vh, 10rem);
+  padding-bottom: clamp(2.5rem, 7vh, 4.5rem);
+  max-width: 48rem;
+  display: grid;
+  gap: 1.4rem;
+}
+.pf .home-hero h1 {
+  font-size: clamp(2.6rem, 7.2vw, 5rem);
+  font-weight: 800;
+  line-height: 1.02;
+}
+.pf .home-hero h1 em {
+  font-style: normal;
+  color: var(--accent);
+}
+.pf .home-hero p {
+  color: var(--ink-2);
+  font-size: clamp(1.02rem, 1.6vw, 1.2rem);
+  max-width: 38rem;
+}
+.pf .home-hero .ctas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.7rem;
+}
+.pf .built-link {
+  justify-self: start;
+  color: var(--accent);
+  text-decoration: none;
+  font-weight: 500;
+}
+.pf .built-link:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* The pointer from the home page to /architecture. */
+.pf .built {
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) * 2);
+  background: color-mix(in srgb, var(--surface) 80%, transparent);
+  padding: clamp(1.4rem, 4vw, 2.6rem);
+  display: grid;
+  gap: 1rem;
+  justify-items: start;
+}
+.pf .built h2 {
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
+  font-weight: 800;
+  max-width: 34rem;
+}
+.pf .built p {
+  color: var(--ink-2);
+  max-width: 40rem;
+}
+
+/* Pages other than the home page start below the fixed header. */
+.pf .page-top {
+  padding-top: 5.5rem;
+}

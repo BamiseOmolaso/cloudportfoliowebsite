@@ -129,14 +129,22 @@ export default function ProjectsPage() {
               transition={{ duration: 0.5 }}
               className="bg-gray-800 rounded-lg overflow-hidden group hover:transform hover:scale-105 transition-all duration-300"
             >
-              <div className="relative h-48 overflow-hidden">
-                <Image
-                  src={project.cover_image}
-                  alt={project.title}
-                  fill
-                  className="object-cover group-hover:opacity-80 transition-opacity"
+              {project.cover_image ? (
+                <div className="relative h-48 overflow-hidden">
+                  <Image
+                    src={project.cover_image}
+                    alt={project.title}
+                    fill
+                    className="object-cover group-hover:opacity-80 transition-opacity"
+                  />
+                </div>
+              ) : (
+                // No cover image: a soft gradient instead of a broken-image box.
+                <div
+                  className="h-2 bg-gradient-to-r from-purple-500/60 via-purple-700/30 to-transparent"
+                  aria-hidden="true"
                 />
-              </div>
+              )}
               <div className="p-6">
                 <h3 className="text-lg font-semibold mb-2 text-white group-hover:text-purple-400 transition-colors">
                   {project.title}
