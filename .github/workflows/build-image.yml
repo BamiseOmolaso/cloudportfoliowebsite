@@ -19,8 +19,22 @@ on:
       - 'public/**'
       - 'next.config.*'
       - '.github/workflows/build-image.yml'
+  # Only a commit that changes the website needs a new image. A docs, infrastructure or release
+  # commit would build and publish an identical image for nothing. (To build by hand, use
+  # "Run workflow": workflow_dispatch below.) A release then names the newest commit that HAS an
+  # image, which is the last one that changed the website.
   push:
     branches: [develop]
+    paths:
+      - 'Dockerfile'
+      - '.dockerignore'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'prisma/**'
+      - 'src/**'
+      - 'public/**'
+      - 'next.config.*'
+      - '.github/workflows/build-image.yml'
   workflow_dispatch:
 
 permissions:

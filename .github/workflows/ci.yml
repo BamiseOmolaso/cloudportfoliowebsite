@@ -12,22 +12,68 @@ on:
       - '.github/workflows/README.md'
       - 'CLEANUP_REPORT.md'
       - 'DOCUMENTATION_*.md'
+  # Pull requests always start this workflow, but the heavy jobs only run when files they
+  # care about changed (see the `changes` job). Skipping the whole workflow with a path
+  # filter would leave the required checks "pending" forever; a skipped job counts as passed.
   pull_request:
     branches:
       - main
       - develop
-    paths-ignore:
-      - '**.md'
-      - 'docs/**'
-      - '.github/workflows/README.md'
-      - 'CLEANUP_REPORT.md'
-      - 'DOCUMENTATION_*.md'
 
 env:
   NODE_VERSION: '20.x'
   AWS_REGION: us-east-1
 
 jobs:
+  # ============================================
+  # What changed? (so docs-only and infra-only changes skip the app jobs)
+  # ============================================
+
+  changes:
+    name: Detect changed areas
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      app: ${{ steps.filter.outputs.app }}
+      terraform: ${{ steps.filter.outputs.terraform }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Work out which areas changed
+        id: filter
+        run: |
+          set -euo pipefail
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            BASE="${{ github.event.pull_request.base.sha }}"
+          else
+            BASE="${{ github.event.before }}"
+          fi
+
+          # A new branch, a forced push or an unknown base: run everything (the safe default).
+          if [ -z "$BASE" ] || [ "$BASE" = "0000000000000000000000000000000000000000" ] \
+             || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
+            echo "No usable base to compare with: running everything."
+            echo "app=true" >> "$GITHUB_OUTPUT"
+            echo "terraform=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          FILES="$(git diff --name-only "$BASE" HEAD)"
+          echo "Changed files:"; echo "$FILES" | sed 's/^/  /'
+
+          # The website: its code, tests, database schema, dependencies, build and tool config,
+          # and this workflow itself.
+          APP='^(src/|prisma/|public/|scripts/|package(-lock)?\.json$|Dockerfile$|\.dockerignore$|next\.config|tailwind\.config|postcss\.config|tsconfig|jest\.|\.eslintrc|\.eslintignore|\.prettier|\.github/workflows/ci\.yml$)'
+          # The old AWS Terraform that this workflow validates.
+          TF='^(terraform/|\.github/workflows/ci\.yml$)'
+
+          if echo "$FILES" | grep -Eq "$APP"; then echo "app=true" >> "$GITHUB_OUTPUT"; else echo "app=false" >> "$GITHUB_OUTPUT"; fi
+          if echo "$FILES" | grep -Eq "$TF"; then echo "terraform=true" >> "$GITHUB_OUTPUT"; else echo "terraform=false" >> "$GITHUB_OUTPUT"; fi
+
   # ============================================
   # Code Quality & Security
   # ============================================
@@ -36,6 +82,8 @@ jobs:
     name: Lint & Type Check
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     
     steps:
       - name: Checkout code
@@ -62,6 +110,8 @@ jobs:
     name: Security Scan
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     
     steps:
       - name: Checkout code
@@ -106,6 +156,8 @@ jobs:
     name: Test Suite
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    needs: changes
+    if: needs.changes.outputs.app == 'true'
     
     services:
       postgres:
@@ -192,7 +244,8 @@ jobs:
     name: Build Application
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    needs: [lint-and-typecheck, test]
+    needs: [changes, lint-and-typecheck, test]
+    if: needs.changes.outputs.app == 'true'
     
     steps:
       - name: Checkout code
@@ -279,8 +332,8 @@ jobs:
     name: Build Docker Image
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [build]
-    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
+    needs: [changes, build]
+    if: needs.changes.outputs.app == 'true' && github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop')
     permissions:
       contents: read
       security-events: write
@@ -334,6 +387,8 @@ jobs:
     name: Validate Terraform
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    needs: changes
+    if: needs.changes.outputs.terraform == 'true'
     
     steps:
       - name: Checkout code
@@ -401,7 +456,7 @@ jobs:
   ci-summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [lint-and-typecheck, security-scan, test, build, docker-build, terraform-validate]
+    needs: [changes, lint-and-typecheck, security-scan, test, build, docker-build, terraform-validate]
     if: always()
     
     steps:
@@ -417,4 +472,18 @@ jobs:
           echo "| Build | ${{ needs.build.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Docker Build | ${{ needs.docker-build.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Terraform Validate | ${{ needs.terraform-validate.result }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Website changed: ${{ needs.changes.outputs.app }}. Old AWS Terraform changed: ${{ needs.changes.outputs.terraform }}. A skipped job means nothing it checks was changed." >> $GITHUB_STEP_SUMMARY
+
+      # This is the check to require on a pull request. A skipped job is fine (nothing it
+      # covers changed); a failed or cancelled one is not. Without this step the summary
+      # would be green even when the tests had failed.
+      - name: Fail if any job failed
+        run: |
+          if [ "${{ contains(needs.*.result, 'failure') }}" = "true" ] || [ "${{ contains(needs.*.result, 'cancelled') }}" = "true" ]; then
+            echo "A job failed or was cancelled."
+            exit 1
+          fi
+          echo "All jobs passed or were skipped because nothing they cover changed."
+
 
