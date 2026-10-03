@@ -24,13 +24,13 @@ export default function Error({
         <div className="flex justify-center gap-4">
           <button
             onClick={reset}
-            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
+            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-500 transition-colors"
           >
             Try again
           </button>
           <Link
             href="/projects"
-            className="inline-flex items-center px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700 transition-colors"
+            className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-500 transition-colors"
           >
             Back to Projects
           </Link>

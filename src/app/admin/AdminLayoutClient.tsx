@@ -42,7 +42,7 @@ const GROUPS: {
   {
     label: "Site",
     items: [
-      { name: "Performance", href: "/admin/performance", icon: BarChart3 },
+      { name: "Analytics", href: "/admin/analytics", icon: BarChart3 },
     ],
   },
 ];

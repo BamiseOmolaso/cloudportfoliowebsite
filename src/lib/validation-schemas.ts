@@ -58,16 +58,3 @@ export const newsletterUpdateSchema = newsletterCreateSchema.partial();
 export const newsletterSendSchema = z.object({
   newsletterId: z.string().uuid('Newsletter ID must be a valid UUID'),
 });
-
-// Performance Metric Schema
-export const performanceMetricSchema = z.object({
-  url: z.string().url().optional(),
-  metrics: z.record(z.any()),
-  timestamp: z.string().datetime().optional(),
-});
-
-export const lcpMetricSchema = z.object({
-  value: z.number().min(0),
-  url: z.string().url().optional(),
-});
-

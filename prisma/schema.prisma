@@ -336,3 +336,27 @@ model MediaAsset {
   @@index([createdAt])
   @@map("media_assets")
 }
+
+// ============================================
+// Site analytics (first-party, no cookies)
+// ============================================
+// One row per page view. No IP address and no cookie is stored: "visitor" is a hash of
+// the address and browser mixed with a secret and the date, so it cannot be traced back
+// to a person and changes every day. See docs/infra/09-site-structure-and-content.md.
+
+model PageView {
+  id        String   @id @default(uuid())
+  path      String
+  referrer  String?
+  country   String?  @db.VarChar(2)
+  device    String   @db.VarChar(10)
+  visitor   String   @db.VarChar(32)
+  loadMs    Int?     @map("load_ms")
+  lcpMs     Int?     @map("lcp_ms")
+  ttfbMs    Int?     @map("ttfb_ms")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([createdAt])
+  @@index([path, createdAt])
+  @@map("page_views")
+}

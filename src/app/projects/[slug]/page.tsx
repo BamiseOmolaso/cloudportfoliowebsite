@@ -177,7 +177,7 @@ export default async function ProjectPage({
             <div className="mb-8">
               <Link
                 href="/projects"
-                className="inline-flex items-center text-purple-400 hover:text-purple-300 mb-6 transition-colors group"
+                className="group mb-6 inline-flex items-center justify-center gap-2 rounded-md bg-purple-500/15 px-4 py-2 text-sm font-medium text-purple-100 ring-1 ring-inset ring-purple-500/50 transition-colors hover:bg-purple-500/25"
               >
                 <svg
                   className="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-1"

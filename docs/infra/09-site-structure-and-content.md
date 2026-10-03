@@ -189,7 +189,7 @@ The admin panel (`/admin`) has its own sidebar layout, in three groups:
 |---|---|
 | Content | **Overview**, **Pages**, **Blog**, **Projects** |
 | Audience | **Messages** (contact-form inbox), **Subscribers**, **Newsletters** |
-| Site | **Performance** |
+| Site | **Analytics** |
 
 **Blog and Projects** share one list (`ContentList`): tabs for All, Published, Drafts and
 Scheduled with counts, a search box, and on each row Edit, View (published items), Publish
@@ -294,14 +294,44 @@ How the reports reach the site:
 Cloudflare Access protects `/api/admin` but not `/api/webhooks`, which is what lets Resend
 reach it. Check that no Access rule covers `/api/webhooks`.
 
-## 11. Flow strips
+## 11. Analytics (replaces "Performance")
+
+The old Performance screen held two things that were already covered elsewhere or never
+worked: newsletter results (now each newsletter's **Report**) and website speed numbers
+that **nothing was collecting** (the code that sent them was never switched on, and the
+Google Analytics snippet was never loaded either, so there was no data). Both were removed;
+`/admin/performance` redirects to **Analytics**.
+
+**Analytics** counts visits itself, so it works without Google and without a consent
+banner:
+
+| Piece | Job |
+|---|---|
+| `src/components/PageViewTracker.tsx` | In the public pages. Sends one small message per page view (the page, the referring site; the first view also carries load time, TTFB and LCP). Skips the admin panel and browsers set to Do Not Track |
+| `POST /api/analytics/collect` | Public. Ignores crawlers and link previews, the signed-in admin (so your own visits do not count), the admin and API paths, and anything malformed. Always answers 204, so analytics can never slow or break a page. Rate limited |
+| `page_views` table | path, referring site (name only), country (from Cloudflare's `CF-IPCountry`), device type, a daily visitor hash, and the three timings. **No IP address, no cookie** |
+| `src/lib/analytics.ts` | `visitorHash` (HMAC of address + browser + date with the site secret: stable for a day, then a new stranger, and not reversible), bot, device, path and referrer helpers |
+| `GET /api/admin/analytics?days=7|30|90` | Totals, per-day series, top pages, referrers, countries, devices |
+
+The page shows: visitors (one per person per day), page views, **LCP** (how long the main
+content takes to appear: under 2.5 s is *Good*, over 4 s is *Slow*, measured on the slowest
+quarter of visits), the typical full load time, a visits-per-day chart, a per-page table
+with a speed verdict, and where visitors come from.
+
+What it cannot tell you, honestly: it only sees visitors whose browsers run scripts; a
+visitor is "new" every day, so returning-visitor figures are not possible; **country needs
+the site to be behind Cloudflare** (it is on the live site; locally the list stays empty);
+and old rows in `performance_metrics` and `lcp_metrics` (always empty) were left in the
+database rather than dropped. The privacy policy now explains this counting.
+
+## 12. Flow strips
 
 Each curated project has a `flow` (in `portfolio.ts`): a short chain of named steps such
 as Visitor, Cloudflare, Traefik, Next.js, PostgreSQL. `FlowStrip` draws it with a logo
 where a step is a known tool, on the home cards, `/projects` and each project page. It is
 a one-line version of the full diagram, not a replacement for it.
 
-## 12. Glossary
+## 13. Glossary
 
 - **Landing page:** the page most visitors see first; its job is to get them to act.
 - **AIDA:** Attention, Interest, Desire, Action: the order a persuasive page follows.

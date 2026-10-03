@@ -9,6 +9,7 @@ import { fontVars } from "./fonts";
 import SiteChrome from "@/components/layout/SiteChrome";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import CookieConsent from "@/components/CookieConsent";
+import PageViewTracker from "@/components/PageViewTracker";
 
 // Optimized font loading with fallbacks
 const inter = Inter({
@@ -90,6 +91,7 @@ export default function RootLayout({
         <ErrorBoundary>
           <SiteChrome fontClass={fontVars}>{children}</SiteChrome>
           <CookieConsent />
+          <PageViewTracker />
         </ErrorBoundary>
       </body>
     </html>

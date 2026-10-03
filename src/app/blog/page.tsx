@@ -267,7 +267,7 @@ const BlogPage = () => {
                 )}
                 <Link
                   href={`/blog/${post.slug}`}
-                  className="inline-flex items-center text-purple-400 hover:text-purple-300 transition-colors"
+                  className="inline-flex items-center justify-center gap-2 rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-500"
                 >
                   Read more
                   <svg

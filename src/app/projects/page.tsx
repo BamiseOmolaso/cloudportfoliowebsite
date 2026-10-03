@@ -182,7 +182,7 @@ export default function ProjectsPage() {
                 <div className="flex items-center justify-between">
                   <Link
                     href={`/projects/${project.slug}`}
-                    className="inline-flex items-center text-purple-400 hover:text-purple-300 transition-colors"
+                    className="inline-flex items-center justify-center gap-2 rounded-md bg-purple-600 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-purple-500"
                   >
                     Read More
                     <svg
@@ -204,7 +204,7 @@ export default function ProjectsPage() {
                       href={project.github_url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-purple-400 hover:text-purple-300"
+                      className="inline-flex items-center justify-center gap-2 rounded-md bg-purple-500/15 px-4 py-2 text-sm font-medium text-purple-100 ring-1 ring-inset ring-purple-500/50 transition-colors hover:bg-purple-500/25"
                     >
                       GitHub
                     </a>
