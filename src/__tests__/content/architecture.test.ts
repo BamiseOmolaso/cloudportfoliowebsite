@@ -4,7 +4,12 @@
  * content rules as the rest of the page (docs/redesign/PLAN.md). The AWS
  * diagram is also checked against what the infrastructure really does.
  */
-import { awsStack, vpsStack, type Diagram } from "@/content/architecture";
+import {
+  awsStack,
+  hetznerStack,
+  vpsStack,
+  type Diagram,
+} from "@/content/architecture";
 
 function strings(value: unknown, out: string[] = []): string[] {
   if (typeof value === "string") out.push(value);
@@ -17,6 +22,7 @@ function strings(value: unknown, out: string[] = []): string[] {
 describe.each<[string, Diagram]>([
   ["awsStack", awsStack],
   ["vpsStack", vpsStack],
+  ["hetznerStack", hetznerStack],
 ])("%s diagram", (_name, d) => {
   const ids = [
     ...d.nodes.map((n) => n.id),
@@ -59,9 +65,7 @@ describe.each<[string, Diagram]>([
 
   it("follows the content rules: generic, no addresses, paths or secrets", () => {
     const text = strings(d).join(" ").toLowerCase();
-    expect(text).not.toMatch(
-      /wedding|adebola|upperspring|upper spring|hetzner/,
-    );
+    expect(text).not.toMatch(/wedding|adebola|upperspring|upper spring/);
     expect(text).not.toMatch(/\b\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}\b/);
     expect(text).not.toMatch(/\/opt\/|~\/\.ssh|\.pem\b|arn:aws|\b\d{12}\b/);
     expect(text).not.toMatch(/\b[0-9a-f]{32,}\b/);
@@ -139,5 +143,57 @@ describe("vpsStack", () => {
     if (!server || !bucket) throw new Error("missing server or bucket");
     expect(bucket.external).toBe(true);
     expect(bucket.x).toBeGreaterThan(server.x + server.w);
+  });
+});
+
+describe("hetznerStack matches the real infrastructure", () => {
+  const text = strings(hetznerStack).join(" ").toLowerCase();
+  const labels = hetznerStack.nodes.map((n) => n.label);
+
+  it("draws what infra/ really builds", () => {
+    for (const l of [
+      "Cloudflare",
+      "Cloud firewall",
+      "Traefik",
+      "PostgreSQL",
+      "ArgoCD",
+      "Terraform",
+      "GitHub",
+      "Backup job",
+    ])
+      expect(labels).toContain(l);
+  });
+
+  it("keeps the facts that were verified: Cloudflare-only firewall, 30-day backups", () => {
+    expect(text).toContain("cloudflare addresses only");
+    expect(text).toContain("kept 30 days");
+  });
+
+  it("draws the services built outside the server outside it", () => {
+    const outside = hetznerStack.nodes
+      .filter((n) => n.external)
+      .map((n) => n.id);
+    expect(outside).toEqual(
+      expect.arrayContaining(["cloudflare", "terraform", "github", "bucket"]),
+    );
+    const inside = hetznerStack.nodes
+      .filter((n) => !n.external)
+      .map((n) => n.id);
+    expect(inside).toEqual(
+      expect.arrayContaining([
+        "traefik",
+        "app",
+        "postgres",
+        "argocd",
+        "backup",
+      ]),
+    );
+  });
+
+  it("does not claim things the platform does not do", () => {
+    // No managed database, no load balancer product, no autoscaling, no encryption claim.
+    expect(text).not.toMatch(
+      /managed database|load balancer|auto ?scal|multi-?az|encrypted/,
+    );
   });
 });

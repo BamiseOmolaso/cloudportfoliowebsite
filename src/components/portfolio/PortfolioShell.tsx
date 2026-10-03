@@ -9,9 +9,9 @@ const STORAGE_KEY = "pf-theme";
 
 /** One list drives both the desktop bar and the phone menu. */
 const NAV = [
+  { label: "Home", href: "/" },
   { label: "Projects", href: "/projects" },
   { label: "Blog", href: "/blog" },
-  { label: "How it's built", href: "/architecture" },
   { label: "About", href: "/about" },
   { label: "Contact", href: "#contact" },
 ] as const;

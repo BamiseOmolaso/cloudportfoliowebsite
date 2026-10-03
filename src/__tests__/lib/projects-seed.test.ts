@@ -27,9 +27,7 @@ describe("projects seed", () => {
     expect(buildSeedSql()).toContain('ON CONFLICT ("slug") DO NOTHING');
   });
 
-  it("features at most two projects on the home page", () => {
-    const featured = projects.filter((p) => p.featured);
-    expect(featured.length).toBeGreaterThan(0);
-    expect(featured.length).toBeLessThanOrEqual(2);
+  it("features exactly three projects on the home page", () => {
+    expect(projects.filter((p) => p.featured)).toHaveLength(3);
   });
 });

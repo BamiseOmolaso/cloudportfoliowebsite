@@ -83,7 +83,7 @@ export default function ProjectsPage() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Projects</h1>
           <p className="text-gray-400 max-w-2xl mx-auto">
-            Explore my projects in data science, cloud computing, and healthcare technology.
+            Production platforms, cloud labs and tools, each with the decisions behind it. Filter by technology.
           </p>
         </div>
 

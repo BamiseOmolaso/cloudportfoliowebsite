@@ -43,13 +43,12 @@ function useFeed<T>(url: string, max: number): T[] {
 
 /** The latest published posts. Renders nothing until there is at least one. */
 export function LivePosts() {
-  const posts = useFeed<Post>("/api/blog?status=published", 2);
+  const posts = useFeed<Post>("/api/blog?status=published", 3);
   if (posts.length === 0) return null;
 
   return (
     <section className="block" id="posts">
       <div className="sec-head rise">
-        <span className="label">{livePosts.label}</span>
         <h2>{livePosts.title}</h2>
       </div>
       <div className="posts">

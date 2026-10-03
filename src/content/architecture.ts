@@ -643,3 +643,220 @@ export const vpsStack: Diagram = {
     },
   ],
 };
+
+/**
+ * The platform this site runs on today. Every box is checked against the real
+ * infrastructure code (infra/ in the repository): a Hetzner Cloud firewall that
+ * accepts web traffic from Cloudflare's published ranges only; one server
+ * hardened with Ansible; k3s with its bundled Traefik for ingress; the app and a
+ * self-hosted PostgreSQL (a StatefulSet on its own data volume); ArgoCD syncing
+ * from git; a nightly dump to object storage kept 30 days; Terraform building
+ * the server, firewall and DNS.
+ *
+ * Coordinates are in a 440 x 700 space, drawn top to bottom.
+ */
+export const hetznerStack: Diagram = {
+  width: 440,
+  height: 700,
+  summary:
+    "Diagram of the platform this site runs on. A visitor reaches Cloudflare, which proxies the request to a cloud firewall that accepts web traffic from Cloudflare's addresses only. On the server, k3s runs Traefik as the entry point, the Next.js app, and a self-hosted PostgreSQL. ArgoCD watches the GitHub repository and applies changes to the cluster. A nightly job dumps the database to object storage, kept for 30 days. Terraform builds the server, firewall and DNS records; Ansible hardens the server.",
+
+  nodes: [
+    {
+      id: "visitor",
+      label: "Visitor",
+      x: 162,
+      y: 40,
+      icon: "browser",
+      tone: "neutral",
+    },
+    {
+      id: "cloudflare",
+      label: "Cloudflare",
+      sub: "DNS · proxy · TLS",
+      x: 162,
+      y: 130,
+      icon: "globe",
+      tone: "neutral",
+      external: true,
+    },
+    {
+      id: "firewall",
+      label: "Cloud firewall",
+      sub: "Cloudflare addresses only",
+      x: 162,
+      y: 225,
+      icon: "shield",
+      tone: "security",
+    },
+    {
+      id: "traefik",
+      label: "Traefik",
+      sub: "ingress · HTTPS",
+      x: 162,
+      y: 395,
+      icon: "gateway",
+      tone: "network",
+    },
+    {
+      id: "app",
+      label: "Next.js app",
+      sub: "non-root · read-only",
+      x: 110,
+      y: 510,
+      icon: "container",
+      tone: "compute",
+    },
+    {
+      id: "argocd",
+      label: "ArgoCD",
+      sub: "syncs from git",
+      x: 214,
+      y: 510,
+      icon: "branch",
+      tone: "neutral",
+    },
+    {
+      id: "postgres",
+      label: "PostgreSQL",
+      sub: "own data volume",
+      x: 110,
+      y: 625,
+      icon: "database",
+      tone: "database",
+    },
+    {
+      id: "backup",
+      label: "Backup job",
+      sub: "nightly dump",
+      x: 214,
+      y: 625,
+      icon: "container",
+      tone: "compute",
+    },
+    {
+      id: "terraform",
+      label: "Terraform",
+      sub: "server · firewall · DNS",
+      x: 380,
+      y: 330,
+      icon: "bolt",
+      tone: "dark",
+      external: true,
+    },
+    {
+      id: "github",
+      label: "GitHub",
+      sub: "repo · Actions",
+      x: 380,
+      y: 510,
+      icon: "branch",
+      tone: "dark",
+      external: true,
+    },
+    {
+      id: "bucket",
+      label: "Object storage",
+      sub: "kept 30 days",
+      x: 380,
+      y: 625,
+      icon: "registry",
+      tone: "storage",
+      external: true,
+    },
+  ],
+
+  groups: [
+    {
+      id: "server",
+      kind: "vpc",
+      x: 12,
+      y: 280,
+      w: 300,
+      h: 410,
+      label: "Server · hardened with Ansible",
+      labelAt: { x: 24, y: 298, anchor: "start" },
+    },
+    {
+      id: "k3s",
+      kind: "service",
+      x: 24,
+      y: 340,
+      w: 276,
+      h: 340,
+      label: "k3s · Kubernetes",
+      labelAt: { x: 162, y: 355, anchor: "middle" },
+    },
+  ],
+
+  edges: [
+    { id: "visitor-cf", d: "M162,66 V104" },
+    { id: "cf-fw", d: "M162,156 V199" },
+    { id: "fw-traefik", d: "M162,251 V369" },
+    { id: "traefik-app", d: "M162,421 V446 H110 V484" },
+    { id: "app-pg", d: "M110,536 V599" },
+    { id: "pg-backup", d: "M136,625 H188" },
+    { id: "backup-bucket", d: "M240,625 H354", dashed: true },
+    { id: "gh-argocd", d: "M354,510 H240", dashed: true },
+    { id: "argocd-app", d: "M188,510 H136", dashed: true },
+    { id: "tf-server", d: "M354,330 H312", dashed: true },
+  ],
+
+  labels: [{ text: "pull, not push", x: 297, y: 498, showIn: [1] }],
+
+  markers: [],
+
+  routes: ["M162,40 V446 H110 V599"],
+
+  steps: [
+    // 0 · a request
+    {
+      region: [0, 10, 440, 640],
+      focus: [
+        "visitor",
+        "cloudflare",
+        "firewall",
+        "traefik",
+        "app",
+        "postgres",
+        "server",
+        "k3s",
+        "visitor-cf",
+        "cf-fw",
+        "fw-traefik",
+        "traefik-app",
+        "app-pg",
+      ],
+    },
+    // 1 · a change reaches production
+    {
+      region: [0, 280, 440, 280],
+      focus: [
+        "github",
+        "argocd",
+        "app",
+        "terraform",
+        "server",
+        "k3s",
+        "gh-argocd",
+        "argocd-app",
+        "tf-server",
+      ],
+    },
+    // 2 · data and backups
+    {
+      region: [0, 470, 440, 220],
+      focus: [
+        "postgres",
+        "backup",
+        "bucket",
+        "app",
+        "server",
+        "k3s",
+        "app-pg",
+        "pg-backup",
+        "backup-bucket",
+      ],
+    },
+  ],
+};

@@ -1,6 +1,6 @@
 import Contact from "@/components/portfolio/Contact";
 import PortfolioShell from "@/components/portfolio/PortfolioShell";
-import { Clinical, Record, Writing } from "@/components/portfolio/Record";
+import { Clinical, Record } from "@/components/portfolio/Record";
 import SiteFooter from "@/components/portfolio/SiteFooter";
 import { fontVars } from "../fonts";
 
@@ -17,7 +17,6 @@ export default function AboutPage() {
       <div className="wrap page-top" id="main">
         <Record />
         <Clinical />
-        <Writing />
         <Contact />
         <SiteFooter />
       </div>

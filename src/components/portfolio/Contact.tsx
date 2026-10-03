@@ -32,7 +32,6 @@ export default function Contact() {
   return (
     <section className="block" id="contact" style={{ paddingBottom: "1rem" }}>
       <div className="contact rise">
-        <span className="label">{contact.label}</span>
         <h2>{contact.title}</h2>
         <p>{contact.body}</p>
         <div className="mail">

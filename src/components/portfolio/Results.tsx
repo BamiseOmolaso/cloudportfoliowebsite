@@ -54,7 +54,6 @@ export default function Results() {
   return (
     <section className="block rise" id="proof">
       <div className="sec-head">
-        <span className="label">{results.label}</span>
         <h2>{results.title}</h2>
       </div>
       <div className="stats">

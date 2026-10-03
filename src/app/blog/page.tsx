@@ -158,7 +158,7 @@ const BlogPage = () => {
         >
           <h1 className="text-4xl font-bold mb-4">Blog</h1>
           <p className="text-gray-400 text-lg">
-            Insights and thoughts on healthcare data science, cloud technology, and AI.
+            Write-ups on cloud, DevSecOps and what broke in production, and how I fixed it.
           </p>
         </motion.div>
 

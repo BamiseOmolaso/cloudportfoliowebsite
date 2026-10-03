@@ -10,13 +10,9 @@
  */
 import { writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { profile, projects } from "../src/content/portfolio";
+import { profile, projectSlug, projects } from "../src/content/portfolio";
 
-export const slugify = (title: string) =>
-  title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+export const slugify = projectSlug;
 
 const q = (s: string) => `'${s.replace(/'/g, "''")}'`;
 const arr = (xs: string[]) =>

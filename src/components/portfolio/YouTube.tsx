@@ -6,7 +6,6 @@ export default function YouTube() {
   return (
     <section className="block" id="youtube">
       <div className="sec-head rise">
-        <span className="label">{youtube.label}</span>
         <h2>{youtube.title}</h2>
         <p>{youtube.body}</p>
       </div>

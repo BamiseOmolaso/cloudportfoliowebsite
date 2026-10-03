@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { projects, seeAll, work } from "@/content/portfolio";
+import { ToolChip } from "./BrandIcon";
 
 /** Selected work: the featured projects; the rest are on /projects. */
 export default function Work() {
   return (
     <section className="block" id="work">
       <div className="sec-head rise">
-        <span className="label">{work.label}</span>
         <h2>{work.title}</h2>
         <p>{work.intro}</p>
       </div>
@@ -23,15 +23,18 @@ export default function Work() {
                   {p.status}
                 </span>
               </div>
-              <p>{p.body}</p>
+              <p>{p.blurb ?? p.body}</p>
               <div className="chips">
                 {p.stack.map((t) => (
-                  <span className="chip" key={t}>
-                    {t}
-                  </span>
+                  <ToolChip key={t} label={t} />
                 ))}
               </div>
               <div className="proj-links">
+                {p.caseStudy && (
+                  <Link className="case-study" href={p.caseStudy.href}>
+                    {p.caseStudy.label} →
+                  </Link>
+                )}
                 {p.links.map((l) => (
                   <a
                     key={l.href}

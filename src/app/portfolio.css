@@ -2141,14 +2141,15 @@
 .pf .home-hero {
   padding-top: clamp(6.5rem, 17vh, 10rem);
   padding-bottom: clamp(2.5rem, 7vh, 4.5rem);
-  max-width: 48rem;
+  max-width: 62rem;
   display: grid;
   gap: 1.4rem;
 }
 .pf .home-hero h1 {
-  font-size: clamp(2.6rem, 7.2vw, 5rem);
+  /* two lines on a laptop: wide column, and a size that scales with the screen */
+  font-size: clamp(2.2rem, 5.6vw, 4.4rem);
   font-weight: 800;
-  line-height: 1.02;
+  line-height: 1.04;
 }
 .pf .home-hero h1 em {
   font-style: normal;
@@ -2175,27 +2176,103 @@
   text-underline-offset: 4px;
 }
 
-/* The pointer from the home page to /architecture. */
-.pf .built {
-  border: 1px solid var(--line);
-  border-radius: calc(var(--radius) * 2);
-  background: color-mix(in srgb, var(--surface) 80%, transparent);
-  padding: clamp(1.4rem, 4vw, 2.6rem);
+/* The "why a doctor" pointer on the home page. */
+.pf .about-teaser {
   display: grid;
   gap: 1rem;
   justify-items: start;
+  max-width: 44rem;
 }
-.pf .built h2 {
-  font-size: clamp(1.7rem, 4vw, 2.6rem);
+.pf .about-teaser h2 {
+  font-size: clamp(1.6rem, 3.6vw, 2.4rem);
   font-weight: 800;
-  max-width: 34rem;
 }
-.pf .built p {
+.pf .about-teaser p {
   color: var(--ink-2);
-  max-width: 40rem;
 }
 
 /* Pages other than the home page start below the fixed header. */
 .pf .page-top {
   padding-top: 5.5rem;
+}
+
+/* Brand logos: one colour (the surrounding text colour) on both themes. */
+.pf .brand-icon {
+  display: inline-block;
+  flex: none;
+  vertical-align: -0.2em;
+}
+.pf .brand-mask {
+  background: currentColor;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+.pf .chip.tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+/* The row of tools under the hero. */
+.pf .tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 1.25rem;
+  padding-block: 1.6rem 2.2rem;
+  border-block: 1px solid var(--line);
+  color: var(--ink-2);
+}
+.pf .tools-label {
+  font-size: 0.82rem;
+  color: var(--ink-2);
+  margin-right: 0.4rem;
+}
+.pf .tools li {
+  list-style: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.92rem;
+  white-space: nowrap;
+}
+.pf .tools ul {
+  display: contents;
+  margin: 0;
+  padding: 0;
+}
+
+/* A diagram embedded in an older page (a project's detail page). */
+.pf.pf-embed {
+  min-height: 0;
+  padding: 0;
+  background: none;
+  margin-top: 3rem;
+}
+.pf .embed-title {
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  font-weight: 800;
+  margin-bottom: 1.4rem;
+}
+
+/* "Read the case study" on a project card. */
+.pf .proj-links .case-study {
+  color: var(--accent);
+  font-weight: 500;
+  text-decoration: none;
+}
+.pf .proj-links .case-study:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+
+/* An odd stat on its own row fills it, instead of leaving an empty cell. */
+@media (max-width: 40rem) {
+  .pf .stats > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }

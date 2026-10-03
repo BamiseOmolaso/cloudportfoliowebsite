@@ -104,9 +104,9 @@ describe("PortfolioShell menu", () => {
     );
     const hrefs = (name: string) =>
       screen.getAllByRole("link", { name }).map((a) => a.getAttribute("href"));
+    expect(hrefs("Home")).toContain("/");
     expect(hrefs("Projects")).toContain("/projects");
     expect(hrefs("Blog")).toContain("/blog");
-    expect(hrefs("How it's built")).toContain("/architecture");
     expect(hrefs("About")).toContain("/about");
     expect(hrefs("Contact")).toContain("#contact");
 

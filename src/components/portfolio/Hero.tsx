@@ -1,10 +1,8 @@
-import Link from "next/link";
 import { hero, homeHero, profile } from "@/content/portfolio";
 
 /**
- * The home page's opening: who I am, what I do, two ways to act, and one way
- * into the detail. The scroll story that used to sit here now lives at
- * /architecture, so this stays short.
+ * The landing page's opening: who I am, what I do, and two ways to act. One small
+ * line above the headline, no tagline below it, and the headline fits on two lines.
  */
 export default function Hero() {
   return (
@@ -17,7 +15,7 @@ export default function Hero() {
       </h1>
       <p>{homeHero.intro}</p>
       <div className="ctas">
-        <a className="btn primary" href="#contact">
+        <a className="btn primary" href="#work">
           {homeHero.primaryCta}
         </a>
         <a
@@ -29,9 +27,6 @@ export default function Hero() {
           {homeHero.secondaryCta}
         </a>
       </div>
-      <Link className="built-link" href={homeHero.builtHref}>
-        {homeHero.builtLabel} <span aria-hidden="true">→</span>
-      </Link>
     </section>
   );
 }
