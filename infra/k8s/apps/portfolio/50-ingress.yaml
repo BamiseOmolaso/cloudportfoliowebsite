@@ -1,6 +1,13 @@
 # The rule "web requests for this hostname go to the portfolio Service", plus the
 # HTTPS certificate request (cert-manager sees the annotation and obtains it).
-# Test hostname first; the real domain is added at cut-over (doc 07).
+#
+# One certificate covers three names: the real domain, `www` and the test host. The
+# certificate is requested with a DNS challenge (a temporary record in Cloudflare), so
+# it can be issued BEFORE any visitor traffic moves to this cluster. That is what lets
+# the DNS switch (doc 08) be instant, with no HTTPS gap.
+#
+# Only the real domain and the test host are served here. `www` is handled by
+# 55-www-redirect.yaml, which sends it to the real domain.
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -13,9 +20,21 @@ spec:
   ingressClassName: traefik
   tls:
     - hosts:
+        - oluwabamiseomolaso.com.ng
+        - www.oluwabamiseomolaso.com.ng
         - test.oluwabamiseomolaso.com.ng
       secretName: portfolio-tls
   rules:
+    - host: oluwabamiseomolaso.com.ng
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: portfolio
+                port:
+                  number: 80
     - host: test.oluwabamiseomolaso.com.ng
       http:
         paths:
