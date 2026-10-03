@@ -1,9 +1,12 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import Link from 'next/link';
-import Image from 'next/image';
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import Link from "next/link";
+import Image from "next/image";
+import BrandIcon from "@/components/portfolio/BrandIcon";
+import FlowStrip from "@/components/portfolio/FlowStrip";
+import { projectSlug, projects as curated } from "@/content/portfolio";
 
 interface Project {
   id: string;
@@ -18,11 +21,15 @@ interface Project {
   github_url?: string;
   live_url?: string;
   author: string;
-  status: 'draft' | 'published' | 'scheduled';
+  status: "draft" | "published" | "scheduled";
   created_at: string;
   updated_at: string;
   published_at: string | null;
 }
+
+/** The flow of a curated project, found by its address; other projects have none. */
+const flowFor = (slug: string) =>
+  curated.find((p) => projectSlug(p.title) === slug)?.flow;
 
 export default function ProjectsPage() {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -32,19 +39,19 @@ export default function ProjectsPage() {
   useEffect(() => {
     const fetchProjects = async () => {
       try {
-        const response = await fetch('/api/projects');
-        if (!response.ok) throw new Error('Failed to fetch projects');
+        const response = await fetch("/api/projects");
+        if (!response.ok) throw new Error("Failed to fetch projects");
         const data = await response.json();
 
         const normalizedData = data.map((project: Project) => ({
           ...project,
           technologies: project.technologies || [],
-          tags: project.technologies || []
+          tags: project.technologies || [],
         }));
 
         setProjects(normalizedData);
       } catch (err) {
-        console.error('Error fetching projects:', err);
+        console.error("Error fetching projects:", err);
       } finally {
         setLoading(false);
       }
@@ -55,20 +62,23 @@ export default function ProjectsPage() {
 
   // Get all unique tags from projects
   const allTags = Array.from(
-    new Set(projects.flatMap(project => project.technologies))
+    new Set(projects.flatMap((project) => project.technologies)),
   ).sort();
 
   // Filter projects based on selected tag
-  const filteredProjects = selectedTags.length > 0
-    ? projects.filter(project => selectedTags.every(tag => project.technologies.includes(tag)))
-    : projects;
+  const filteredProjects =
+    selectedTags.length > 0
+      ? projects.filter((project) =>
+          selectedTags.every((tag) => project.technologies.includes(tag)),
+        )
+      : projects;
 
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-950 py-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="animate-pulse space-y-8">
-            {[1, 2, 3].map(i => (
+            {[1, 2, 3].map((i) => (
               <div key={i} className="bg-gray-800 rounded-lg h-64"></div>
             ))}
           </div>
@@ -83,7 +93,8 @@ export default function ProjectsPage() {
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold mb-4">Projects</h1>
           <p className="text-gray-400 max-w-2xl mx-auto">
-            Production platforms, cloud labs and tools, each with the decisions behind it. Filter by technology.
+            Production platforms, cloud labs and tools, each with the decisions
+            behind it. Filter by technology.
           </p>
         </div>
 
@@ -93,26 +104,26 @@ export default function ProjectsPage() {
             onClick={() => setSelectedTags([])}
             className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
               selectedTags.length === 0
-                ? 'bg-purple-600 text-white'
-                : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                ? "bg-purple-600 text-white"
+                : "bg-gray-800 text-gray-300 hover:bg-gray-700"
             }`}
           >
             All
           </button>
-          {allTags.map(tag => (
+          {allTags.map((tag) => (
             <button
               key={tag}
               onClick={() => {
                 if (selectedTags.includes(tag)) {
-                  setSelectedTags(selectedTags.filter(t => t !== tag));
+                  setSelectedTags(selectedTags.filter((t) => t !== tag));
                 } else {
                   setSelectedTags([...selectedTags, tag]);
                 }
               }}
               className={`px-4 py-2 rounded-full text-sm font-medium transition-colors ${
                 selectedTags.includes(tag)
-                  ? 'bg-purple-600 text-white'
-                  : 'bg-gray-800 text-gray-300 hover:bg-gray-700'
+                  ? "bg-purple-600 text-white"
+                  : "bg-gray-800 text-gray-300 hover:bg-gray-700"
               }`}
             >
               {tag}
@@ -121,7 +132,7 @@ export default function ProjectsPage() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {filteredProjects.map(project => (
+          {filteredProjects.map((project) => (
             <motion.div
               key={project.id}
               initial={{ opacity: 0, y: 20 }}
@@ -149,13 +160,21 @@ export default function ProjectsPage() {
                 <h3 className="text-lg font-semibold mb-2 text-white group-hover:text-purple-400 transition-colors">
                   {project.title}
                 </h3>
-                <p className="text-gray-400 mb-4 line-clamp-2">{project.excerpt}</p>
+                <p className="text-gray-400 mb-4 line-clamp-2">
+                  {project.excerpt}
+                </p>
+                {flowFor(project.slug) && (
+                  <div className="mb-4 text-gray-400">
+                    <FlowStrip steps={flowFor(project.slug) as string[]} />
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {project.technologies.map(tech => (
+                  {project.technologies.map((tech) => (
                     <span
                       key={tech}
-                      className="px-2 py-1 bg-purple-500/10 text-purple-400 rounded-full text-sm"
+                      className="inline-flex items-center gap-1.5 px-2 py-1 bg-purple-500/10 text-purple-400 rounded-full text-sm"
                     >
+                      <BrandIcon name={tech} size={14} />
                       {tech}
                     </span>
                   ))}
@@ -198,4 +217,4 @@ export default function ProjectsPage() {
       </div>
     </div>
   );
-} 
+}

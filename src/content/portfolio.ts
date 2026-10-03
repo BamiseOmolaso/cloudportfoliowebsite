@@ -78,7 +78,8 @@ export interface Project {
   /** Public links only. Private repositories get `note` instead. */
   links: Link[];
   note?: string;
-  /** A page on this site that tells the whole story. */
+  /** The path a request or a change takes, as a few named steps (drawn by FlowStrip). */
+  flow?: string[];
   /** A shorter line for the home page card; the full `body` is on the project's own page. */
   blurb?: string;
 }
@@ -230,7 +231,7 @@ export const seeAll = {
 export const platformFeature = {
   title: "This site runs on a platform I built.",
   intro:
-    "A hardened server, Kubernetes, deploys from Git and a database restore I have tested. Pick a tab to follow a request, a change or a backup.",
+    "A hardened server, Kubernetes, deploys from Git and a database restore I have tested. Follow it in three steps, in order: how a visitor arrives, how I ship a change, and how the data stays safe.",
 } as const;
 
 /** The five scroll steps that follow the hero (edge → app → data → security → cost). */
@@ -511,7 +512,7 @@ const repo = (name: string) => `https://github.com/BamiseOmolaso/${name}`;
 
 export const work = {
   label: "Selected work",
-  title: "Things I've built and run.",
+  title: "Projects, and the thinking behind them.",
   intro:
     "Real systems, with the architecture and the trade-offs written down. Where a repository is private, I say so.",
 };
@@ -519,6 +520,7 @@ export const work = {
 export const projects: Project[] = [
   {
     title: "Production platform on Hetzner",
+    flow: ["Visitor", "Cloudflare", "Traefik", "Next.js", "PostgreSQL"],
     status: "Live",
     blurb:
       "A hardened server, Kubernetes, GitOps deploys and a database restore I have tested, all built from code and documented.",
@@ -537,6 +539,7 @@ export const projects: Project[] = [
   },
   {
     title: "Cloud portfolio on AWS",
+    flow: ["Visitor", "Load balancer", "ECS Fargate", "PostgreSQL"],
     featured: true,
     blurb:
       "Containers on ECS Fargate behind a load balancer, PostgreSQL on RDS, and GitHub OIDC instead of access keys.",
@@ -554,6 +557,7 @@ export const projects: Project[] = [
   },
   {
     title: "Hotel booking platform",
+    flow: ["Guest", "Nginx", "Next.js", "PostgreSQL"],
     featured: true,
     blurb:
       "A production booking app for a small hotel: timed holds, an admin panel and nightly backups, on one VPS with Docker Compose.",
@@ -565,6 +569,7 @@ export const projects: Project[] = [
   },
   {
     title: "Self-hosted automation on a VPS",
+    flow: ["Visitor", "Cloudflare", "Nginx", "n8n"],
     featured: true,
     blurb:
       "n8n behind Nginx and HTTPS, rebuildable from the docs, with encrypted off-server backups and a restore I have tested.",
@@ -583,6 +588,7 @@ export const projects: Project[] = [
   },
   {
     title: "DeployMentor",
+    flow: ["GitHub Actions", "API Gateway", "AWS Lambda", "Explanation"],
     status: "Built",
     body: "A serverless agent that reads a failed GitHub Actions run and explains the likely root cause and a fix. Lambda behind API Gateway, infrastructure in Terraform, CI/CD through OIDC, with a dev, staging and production promotion path.",
     stack: ["AWS Lambda", "API Gateway", "Python", "Terraform", "GitHub OIDC"],
@@ -590,6 +596,7 @@ export const projects: Project[] = [
   },
   {
     title: "infergate",
+    flow: ["Client", "Go", "OpenAI API"],
     status: "In progress",
     body: "An AI inference gateway in Go that speaks the OpenAI API and will sit in front of several model providers. Milestone 1 of 7 is done: a streaming reverse proxy that keeps tokens flowing as they arrive. Caching, rate limiting, routing and a Prometheus and Grafana observability stack are next.",
     stack: ["Go", "SSE streaming", "OpenAI API", "Prometheus"],
@@ -598,6 +605,7 @@ export const projects: Project[] = [
   },
   {
     title: "Kubernetes and GitOps labs",
+    flow: ["Docker", "Kubernetes", "Argo CD"],
     status: "Learning lab",
     body: "A real application, not a toy guestbook, moved from Docker Compose onto a local kind cluster stage by stage, plus GitOps practice with Argo CD using Kustomize and Helm.",
     stack: ["Kubernetes", "kind", "Argo CD", "Helm", "Kustomize"],

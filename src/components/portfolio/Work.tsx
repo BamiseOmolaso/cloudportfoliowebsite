@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { projects, seeAll, work } from "@/content/portfolio";
 import { ToolChip } from "./BrandIcon";
+import FlowStrip from "./FlowStrip";
 
 /** Selected work: the featured projects; the rest are on /projects. */
 export default function Work() {
@@ -24,6 +25,7 @@ export default function Work() {
                 </span>
               </div>
               <p>{p.blurb ?? p.body}</p>
+              {p.flow && <FlowStrip steps={p.flow} />}
               <div className="chips">
                 {p.stack.map((t) => (
                   <ToolChip key={t} label={t} />

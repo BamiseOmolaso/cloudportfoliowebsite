@@ -18,15 +18,16 @@ flowchart TD
   H -->|"the platform, drawn"| PS
   H -->|"3 featured, then See all"| P["/projects<br/>the full list"]
   H -->|"3 latest, then All posts"| B["/blog<br/>the full list"]
+  H -->|"nav: Continuous learning"| LR["/learning<br/>Terraform: one server to a production stack"]
   H -->|"More about me"| AB["/about<br/>record and why a doctor"]
   H -->|"Send a message"| CF["/contact<br/>the full form"]
   P --> PS["/projects/slug<br/>one project, with its diagram"]
-  PS --> PL["/projects/production-platform-on-hetzner<br/>diagram, Terraform timeline, pipeline, patterns"]
+  PS --> PL["/projects/production-platform-on-hetzner<br/>the platform in full, with its diagram"]
   B --> L["/blog<br/>posts, then lessons learnt"]
   B --> BS["/blog/slug"]
 ```
 
-The menu is **Home, Projects, Blog, About, Contact**. "How it's built" is not in the menu:
+The menu is **Home, Projects, Blog, Continuous learning, About, Contact**. "How it's built" is not in the menu:
 it is a **project** (the platform this site runs on). The home page draws that platform
 with its tabs and a "Read how I built it" link; the case study itself lives on the
 project's page under Projects. The old `/architecture` address redirects there (308,
@@ -34,10 +35,11 @@ permanent). What broke and what I learnt sits at the foot of the blog.
 
 | Page | Job | Content comes from |
 |---|---|---|
-| `/` | Persuade: hero, proof, featured work, latest posts, one way to get in touch | The content file, plus the database for posts |
+| `/` | Persuade: hero and moving tool logos, numbers, featured work, the platform drawn, how a change ships, the patterns I use, latest posts, one way to get in touch | The content file, plus the database for posts |
 | `/projects`, `/projects/slug` | Every project; a project page shows its architecture diagram | The **database**, plus the content file for the diagrams |
 | `/blog`, `/blog/slug` | Every post | The **database** |
-| `/projects/production-platform-on-hetzner` | The case study: the platform's diagram, Terraform timeline, pipeline, patterns | The content file, below the project's own text |
+| `/projects/production-platform-on-hetzner` | The platform in full: its diagram, explained in three steps | The content file, below the project's own text |
+| `/learning` | Continuous learning: the Terraform journey from one EC2 instance to a production stack | The content file |
 | `/blog` (foot of the page) | Lessons: incidents and what changed, plus the long-form write-ups | The content file |
 | `/about` | Where I've worked, what I hold, why a doctor | The content file |
 | `/contact` | The full contact form | Code (posts to `/api/contact`) |
@@ -136,7 +138,7 @@ A project shows an **architecture view** if its slug is in `projectViews`
 
 | Project | Diagram | Tabs |
 |---|---|---|
-| Production platform on Hetzner | `hetznerStack` (new, drawn from the real infrastructure code) | A request, A change, Data and backups |
+| Production platform on Hetzner | `hetznerStack` (new, drawn from the real infrastructure code) | 1. A visitor arrives, 2. I ship a change, 3. The data stays safe |
 | Cloud portfolio on AWS | `awsStack`, drawn as paused | Overview, then the five steps of the story |
 | Self-hosted automation on a VPS | `vpsStack` | Request path, Backups, Hardening |
 | The other four | Not drawn yet | |
@@ -188,3 +190,10 @@ harmless and can be removed.
 - **Seed:** loading starting data into a database. **Idempotent:** safe to run twice.
 - **Slug:** the URL-safe name of an item (`cloud-portfolio-on-aws`).
 - **Mask (CSS):** using a shape as a stencil, so a block of colour shows only through it.
+
+## 11. Flow strips
+
+Each curated project has a `flow` (in `portfolio.ts`): a short chain of named steps such
+as Visitor, Cloudflare, Traefik, Next.js, PostgreSQL. `FlowStrip` draws it with a logo
+where a step is a known tool, on the home cards, `/projects` and each project page. It is
+a one-line version of the full diagram, not a replacement for it.

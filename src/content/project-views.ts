@@ -30,7 +30,7 @@ export const hetznerView: StackView = {
   diagram: hetznerStack,
   tabs: [
     {
-      name: "A request",
+      name: "1. A visitor arrives",
       title: "Nothing reaches the server except through Cloudflare.",
       body: "Visitors reach Cloudflare, which forwards to the server. The cloud firewall accepts web traffic from Cloudflare's published addresses only, so the server cannot be reached directly. Traefik, the entry point of the Kubernetes cluster, ends HTTPS with a certificate that renews itself.",
       points: [
@@ -40,7 +40,7 @@ export const hetznerView: StackView = {
       ],
     },
     {
-      name: "A change",
+      name: "2. I ship a change",
       title: "Git is the only way a change reaches production.",
       body: "Every change is a pull request. When it merges, GitHub Actions builds the app image; a second pull request names that image; ArgoCD sees it and rolls it out with no downtime. Terraform builds the server, firewall and DNS, and Ansible hardens the server.",
       points: [
@@ -50,7 +50,7 @@ export const hetznerView: StackView = {
       ],
     },
     {
-      name: "Data and backups",
+      name: "3. The data stays safe",
       title: "A backup isn't real until it has been restored.",
       body: "PostgreSQL runs on its own data volume. Every night at 02:17 UTC a job dumps it to object storage, and a lifecycle rule deletes dumps after 30 days. I restored a dump into a scratch database and checked its contents.",
       points: [

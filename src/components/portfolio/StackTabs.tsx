@@ -38,6 +38,12 @@ export default function StackTabs({
             </button>
           ))}
         </div>
+        {view.tabs.length > 1 && (
+          <p className="tab-hint">
+            Go step by step: step {tab + 1} of {view.tabs.length}. The diagram
+            highlights the part being explained.
+          </p>
+        )}
         <div
           className="vps-panel"
           role="tabpanel"
@@ -52,6 +58,15 @@ export default function StackTabs({
                 <li key={p}>{p}</li>
               ))}
             </ul>
+          )}
+          {tab < view.tabs.length - 1 && (
+            <button
+              type="button"
+              className="tab-next"
+              onClick={() => setTab(tab + 1)}
+            >
+              Next step →
+            </button>
           )}
         </div>
       </div>
