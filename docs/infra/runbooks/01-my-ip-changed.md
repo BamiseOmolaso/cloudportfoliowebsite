@@ -5,6 +5,7 @@ works. It happened to us on the first day (a switch to a different network), so 
 happen again.
 
 A **runbook** is a short, tested checklist for a known problem. Follow it top to bottom.
+More problems and their fixes are collected in `02-troubleshooting-log.md`.
 
 ---
 
