@@ -37,10 +37,12 @@ jest.mock('@/lib/security', () => ({
 // ---- Email mocks ----
 const mockSendWelcomeEmail: AsyncMock = jest.fn();
 const mockSendAdminNotification: AsyncMock = jest.fn();
+const mockSendConfirmationEmail: AsyncMock = jest.fn();
 
 jest.mock('@/lib/resend', () => ({
   sendWelcomeEmail: mockSendWelcomeEmail,
   sendAdminNotification: mockSendAdminNotification,
+  sendConfirmationEmail: mockSendConfirmationEmail,
 }));
 
 // ---- Rate limit mock ----
@@ -209,16 +211,18 @@ describe('POST /api/newsletter/subscribe', () => {
     const data = await response.json();
 
     expect(response.status).toBe(200);
-    expect(data.success).toBe(true);
+    expect(data).toEqual({ success: true, pendingConfirmation: true });
     expect(mockUpsert).toHaveBeenCalled();
     expect(mockCreate).toHaveBeenCalledWith({
       data: expect.objectContaining({
         subscriberId: 'sub-123',
-        action: 'subscribed',
+        action: 'confirmation_requested',
       }),
     });
-    expect(mockSendWelcomeEmail).toHaveBeenCalled();
-    expect(mockSendAdminNotification).toHaveBeenCalled();
+    // Signing up only asks for confirmation: no welcome email, and the owner is not told yet.
+    expect(mockSendConfirmationEmail).toHaveBeenCalledWith('test@example.com', 'Test User', expect.stringMatching(/^[0-9a-f]{64}$/));
+    expect(mockSendWelcomeEmail).not.toHaveBeenCalled();
+    expect(mockSendAdminNotification).not.toHaveBeenCalled();
   });
 
   it('should require CAPTCHA if too many attempts', async () => {
@@ -349,13 +353,13 @@ describe('POST /api/newsletter/subscribe', () => {
     expect(mockUpsert).toHaveBeenCalledWith({
       where: { email: 'test@example.com' },
       update: expect.objectContaining({
-        isSubscribed: true,
+        confirmationTokenHash: expect.stringMatching(/^[0-9a-f]{64}$/),
       }),
       create: expect.any(Object),
     });
   });
 
-  it('records when they opted in, and clears any earlier unsubscribe date', async () => {
+  it('does not subscribe anyone until they confirm, and keeps only a hash of the link', async () => {
     mockUpsert.mockResolvedValueOnce({ id: 'sub-1', email: 'test@example.com', name: 'Ada' });
     mockCreate.mockResolvedValueOnce({ id: 'log-1' });
     await POST(
@@ -365,9 +369,16 @@ describe('POST /api/newsletter/subscribe', () => {
         body: JSON.stringify({ email: 'test@example.com', name: 'Ada' }),
       }),
     );
-    const call = mockUpsert.mock.calls.at(-1)?.[0] as { update: Record<string, unknown> };
-    expect(call.update).toMatchObject({ name: 'Ada', unsubscribedAt: null });
-    expect(call.update.subscribedAt).toBeInstanceOf(Date);
+    const call = mockUpsert.mock.calls.at(-1)?.[0] as {
+      create: Record<string, unknown>;
+      update: Record<string, unknown>;
+    };
+    expect(call.create.isSubscribed).toBe(false);
+    // An existing row (for example someone who had unsubscribed) is not switched back on either.
+    expect(call.update).not.toHaveProperty('isSubscribed');
+    expect(call.update.confirmationExpiresAt).toBeInstanceOf(Date);
+    const token = mockSendConfirmationEmail.mock.calls.at(-1)?.[2] as string;
+    expect(JSON.stringify(call)).not.toContain(token);
   });
 
   it('does not erase a name we already have when the form leaves it blank', async () => {
@@ -435,19 +446,46 @@ describe('POST /api/newsletter/subscribe', () => {
   });
 
   it.each([
-    ['unsubscribed earlier', { email: 'test@example.com', isSubscribed: false, isDeleted: false }],
-    ['deleted earlier', { email: 'test@example.com', isSubscribed: true, isDeleted: true }],
-  ])('lets someone re-subscribe who %s', async (_label, row) => {
+    ['unsubscribed earlier', { email: 'test@example.com', isSubscribed: false, isDeleted: false, confirmationTokenHash: null, confirmationSentAt: null }],
+    ['deleted earlier', { email: 'test@example.com', isSubscribed: true, isDeleted: true, confirmationTokenHash: null, confirmationSentAt: null }],
+  ])('asks someone who %s to confirm again, instead of re-subscribing them', async (_label, row) => {
     mockFindUnique.mockResolvedValueOnce(row);
 
     const response = await POST(signup());
 
     expect(response.status).toBe(200);
     expect(mockUpsert).toHaveBeenCalled();
-    expect(mockSendWelcomeEmail).toHaveBeenCalled();
+    expect(mockSendConfirmationEmail).toHaveBeenCalled();
+    expect(mockSendWelcomeEmail).not.toHaveBeenCalled();
   });
 
-  it('should handle email sending errors gracefully', async () => {
+  it('does not send another confirmation email within a few minutes of the last one', async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      email: 'test@example.com',
+      isSubscribed: false,
+      isDeleted: false,
+      confirmationTokenHash: 'a'.repeat(64),
+      confirmationSentAt: new Date(Date.now() - 60 * 1000),
+    });
+    const data = await (await POST(signup())).json();
+    expect(data).toEqual({ success: true, pendingConfirmation: true, alreadySent: true });
+    expect(mockSendConfirmationEmail).not.toHaveBeenCalled();
+    expect(mockUpsert).not.toHaveBeenCalled();
+  });
+
+  it('sends a fresh confirmation email when the last one is old', async () => {
+    mockFindUnique.mockResolvedValueOnce({
+      email: 'test@example.com',
+      isSubscribed: false,
+      isDeleted: false,
+      confirmationTokenHash: 'a'.repeat(64),
+      confirmationSentAt: new Date(Date.now() - 60 * 60 * 1000),
+    });
+    expect((await POST(signup())).status).toBe(200);
+    expect(mockSendConfirmationEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it('says so when the confirmation email cannot be sent', async () => {
     const mockSubscriber = {
       id: 'sub-123',
       email: 'test@example.com',
@@ -456,29 +494,13 @@ describe('POST /api/newsletter/subscribe', () => {
 
     mockUpsert.mockResolvedValueOnce(mockSubscriber);
     mockCreate.mockResolvedValueOnce({ id: 'log-123' });
-    mockSendWelcomeEmail.mockRejectedValueOnce(new Error('Email error'));
+    mockSendConfirmationEmail.mockRejectedValueOnce(new Error('Email error'));
 
-    const request = new Request(
-      'http://localhost:3000/api/newsletter/subscribe',
-      {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-forwarded-for': '192.168.1.1',
-          'user-agent': 'Mozilla/5.0',
-        },
-        body: JSON.stringify({
-          email: 'test@example.com',
-          name: 'Test User',
-        }),
-      },
-    );
-
-    const response = await POST(request);
+    const response = await POST(signup());
     const data = await response.json();
 
-    // Should still succeed even if email fails
-    expect(response.status).toBe(200);
-    expect(data.success).toBe(true);
+    // The email is the only way to finish signing up, so a failure is not hidden.
+    expect(response.status).toBe(502);
+    expect(data.error).toContain('confirmation email');
   });
 });

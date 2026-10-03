@@ -59,6 +59,49 @@ async function getDomainIdByName(name: string): Promise<string | null> {
   }
 }
 
+/**
+ * Asks a new address to confirm it wants the newsletter. The link opens a page with a
+ * button (rather than confirming on its own), so mail scanners that open every link in a
+ * message cannot subscribe someone by accident.
+ */
+export async function sendConfirmationEmail(
+  email: string,
+  name: string,
+  token: string,
+) {
+  const confirmUrl = `${getSiteUrl()}/newsletter/confirm?token=${token}`;
+  const firstName = escapeHtml(name.split(" ")[0] || "there");
+
+  const { data, error } = await getResend().emails.send({
+    from: `Bamise Omolaso <${process.env.RESEND_FROM_EMAIL}>`,
+    replyTo:
+      process.env.CONTACT_EMAIL ||
+      process.env.RESEND_FROM_EMAIL ||
+      "noreply@example.com",
+    to: email,
+    subject: "Please confirm your subscription",
+    html: `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <h1 style="color: #4F46E5; margin-bottom: 24px;">One more step</h1>
+        <p>Hi ${firstName},</p>
+        <p>Someone, hopefully you, asked to get my newsletter at this address. To finish, please confirm:</p>
+        <p style="margin: 28px 0;">
+          <a href="${confirmUrl}" style="background: #4F46E5; color: #ffffff; padding: 12px 22px; border-radius: 6px; text-decoration: none; font-weight: bold;">Confirm my subscription</a>
+        </p>
+        <p style="font-size: 14px; color: #555;">The link works for 48 hours. If you did not ask for this, ignore this email: nothing happens and you will not hear from me again.</p>
+        <p style="font-size: 12px; color: #888;">Button not working? Copy this address into your browser:<br>${confirmUrl}</p>
+      </div>
+    `,
+    text: `Hi ${name.split(" ")[0] || "there"},\n\nSomeone, hopefully you, asked to get my newsletter at this address. To finish, confirm here (the link works for 48 hours):\n\n${confirmUrl}\n\nIf you did not ask for this, ignore this email: nothing happens.`,
+  });
+
+  if (error) {
+    console.error("Error sending confirmation email:", error);
+    throw error;
+  }
+  return data;
+}
+
 export async function sendWelcomeEmail(
   email: string,
   name: string,

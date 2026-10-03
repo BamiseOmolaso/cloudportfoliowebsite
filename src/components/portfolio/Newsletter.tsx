@@ -38,7 +38,15 @@ export default function Newsletter({
       }
       if (!res.ok) throw new Error(data?.error || "Failed to subscribe");
       setStatus("done");
-      setMessage(data?.alreadySubscribed ? content.already : content.success);
+      setMessage(
+        data?.alreadySubscribed
+          ? content.already
+          : data?.pendingConfirmation
+            ? data.alreadySent
+              ? content.pendingSent
+              : content.pending
+            : content.success,
+      );
       setEmail("");
       setName("");
     } catch (err) {

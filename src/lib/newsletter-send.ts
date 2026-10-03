@@ -44,6 +44,8 @@ export interface Recipient {
   email: string;
   name: string | null;
   unsubscribeToken: string | null;
+  /** Older tokens expire after 30 days; the unsubscribe link in a newsletter must not. */
+  unsubscribeTokenExpiresAt?: Date | null;
 }
 
 /** The HTML and plain-text body for one recipient. */
@@ -75,7 +77,17 @@ export function buildEmail(
 
 /** A subscriber's unsubscribe token, created if they do not have one. Links never expire. */
 async function tokenFor(recipient: Recipient): Promise<string> {
-  if (recipient.unsubscribeToken) return recipient.unsubscribeToken;
+  if (recipient.unsubscribeToken) {
+    // A token from the old sign-up flow expires after 30 days, which would break the link in
+    // an older email. Keep the token and drop its expiry.
+    if (recipient.unsubscribeTokenExpiresAt) {
+      await db.newsletterSubscriber.update({
+        where: { id: recipient.id },
+        data: { unsubscribeTokenExpiresAt: null },
+      });
+    }
+    return recipient.unsubscribeToken;
+  }
   const token = randomBytes(32).toString("hex");
   await db.newsletterSubscriber.update({
     where: { id: recipient.id },

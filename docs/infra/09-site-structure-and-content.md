@@ -276,9 +276,46 @@ refuses everything rather than run unprotected. Two fixes came with it:
 - The call to Google put the visitor's answer into the request unescaped, so a crafted
   answer could add fields to it. It is now encoded.
 
-Still open, and worth doing: **double opt-in** (a confirmation link, so nobody can sign up
-or re-subscribe someone else's address; today a stranger can re-subscribe a person who had
-unsubscribed).
+**Double opt-in** (below) closes the last gap: nobody can sign up, or re-subscribe,
+an address that is not theirs.
+
+### Double opt-in (confirming a newsletter sign-up)
+
+Signing up no longer subscribes anyone. It asks the address to confirm.
+
+```mermaid
+flowchart LR
+  A["Visitor enters their email"] --> B["Site saves a pending row<br/>and emails a link"]
+  B --> C["Visitor opens the link<br/>(/newsletter/confirm)"]
+  C --> D["Presses 'Confirm my subscription'"]
+  D --> E["Subscribed: welcome email sent,<br/>owner notified"]
+  B -. "nobody clicks" .-> F["Stays pending, then expires<br/>after 48 hours"]
+```
+
+| Piece | Job |
+|---|---|
+| `POST /api/newsletter/subscribe` | Same protections as before (limits, CAPTCHA step, duplicate answers). Then: creates or updates the row **without** switching it on, stores a **hash** of a fresh 64-character token, and emails the link. A repeat within 5 minutes does not email again. If the email cannot be sent the visitor is told so (it is the only way to finish) |
+| `sendConfirmationEmail` (`src/lib/resend.ts`) | The email: a "Confirm my subscription" button, a plain-text copy, and the line "If you did not ask for this, ignore this email: nothing happens" |
+| `/newsletter/confirm?token=...` | A page with a button. **The link does not confirm by itself**: some mail scanners open every link in a message, which would subscribe people who never clicked. The button sends the `POST` |
+| `POST /api/newsletter/confirm` | Looks the person up by the token's hash, checks it has not expired (48 hours), then sets subscribed, records `confirmed_at`, clears the token, creates fresh unsubscribe and preferences links, sends the welcome email and notifies you. A wrong, used or missing token all get the same answer; an expired one says so |
+| `src/lib/subscription.ts` | Token and hash helpers, the 48-hour and 5-minute limits, and `stateOf` (subscribed, pending or unsubscribed) |
+| Columns | `confirmed_at`, `confirmation_token_hash` (unique), `confirmation_expires_at`, `confirmation_sent_at` on `newsletter_subscribers` |
+
+**Three states** show on the Subscribers screen: **Subscribed**, **Waiting to confirm**
+(with the date the email was sent) and **Unsubscribed**, each with its own tab and count.
+Only **Subscribed** people appear in the recipient chooser, so a newsletter can never reach
+someone who has not confirmed. Someone who unsubscribed and signs up again becomes *pending*
+and must confirm again.
+
+**Existing subscribers** signed up under the old rules, so the migration treats them as
+already confirmed (their sign-up date becomes `confirmed_at`). You do not need to email them.
+
+Two more fixes made on the way: the unsubscribe link in newsletters never expires now (links
+created by the old flow expired after 30 days, which would have broken them in older emails),
+and "rejoined" on the Subscribers screen now means they really joined more than once.
+
+Not done, deliberately: pending sign-ups are not deleted automatically. A stale one is harmless
+(it is not on the list and its link has expired), but a clean-up job is easy to add later.
 
 ### Showing, hiding and moving sections
 

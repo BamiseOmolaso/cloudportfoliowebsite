@@ -198,6 +198,23 @@ describe("runSend", () => {
     });
   });
 
+  it("makes an old, expiring unsubscribe link permanent", async () => {
+    const send = jest.fn<any>().mockResolvedValue({ error: null });
+    await runSend(
+      "n1",
+      [{ ...person("a"), unsubscribeTokenExpiresAt: new Date("2026-01-01") }],
+      { send, delayMs: 0 },
+    );
+    expect(subUpdate).toHaveBeenCalledWith({
+      where: { id: "a" },
+      data: { unsubscribeTokenExpiresAt: null },
+    });
+    // The same token is kept, so links in earlier emails keep working.
+    expect(send.mock.calls[0][0]).toMatchObject({
+      headers: { "List-Unsubscribe": `<${BASE}/unsubscribe?token=tok>` },
+    });
+  });
+
   it("is not marked as sending once it has finished", async () => {
     const send = jest.fn<any>().mockResolvedValue({ error: null });
     await runSend("n1", [person("a")], { send, delayMs: 0 });

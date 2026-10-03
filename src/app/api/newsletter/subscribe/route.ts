@@ -1,7 +1,8 @@
 // src/app/api/newsletter/subscribe/route.ts
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
-import { sendWelcomeEmail, sendAdminNotification } from '@/lib/resend';
+import { sendConfirmationEmail } from '@/lib/resend';
+import { CONFIRM_COOLDOWN_MS, newConfirmation } from '@/lib/subscription';
 import { withRateLimit, subscribeLimiter, perEmailLimiter } from '@/lib/rate-limit';
 import {
   isIPBlacklisted,
@@ -9,7 +10,6 @@ import {
   isCaptchaRequired,
   verifyCaptcha,
 } from '@/lib/security';
-import crypto from 'crypto';
 import { getClientIp } from "@/lib/client-ip";
 
 function sanitizeInput(input: string): string {
@@ -78,19 +78,34 @@ export const POST = withRateLimit(subscribeLimiter, 'newsletter-subscribe', asyn
   // per visitor, 3 per address - slow anyone down who tries to use it to probe addresses.)
   const existing = await db.newsletterSubscriber.findFirst({
     where: { email: { equals: email, mode: 'insensitive' } },
-    select: { email: true, isSubscribed: true, isDeleted: true },
+    select: {
+      email: true,
+      isSubscribed: true,
+      isDeleted: true,
+      confirmationTokenHash: true,
+      confirmationSentAt: true,
+    },
   });
   if (existing?.isSubscribed && !existing.isDeleted) {
     return NextResponse.json({ success: true, alreadySubscribed: true });
   }
 
-  // Generate tokens
-  const unsubscribeToken = crypto.randomBytes(32).toString('hex');
-  const preferencesToken = crypto.randomBytes(32).toString('hex');
-  const tokenExpiresAt = new Date();
-  tokenExpiresAt.setDate(tokenExpiresAt.getDate() + 30); // 30 days expiry
+  // Waiting for a confirmation that was sent a moment ago: do not email again.
+  if (
+    existing &&
+    !existing.isSubscribed &&
+    existing.confirmationTokenHash &&
+    existing.confirmationSentAt &&
+    Date.now() - existing.confirmationSentAt.getTime() < CONFIRM_COOLDOWN_MS
+  ) {
+    return NextResponse.json({ success: true, pendingConfirmation: true, alreadySent: true });
+  }
 
-  // Upsert via Prisma
+  // Double opt-in: this does NOT subscribe anyone. It records the request and emails the
+  // address a link; only clicking that link (see /api/newsletter/confirm) subscribes them.
+  // So nobody can add, or re-add, an address that is not theirs.
+  const confirmation = newConfirmation();
+
   // An older row may be stored with capital letters: update that one, not a duplicate.
   const storedEmail = existing?.email ?? email;
   const subscriber = await db.newsletterSubscriber.upsert({
@@ -99,32 +114,26 @@ export const POST = withRateLimit(subscribeLimiter, 'newsletter-subscribe', asyn
       // A blank name must not erase one we already have.
       ...(name ? { name } : {}),
       location,
-      isSubscribed: true,
-      subscribedAt: new Date(),
-      unsubscribedAt: null,
-      subscriptionCount: { increment: 1 },
       updatedAt: new Date(),
       isDeleted: false,
       deletedAt: null,
       deletedReason: null,
-      unsubscribeToken,
-      unsubscribeTokenExpiresAt: tokenExpiresAt,
-      preferencesToken,
-      preferencesTokenExpiresAt: tokenExpiresAt,
+      confirmationTokenHash: confirmation.hash,
+      confirmationExpiresAt: confirmation.expiresAt,
+      confirmationSentAt: new Date(),
     },
     create: {
       email,
       name,
       location,
-      isSubscribed: true,
+      isSubscribed: false,
       preferences: {
         frequency: 'weekly',
         categories: [],
       },
-      unsubscribeToken,
-      unsubscribeTokenExpiresAt: tokenExpiresAt,
-      preferencesToken,
-      preferencesTokenExpiresAt: tokenExpiresAt,
+      confirmationTokenHash: confirmation.hash,
+      confirmationExpiresAt: confirmation.expiresAt,
+      confirmationSentAt: new Date(),
     },
   });
 
@@ -132,21 +141,23 @@ export const POST = withRateLimit(subscribeLimiter, 'newsletter-subscribe', asyn
   await db.newsletterAuditLog.create({
     data: {
       subscriberId: subscriber.id,
-      action: 'subscribed',
+      action: 'confirmation_requested',
       details: { email, name, location },
       ipAddress: ip,
       userAgent,
     },
   });
 
-  // Send welcome email and admin notification
+  // The confirmation email is the whole point now: if it cannot be sent, say so.
   try {
-    await sendWelcomeEmail(subscriber.email, subscriber.name || '', unsubscribeToken, preferencesToken);
-    await sendAdminNotification(subscriber.email, subscriber.name || undefined);
+    await sendConfirmationEmail(subscriber.email, subscriber.name || '', confirmation.token);
   } catch (emailError) {
-    console.error('Error sending emails:', emailError);
-    // Don't fail the subscription if email fails
+    console.error('Error sending confirmation email:', emailError);
+    return NextResponse.json(
+      { error: 'We could not send the confirmation email. Please try again in a few minutes.' },
+      { status: 502 },
+    );
   }
 
-  return NextResponse.json({ success: true });
+  return NextResponse.json({ success: true, pendingConfirmation: true });
 });

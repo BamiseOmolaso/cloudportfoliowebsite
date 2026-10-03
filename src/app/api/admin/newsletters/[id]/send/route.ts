@@ -59,7 +59,13 @@ async function postHandler(
     const [active, already] = await Promise.all([
       db.newsletterSubscriber.findMany({
         where: { id: { in: wanted }, isSubscribed: true, isDeleted: false },
-        select: { id: true, email: true, name: true, unsubscribeToken: true },
+        select: {
+          id: true,
+          email: true,
+          name: true,
+          unsubscribeToken: true,
+          unsubscribeTokenExpiresAt: true,
+        },
       }),
       db.newsletterSend.findMany({
         where: {

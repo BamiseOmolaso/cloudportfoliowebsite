@@ -890,6 +890,9 @@ export function visibleTestimonials(production: boolean): Testimonial[] {
 
 export const newsletter = {
   already: "You're already subscribed. Nothing more to do.",
+  pending: "Almost done: check your inbox and click the link to confirm.",
+  pendingSent:
+    "We already sent you a confirmation email a moment ago. Check your inbox, and your spam folder.",
   title: "Get the next write-up.",
   body: "One email when I publish something new on cloud, DevSecOps or what broke in production. Leave any time.",
   placeholder: "you@example.com",

@@ -61,6 +61,13 @@ model NewsletterSubscriber {
   // have left, when. "createdAt" stays the date they first signed up.
   subscribedAt              DateTime  @default(now()) @map("subscribed_at") @db.Timestamptz
   unsubscribedAt            DateTime? @map("unsubscribed_at") @db.Timestamptz
+  // Double opt-in: signing up only asks for confirmation. While a confirmation is waiting
+  // "confirmationTokenHash" is set (a hash, never the token itself) and isSubscribed is
+  // false; clicking the emailed link sets confirmedAt and isSubscribed.
+  confirmedAt               DateTime? @map("confirmed_at") @db.Timestamptz
+  confirmationTokenHash     String?   @unique @map("confirmation_token_hash") @db.VarChar(64)
+  confirmationExpiresAt     DateTime? @map("confirmation_expires_at") @db.Timestamptz
+  confirmationSentAt        DateTime? @map("confirmation_sent_at") @db.Timestamptz
   preferences               Json?     @default("{\"frequency\": \"weekly\", \"categories\": []}") // JSONB
   preferencesToken          String?   @map("preferences_token")
   preferencesTokenExpiresAt DateTime? @map("preferences_token_expires_at") @db.Timestamptz

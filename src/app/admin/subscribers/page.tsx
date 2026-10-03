@@ -23,10 +23,14 @@ interface Subscriber {
   created_at: string;
   subscribed_at: string;
   unsubscribed_at: string | null;
+  status: "subscribed" | "pending" | "unsubscribed";
+  confirmed_at: string | null;
+  subscription_count: number;
+  confirmation_sent_at: string | null;
   location?: string | null;
 }
 
-type Filter = "all" | "subscribed" | "unsubscribed";
+type Filter = "all" | "subscribed" | "pending" | "unsubscribed";
 
 const REASONS: Record<string, string> = {
   too_many_emails: "Too many emails",
@@ -46,9 +50,7 @@ const csvCell = (value: string) => {
 const day = (iso: string) => format(new Date(iso), "d MMM yyyy");
 const dayTime = (iso: string) => format(new Date(iso), "d MMM yyyy, HH:mm");
 /** Joined again later (they had unsubscribed and signed up once more). */
-const rejoined = (s: Subscriber) =>
-  new Date(s.subscribed_at).getTime() - new Date(s.created_at).getTime() >
-  60_000;
+const rejoined = (s: Subscriber) => s.subscription_count > 1;
 
 /** A name that can be corrected in place: most people signed up before names were asked for. */
 function NameCell({
@@ -171,11 +173,13 @@ export default function SubscribersPage() {
   }, [load]);
 
   const counts = useMemo(() => {
-    const active = subscribers.filter((s) => s.is_subscribed).length;
+    const n = (status: Subscriber["status"]) =>
+      subscribers.filter((s) => s.status === status).length;
     return {
       all: subscribers.length,
-      subscribed: active,
-      unsubscribed: subscribers.length - active,
+      subscribed: n("subscribed"),
+      pending: n("pending"),
+      unsubscribed: n("unsubscribed"),
     };
   }, [subscribers]);
 
@@ -183,7 +187,7 @@ export default function SubscribersPage() {
     const q = query.trim().toLowerCase();
     return subscribers.filter(
       (s) =>
-        (filter === "all" || (filter === "subscribed") === s.is_subscribed) &&
+        (filter === "all" || filter === s.status) &&
         (!q ||
           s.email.toLowerCase().includes(q) ||
           (s.name ?? "").toLowerCase().includes(q)),
@@ -191,7 +195,7 @@ export default function SubscribersPage() {
   }, [subscribers, filter, query]);
 
   const withoutName = subscribers.filter(
-    (s) => s.is_subscribed && !s.name,
+    (s) => s.status === "subscribed" && !s.name,
   ).length;
 
   const exportCsv = () => {
@@ -210,7 +214,11 @@ export default function SubscribersPage() {
       ...shown.map((s) => [
         s.email,
         s.name ?? "",
-        s.is_subscribed ? "Subscribed" : "Unsubscribed",
+        s.status === "subscribed"
+          ? "Subscribed"
+          : s.status === "pending"
+            ? "Waiting to confirm"
+            : "Unsubscribed",
         s.location ?? "",
         format(new Date(s.created_at), "yyyy-MM-dd HH:mm"),
         format(new Date(s.subscribed_at), "yyyy-MM-dd HH:mm"),
@@ -239,6 +247,7 @@ export default function SubscribersPage() {
   const tabs: { id: Filter; label: string }[] = [
     { id: "all", label: "All" },
     { id: "subscribed", label: "Subscribed" },
+    { id: "pending", label: "Waiting to confirm" },
     { id: "unsubscribed", label: "Unsubscribed" },
   ];
 
@@ -261,10 +270,11 @@ export default function SubscribersPage() {
       />
       {error && <ErrorBanner message={error} onRetry={load} />}
 
-      <div className="mb-6 grid gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {[
           { label: "Total", value: counts.all },
           { label: "Subscribed", value: counts.subscribed },
+          { label: "Waiting to confirm", value: counts.pending },
           { label: "Unsubscribed", value: counts.unsubscribed },
         ].map((t) => (
           <Card key={t.label} className="p-5">
@@ -381,9 +391,22 @@ export default function SubscribersPage() {
                     </td>
                     <td className="px-4 py-3">
                       <StatusBadge
-                        status={s.is_subscribed ? "published" : "draft"}
-                        label={s.is_subscribed ? "subscribed" : "unsubscribed"}
+                        status={
+                          s.status === "subscribed"
+                            ? "published"
+                            : s.status === "pending"
+                              ? "scheduled"
+                              : "draft"
+                        }
+                        label={
+                          s.status === "pending" ? "waiting" : s.status
+                        }
                       />
+                      {s.status === "pending" && s.confirmation_sent_at && (
+                        <p className="mt-1 text-xs text-gray-500">
+                          email sent {day(s.confirmation_sent_at)}
+                        </p>
+                      )}
                     </td>
                     <td className="px-4 py-3 text-gray-300">
                       <span title={dayTime(s.created_at)}>
