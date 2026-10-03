@@ -18,7 +18,9 @@ export function middleware(_request: NextRequest) {
     'Content-Security-Policy',
     // Google reCAPTCHA ("I am not a robot") loads one script and draws itself in a frame; both are
     // allowed from Google's recaptcha paths only. Without these two entries the check never appears.
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/;"
+    // Cloudflare Web Analytics (switched on in the Cloudflare dashboard, which adds its own small
+    // script to every page) loads from static.cloudflareinsights.com and reports to cloudflareinsights.com.
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://static.cloudflareinsights.com; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https://cloudflareinsights.com; frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/;"
   );
 
   return response;
