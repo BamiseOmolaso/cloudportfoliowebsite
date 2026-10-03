@@ -83,5 +83,16 @@ module "dns" {
       content = module.server.ipv4
       comment = "Test host for the new cluster (Terraform)"
     }
+
+    # The real domain (the "apex"). This record already existed, made by hand and
+    # pointing at the old hosting, so Terraform must IMPORT it before it can manage it
+    # (doc 08, section 6). `www` is a CNAME to this name, so it follows automatically.
+    # Mail does NOT use this record any more: MX, mail and ftp use `mailhost`.
+    apex = {
+      name    = "@"
+      type    = "A"
+      content = module.server.ipv4
+      comment = "Real domain, served by the new cluster (Terraform)"
+    }
   }
 }

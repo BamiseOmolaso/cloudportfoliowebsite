@@ -5,7 +5,8 @@ while `oluwabamiseomolaso.com.ng` still showed an old, almost empty WordPress si
 doc explains how we switch the real domain, in an order that cannot leave visitors on a
 broken page and that can be undone in seconds.
 
-> **Status: planned, not yet done.** Section 8 is filled in as each step is verified.
+> **Status: in progress.** Steps 1 to 4 are done and verified (section 8). Step 5, the
+> switch itself, is next.
 
 ---
 
@@ -117,8 +118,40 @@ Because the record is proxied, Cloudflare serves the change from its own edge wi
 seconds. We are not waiting for the world's DNS caches (which can take hours for
 un-proxied records).
 
-*Exact commands are written when we get here, with the record's ID, which is not
-committed to git.*
+**The commands** (from your terminal, after pulling the merged code):
+
+```bash
+hetzner                                    # load the secrets (doc 01)
+cd infra/terraform/envs/prod
+ZONE=$(grep cloudflare_zone_id terraform.tfvars | cut -d'"' -f2)
+
+# 1. Adopt the existing record. The last part is "<zone id>/<record id>".
+terraform import 'module.dns.cloudflare_dns_record.this["apex"]' "$ZONE/<record-id>"
+
+# 2. Review. Expected: 0 to add, 1 to change, 0 to destroy; only the record's
+#    content (old hosting address to the new server) and its comment change.
+terraform plan
+
+# 3. The switch.
+terraform apply
+```
+
+| Part | Meaning |
+|---|---|
+| `terraform import` | Records "this thing already exists" in Terraform's state, without changing it |
+| `'module.dns.cloudflare_dns_record.this["apex"]'` | The address of the record in our code: module `dns`, resource `this`, entry `apex`. Single quotes stop the shell from reading the brackets and quotes |
+| `$ZONE/<record-id>` | How the Cloudflare provider names a record: zone, a slash, the record |
+| `terraform plan` | Shows what would change, changes nothing. **Read it before applying** |
+
+**Finding the record's ID** (it is not a secret, but it is not committed either):
+
+```bash
+curl -s "https://api.cloudflare.com/client/v4/zones/$ZONE/dns_records?type=A&name=oluwabamiseomolaso.com.ng" \
+  -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" | python3 -c 'import sys,json;print(json.load(sys.stdin)["result"][0]["id"])'
+```
+
+If you run `apply` *before* the import, Terraform tries to create the record and
+Cloudflare answers "record already exists". Nothing is damaged; import, then plan again.
 
 **Rollback:** run the same apply with the old address back in the code, or edit the
 record in the dashboard. The old site is back within seconds.
@@ -136,7 +169,24 @@ record in the dashboard. The old site is back within seconds.
 
 ## 8. Verified results
 
-*To be filled in as each step is done.*
+Seen working on 3 October 2026:
+
+| Step | Result |
+|---|---|
+| 2. Mail on its own name | `MX` now points at `mailhost`; `mail` and `ftp` follow it; `mailhost` resolves to the old hosting; the Resend records (`send` MX, `resend._domainkey`) are unchanged; the root website was untouched |
+| 3. Certificate | `portfolio-tls` re-issued (revision 2) by Let's Encrypt and lists three names: the root, `www` and `test`, issued **before** any traffic moved |
+| 3. `www` redirect | `https://www…/blog` answers `301` to `https://oluwabamiseomolaso.com.ng/blog`; the query string is kept; the root itself does not redirect. Tested straight against Traefik through a port-forward, because DNS had not moved yet |
+| 4. Image with the real URL | Pages now carry `https://oluwabamiseomolaso.com.ng` as the canonical link and in the social-card tags |
+
+**A testing gotcha worth remembering.** The first `www` test returned `200`, not `301`.
+The test address had `:8443` in it (the local port), so the `Host` header was
+`www…:8443`, and the redirect's pattern (which expects no port) rightly did not
+match. Testing through a port-forward needs `curl --connect-to www.DOMAIN:443:127.0.0.1:8443`
+so the `Host` header stays port-free. The redirect was fine; the test was wrong.
+
+**A second one: our own IP changed again** in the middle (the third time in a day),
+which made `kubectl` hang. See `runbooks/01-my-ip-changed.md`; the WireGuard tunnel in the
+TODO list is the permanent fix.
 
 ## 9. Cloudflare Access in front of `/admin`
 
