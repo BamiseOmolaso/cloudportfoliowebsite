@@ -37,9 +37,17 @@ describe("Content-Security-Policy", () => {
     }
   });
 
+  it("lets Cloudflare Web Analytics load and report, from its own addresses only", () => {
+    expect(directive("script-src")).toContain(
+      "https://static.cloudflareinsights.com",
+    );
+    expect(directive("connect-src")).toBe(
+      "connect-src 'self' https://cloudflareinsights.com",
+    );
+  });
+
   it("still keeps everything else on this site", () => {
     expect(csp()).toContain("default-src 'self'");
-    expect(directive("connect-src")).toBe("connect-src 'self'");
     expect(directive("font-src")).toBe("font-src 'self' data:");
   });
 });
