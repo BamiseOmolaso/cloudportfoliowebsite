@@ -120,14 +120,15 @@ revert your console edit on the next apply.
 ## 6. Why this keeps happening, and the planned permanent fix
 
 An allow-list of IP addresses suits a fixed address, and a laptop on changing networks is
-the opposite. The planned fix is a **private tunnel with WireGuard**, after which ports 22
-and 6443 are closed to the public internet entirely and nothing depends on your IP.
-See `docs/infra/TODO.md`.
+the opposite. The fix is a **private tunnel with WireGuard**, after which nothing depends
+on your IP. It is written and documented in `docs/infra/11-wireguard.md`; once it is rolled
+out, use the tunnel (`ssh bamise@10.8.0.1`, `kubectl` at `https://10.8.0.1:6443`) and keep
+this runbook as the fallback for when the tunnel itself is down.
 
 | Option | Verdict |
 |---|---|
 | Update the IP by hand (this runbook) | Works today; a chore each time the network changes |
-| **WireGuard** (self-hosted private tunnel) | **Planned.** No third party, no IP to track |
+| **WireGuard** (self-hosted private tunnel) | **Chosen** (doc 11). No third party, no IP to track |
 | Tailscale (hosted private network) | Easiest, but relies on their control server |
 | Headscale (self-hosted Tailscale control server) | More to run, and it would live on the very server you need to reach |
 | Open SSH to everyone | Not for the Kubernetes API; not recommended |

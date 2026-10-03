@@ -27,6 +27,21 @@ resource "hcloud_firewall" "this" {
     source_ips  = var.admin_cidrs
   }
 
+  # WireGuard (the private tunnel, docs/infra/11-wireguard.md). Open to the world on purpose:
+  # WireGuard never answers a packet that is not signed with a key it knows, so to anyone
+  # else this port looks closed. Once the tunnel works, SSH and the API are reached through
+  # it and the two admin rules above can be narrowed or closed.
+  dynamic "rule" {
+    for_each = var.wireguard_port == null ? [] : [var.wireguard_port]
+    content {
+      description = "WireGuard tunnel"
+      direction   = "in"
+      protocol    = "udp"
+      port        = tostring(rule.value)
+      source_ips  = ["0.0.0.0/0", "::/0"]
+    }
+  }
+
   # Web traffic. The caller decides who may connect: in production only
   # Cloudflare's published ranges, so every visitor must come through
   # Cloudflare and nobody can reach the server directly (which also makes the

@@ -12,3 +12,9 @@ all:
           ansible_ssh_private_key_file: ~/.ssh/hetzner_portfolio
           # terraform output -raw data_volume_device
           data_volume_device: /dev/disk/by-id/scsi-0HC_Volume_XXXXXXXXX
+          # Devices allowed into the WireGuard tunnel (docs/infra/11-wireguard.md).
+          # The public key comes from `bash infra/scripts/wireguard-client.sh`.
+          wireguard_peers:
+            - name: macbook
+              public_key: "REPLACE_WITH_YOUR_PUBLIC_KEY"
+              address: 10.8.0.2/32

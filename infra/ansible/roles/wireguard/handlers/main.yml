@@ -1,0 +1,6 @@
+---
+# `syncconf` applies added or removed devices without dropping the tunnel for the ones already connected.
+- name: Reload WireGuard
+  ansible.builtin.shell: "wg syncconf {{ wireguard_interface }} <(wg-quick strip {{ wireguard_interface }})"
+  args:
+    executable: /bin/bash

@@ -1,0 +1,13 @@
+---
+# Step 4 - the private tunnel (docs/infra/11-wireguard.md). Run as the admin user:
+#   ansible-playbook playbooks/04-wireguard.yml -u bamise
+#
+# Installs WireGuard on the node, creates its keys and lists which devices may connect.
+# It changes NOTHING about SSH or the firewall: the old way in keeps working, so a mistake
+# here cannot lock you out. Run playbooks/03-k3s.yml afterwards so the cluster's certificate
+# also names the tunnel address.
+- name: Set up the WireGuard tunnel
+  hosts: k8s_nodes
+  become: true
+  roles:
+    - wireguard
