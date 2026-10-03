@@ -14,6 +14,11 @@ const nextConfig = {
         protocol: 'https',
         hostname: '**.amazonaws.com',
       },
+      // Images uploaded from the admin panel are served from media.<our domain> (Cloudflare R2).
+      {
+        protocol: 'https',
+        hostname: 'media.oluwabamiseomolaso.com.ng',
+      },
     ],
     formats: ['image/avif', 'image/webp'],
   },

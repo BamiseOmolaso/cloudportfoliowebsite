@@ -50,7 +50,7 @@ export default function NewslettersPage() {
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold text-white">Newsletters</h2>
         <Link
-          href="/admin/newsletters/create"
+          href="/admin/newsletters/new"
           className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md"
         >
           Create Newsletter

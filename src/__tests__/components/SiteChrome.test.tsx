@@ -44,15 +44,12 @@ describe("SiteChrome", () => {
     },
   );
 
-  it.each(["/login"])(
-    "keeps the legacy chrome on %s",
-    (path) => {
-      renderAt(path);
-      expect(screen.getByTestId("legacy-navbar")).toBeInTheDocument();
-      expect(screen.getByTestId("legacy-footer")).toBeInTheDocument();
-      expect(screen.queryByTestId("new-footer")).toBeNull();
-    },
-  );
+  it.each(["/login"])("keeps the legacy chrome on %s", (path) => {
+    renderAt(path);
+    expect(screen.getByTestId("legacy-navbar")).toBeInTheDocument();
+    expect(screen.getByTestId("legacy-footer")).toBeInTheDocument();
+    expect(screen.queryByTestId("new-footer")).toBeNull();
+  });
 
   it.each(["/blog", "/blog/some-post", "/projects", "/contact"])(
     "uses the new header and footer on %s",

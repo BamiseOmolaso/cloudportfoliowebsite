@@ -44,6 +44,11 @@ spec:
                 name: portfolio-config
             - secretRef:
                 name: portfolio-secrets
+            # Where uploaded images are stored (infra/scripts/create-media-secret.sh).
+            # Optional: without it the site runs and image uploads are switched off.
+            - secretRef:
+                name: portfolio-media
+                optional: true
           # Next.js needs somewhere to write temporary files; give it throwaway folders.
           volumeMounts:
             - name: tmp

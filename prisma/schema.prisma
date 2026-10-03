@@ -309,3 +309,22 @@ model SiteContent {
 
   @@map("site_content")
 }
+
+// ============================================
+// Images uploaded from the admin panel
+// ============================================
+// The file itself is in object storage (Cloudflare R2); this row lets the Media screen
+// list it and delete it. "key" is the object's name in the bucket.
+
+model MediaAsset {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  url         String
+  filename    String
+  contentType String   @map("content_type")
+  size        Int
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  @@index([createdAt])
+  @@map("media_assets")
+}

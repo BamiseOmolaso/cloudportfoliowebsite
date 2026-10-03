@@ -3,82 +3,49 @@
 import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  BarChart3,
+  Briefcase,
+  FileText,
+  Image as ImageIcon,
+  LayoutDashboard,
+  Mail,
+  Menu,
+  MessageSquare,
+  PenLine,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 
-const GROUPS = [
+const GROUPS: {
+  label: string;
+  items: { name: string; href: string; exact?: boolean; icon: LucideIcon }[];
+}[] = [
   {
     label: "Content",
     items: [
-      {
-        name: "Overview",
-        href: "/admin",
-        exact: true,
-        icon: "M3 12l9-9 9 9M5 10v10h5v-6h4v6h5V10",
-      },
-      {
-        name: "Pages",
-        href: "/admin/pages",
-        icon: "M7 3h7l5 5v13H7zM14 3v5h5M10 13h6M10 17h6",
-      },
-      {
-        name: "Blog",
-        href: "/admin/blog",
-        icon: "M4 5h16M4 10h16M4 15h10M4 20h7",
-      },
-      {
-        name: "Projects",
-        href: "/admin/projects",
-        icon: "M3 7h18v13H3zM8 7V4h8v3",
-      },
+      { name: "Overview", href: "/admin", exact: true, icon: LayoutDashboard },
+      { name: "Pages", href: "/admin/pages", icon: FileText },
+      { name: "Blog", href: "/admin/blog", icon: PenLine },
+      { name: "Projects", href: "/admin/projects", icon: Briefcase },
+      { name: "Media", href: "/admin/media", icon: ImageIcon },
     ],
   },
   {
     label: "Audience",
     items: [
-      {
-        name: "Messages",
-        href: "/admin/messages",
-        icon: "M4 5h16v11H8l-4 4zM8 9h8M8 12h5",
-      },
-      {
-        name: "Subscribers",
-        href: "/admin/subscribers",
-        icon: "M16 11a4 4 0 10-8 0 4 4 0 008 0zM4 21a8 8 0 0116 0",
-      },
-      {
-        name: "Newsletters",
-        href: "/admin/newsletters",
-        icon: "M3 7l9 6 9-6M3 6h18v12H3z",
-      },
+      { name: "Messages", href: "/admin/messages", icon: MessageSquare },
+      { name: "Subscribers", href: "/admin/subscribers", icon: Users },
+      { name: "Newsletters", href: "/admin/newsletters", icon: Mail },
     ],
   },
   {
     label: "Site",
     items: [
-      {
-        name: "Performance",
-        href: "/admin/performance",
-        icon: "M5 20V10M12 20V4M19 20v-7",
-      },
+      { name: "Performance", href: "/admin/performance", icon: BarChart3 },
     ],
   },
-] as const;
-
-function Icon({ d }: { d: string }) {
-  return (
-    <svg
-      className="h-5 w-5 shrink-0"
-      fill="none"
-      viewBox="0 0 24 24"
-      stroke="currentColor"
-      strokeWidth={1.7}
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d={d} />
-    </svg>
-  );
-}
+];
 
 export default function AdminLayoutClient({
   children,
@@ -121,7 +88,10 @@ export default function AdminLayoutClient({
                         : "text-gray-400 hover:bg-gray-800 hover:text-white"
                     }`}
                   >
-                    <Icon d={item.icon} />
+                    <item.icon
+                      className="h-5 w-5 shrink-0"
+                      aria-hidden="true"
+                    />
                     {item.name}
                   </Link>
                 </li>
@@ -164,7 +134,7 @@ export default function AdminLayoutClient({
           className="rounded-lg p-2 text-gray-300 hover:bg-gray-800"
           aria-label="Open the admin menu"
         >
-          <Icon d="M4 6h16M4 12h16M4 18h16" />
+          <Menu className="h-5 w-5" aria-hidden="true" />
         </button>
         <span className="font-bold text-white">Site admin</span>
         <Link href="/" target="_blank" className="text-xs text-gray-400">
