@@ -12,6 +12,8 @@ type SyncMock<
 
 const mockCreate: AsyncMock = jest.fn();
 const mockSend: AsyncMock = jest.fn();
+const mockFindMany: AsyncMock = jest.fn();
+const mockEmailLimit: AsyncMock = jest.fn();
 const mockLimiterCheck: AsyncMock<
   [string],
   { success: boolean; remaining: number; resetTime: number }
@@ -26,6 +28,7 @@ jest.mock("@/lib/db", () => ({
   db: {
     contactMessage: {
       create: mockCreate,
+      findMany: mockFindMany,
     },
   },
 }));
@@ -40,6 +43,7 @@ jest.mock("resend", () => ({
 
 jest.mock("@/lib/rate-limit", () => ({
   withRateLimit: mockWithRateLimit,
+  perEmailLimiter: { check: mockEmailLimit },
   contactFormLimiter: {
     check: mockLimiterCheck,
     config: { maxRequests: 5, windowMs: 3600000 },
@@ -77,6 +81,9 @@ beforeEach(() => {
     resetTime: Date.now() + 3600000,
   });
   mockWithRateLimit.mockImplementation((_, __, handler) => handler);
+  // Default: nothing sent from this address in the last day, and it has not been tried too often
+  mockFindMany.mockResolvedValue([]);
+  mockEmailLimit.mockResolvedValue({ success: true, remaining: 2, resetTime: Date.now() + 3600000 });
 });
 
 describe("POST /api/contact", () => {
@@ -266,5 +273,57 @@ describe("POST /api/contact", () => {
 
     // Restore env var for other tests
     process.env.CONTACT_EMAIL = "admin@example.com";
+  });
+
+  describe("repeat and abusive submissions", () => {
+    const valid = {
+      name: "Ada",
+      email: "ada@example.com",
+      subject: "Hello",
+      message: "I would like to talk about a project.",
+    };
+
+    it("does not save or email an identical message sent again within a day", async () => {
+      mockFindMany.mockResolvedValue([{ message: valid.message }]);
+      const res = await POST(createRequest(valid));
+      const data = await res.json();
+      expect(res.status).toBe(200);
+      expect(data.duplicate).toBe(true);
+      expect(mockCreate).not.toHaveBeenCalled();
+      expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it("accepts a different message from the same address, but sends no second auto-reply", async () => {
+      mockFindMany.mockResolvedValue([{ message: "An earlier, different message." }]);
+      mockCreate.mockResolvedValue({ id: "m1" });
+      mockSend.mockResolvedValue({ id: "e1" });
+      const res = await POST(createRequest(valid));
+      expect(res.status).toBe(200);
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+      // Only the notification to the owner: no auto-reply to the sender.
+      expect(mockSend).toHaveBeenCalledTimes(1);
+      expect((mockSend.mock.calls[0][0] as { to: string }).to).toBe("admin@example.com");
+    });
+
+    it("stops an address that has written too often, from any number of visitors", async () => {
+      mockEmailLimit.mockResolvedValue({ success: false, remaining: 0, resetTime: Date.now() + 1000 });
+      const res = await POST(createRequest(valid));
+      expect(res.status).toBe(429);
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
+    it("quietly drops a submission that filled the hidden field", async () => {
+      const res = await POST(createRequest({ ...valid, website: "http://spam.example" }));
+      expect(res.status).toBe(200);
+      expect(mockCreate).not.toHaveBeenCalled();
+      expect(mockSend).not.toHaveBeenCalled();
+    });
+
+    it("does not reveal the reason for an unexpected failure", async () => {
+      mockFindMany.mockRejectedValue(new Error("password=secret at db host 10.0.0.5"));
+      const res = await POST(createRequest(valid));
+      expect(res.status).toBe(500);
+      expect(JSON.stringify(await res.json())).not.toContain("secret");
+    });
   });
 });

@@ -13,7 +13,7 @@ jest.mock('@/lib/db', () => ({
   db: {
     newsletterSubscriber: {
       upsert: mockUpsert,
-      findUnique: mockFindUnique,
+      findFirst: mockFindUnique,
     },
     newsletterAuditLog: {
       create: mockCreate,
@@ -52,9 +52,12 @@ const mockWithRateLimit = jest.fn(
   ) => handler,
 );
 
+const mockEmailLimit: AsyncMock = jest.fn();
+
 jest.mock('@/lib/rate-limit', () => ({
   withRateLimit: mockWithRateLimit,
-  apiLimiter: {},
+  subscribeLimiter: {},
+  perEmailLimiter: { check: mockEmailLimit },
 }));
 
 // ---- Import handler AFTER mocks ----
@@ -69,7 +72,8 @@ beforeAll(async () => {
 beforeEach(() => {
   jest.clearAllMocks();
 
-  // Default DB behaviour: the email is not on the list yet
+  // Default: the address has not been tried too often, and is not on the list yet
+  mockEmailLimit.mockResolvedValue({ success: true, remaining: 2, resetTime: Date.now() + 3600000 });
   mockFindUnique.mockResolvedValue(null);
   mockUpsert.mockResolvedValue({
     id: 'sub-default',
@@ -392,23 +396,47 @@ describe('POST /api/newsletter/subscribe', () => {
     });
 
   it('does nothing when the email is already subscribed (no emails, no new tokens)', async () => {
-    mockFindUnique.mockResolvedValueOnce({ isSubscribed: true, isDeleted: false });
+    mockFindUnique.mockResolvedValueOnce({ email: 'test@example.com', isSubscribed: true, isDeleted: false });
 
     const response = await POST(signup());
     const data = await response.json();
 
-    // Same answer as a new signup, so the form reveals nothing about who is on the list.
+    // The visitor is told plainly that they are already subscribed.
     expect(response.status).toBe(200);
-    expect(data).toEqual({ success: true });
+    expect(data).toEqual({ success: true, alreadySubscribed: true });
     expect(mockUpsert).not.toHaveBeenCalled();
     expect(mockCreate).not.toHaveBeenCalled();
     expect(mockSendWelcomeEmail).not.toHaveBeenCalled();
     expect(mockSendAdminNotification).not.toHaveBeenCalled();
   });
 
+  it('stops an address that has been tried too many times, from any number of visitors', async () => {
+    mockEmailLimit.mockResolvedValueOnce({ success: false, remaining: 0, resetTime: Date.now() + 1000 });
+    const response = await POST(signup());
+    expect(response.status).toBe(429);
+    expect(mockFindUnique).not.toHaveBeenCalled();
+    expect(mockUpsert).not.toHaveBeenCalled();
+    expect(mockSendWelcomeEmail).not.toHaveBeenCalled();
+  });
+
+  it('treats capital letters as the same address', async () => {
+    mockUpsert.mockResolvedValueOnce({ id: 'sub-1', email: 'test@example.com', name: 'T' });
+    await POST(signup('Test@Example.COM'));
+    expect(mockEmailLimit).toHaveBeenCalledWith('newsletter:test@example.com');
+    const lookup = mockFindUnique.mock.calls[0][0] as { where: { email: { equals: string; mode: string } } };
+    expect(lookup.where.email).toEqual({ equals: 'test@example.com', mode: 'insensitive' });
+  });
+
+  it('updates the row stored with capital letters instead of making a duplicate', async () => {
+    mockFindUnique.mockResolvedValueOnce({ email: 'Test@Example.com', isSubscribed: false, isDeleted: false });
+    mockUpsert.mockResolvedValueOnce({ id: 'sub-1', email: 'Test@Example.com', name: 'T' });
+    await POST(signup('test@example.com'));
+    expect((mockUpsert.mock.calls[0][0] as { where: unknown }).where).toEqual({ email: 'Test@Example.com' });
+  });
+
   it.each([
-    ['unsubscribed earlier', { isSubscribed: false, isDeleted: false }],
-    ['deleted earlier', { isSubscribed: true, isDeleted: true }],
+    ['unsubscribed earlier', { email: 'test@example.com', isSubscribed: false, isDeleted: false }],
+    ['deleted earlier', { email: 'test@example.com', isSubscribed: true, isDeleted: true }],
   ])('lets someone re-subscribe who %s', async (_label, row) => {
     mockFindUnique.mockResolvedValueOnce(row);
 

@@ -58,7 +58,11 @@ const Newsletter = () => {
       }
 
       setStatus('success');
-      setMessage('Thank you for subscribing to our newsletter!');
+      setMessage(
+        data?.alreadySubscribed
+          ? "You're already subscribed. Nothing more to do."
+          : 'Thank you for subscribing to our newsletter!'
+      );
       setEmail('');
       setName('');
       setCaptchaToken('');

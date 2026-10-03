@@ -30,6 +30,9 @@ export default function ContactPage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [successText, setSuccessText] = useState('Message sent successfully!');
+  // Hidden from people; bots that fill every field give themselves away.
+  const [website, setWebsite] = useState('');
   const [error, setError] = useState<string | null>(null);
 
   const validateForm = (): boolean => {
@@ -110,7 +113,7 @@ export default function ContactPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(sanitizedData),
+        body: JSON.stringify({ ...sanitizedData, website }),
       });
 
       const data = await response.json();
@@ -119,6 +122,11 @@ export default function ContactPage() {
         throw new Error(data.error || 'Failed to send message');
       }
 
+      setSuccessText(
+        data.duplicate
+          ? 'We already have this message. I will reply soon.'
+          : 'Message sent successfully!'
+      );
       setSuccess(true);
       setFormData({
         name: '',
@@ -163,7 +171,7 @@ export default function ContactPage() {
 
           {success && (
             <div className="mb-6 p-4 bg-green-500/10 border border-green-500 text-green-500 rounded">
-              Message sent successfully! Redirecting to home page...
+              {successText} Redirecting to home page...
             </div>
           )}
 
@@ -174,6 +182,19 @@ export default function ContactPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Honeypot: invisible to people and to screen readers, tempting to bots. */}
+            <div aria-hidden="true" className="absolute -left-[9999px] h-0 w-0 overflow-hidden">
+              <label htmlFor="website">Leave this empty</label>
+              <input
+                id="website"
+                name="website"
+                type="text"
+                tabIndex={-1}
+                autoComplete="off"
+                value={website}
+                onChange={(e) => setWebsite(e.target.value)}
+              />
+            </div>
             <div>
               <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-2">
                 Name

@@ -335,6 +335,9 @@ placeholders (`<record-id>`, `example.com`).
   `mapPrismaError`; unknown errors through `handleError` (no internals leaked).
 - Public endpoints that must stay public (`/api/analytics/collect`, `/api/webhooks/resend`)
   say why, validate everything, and fail closed. The webhook is gated by its **signature**.
+- **Every public form has layers**: a per-visitor rate limit, a per-address limit (`perEmailLimiter`),
+  duplicate detection that answers plainly instead of repeating work, a honeypot field, and
+  no email sent to a stranger more than once a day. See doc 09, "Repeat submissions and abuse".
 - Uploads: the file's real bytes decide its type; **SVG is refused**; 5 MB cap; unguessable
   names; server-side only.
 - **Analytics is cookie-free and stores no IP address.** Do not add cookies or third-party

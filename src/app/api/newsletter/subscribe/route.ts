@@ -2,7 +2,7 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { sendWelcomeEmail, sendAdminNotification } from '@/lib/resend';
-import { withRateLimit, apiLimiter } from '@/lib/rate-limit';
+import { withRateLimit, subscribeLimiter, perEmailLimiter } from '@/lib/rate-limit';
 import {
   isIPBlacklisted,
   trackFailedAttempt,
@@ -27,7 +27,7 @@ function validateInputs(email: string, name: string): { isValid: boolean; error?
   return { isValid: true };
 }
 
-export const POST = withRateLimit(apiLimiter, 'newsletter-subscribe', async (req: Request) => {
+export const POST = withRateLimit(subscribeLimiter, 'newsletter-subscribe', async (req: Request) => {
   const ip = getClientIp(req.headers) || 'unknown';
   const userAgent = req.headers.get('user-agent') || 'unknown';
 
@@ -36,7 +36,8 @@ export const POST = withRateLimit(apiLimiter, 'newsletter-subscribe', async (req
   }
 
   const body = await req.json();
-  const email = sanitizeInput(body.email || '');
+  // One spelling per address: "Ada@X.com" and "ada@x.com" are the same inbox.
+  const email = sanitizeInput(body.email || '').toLowerCase();
   const name = sanitizeInput(body.name || '');
   const location = sanitizeInput(body.location || '');
 
@@ -60,17 +61,27 @@ export const POST = withRateLimit(apiLimiter, 'newsletter-subscribe', async (req
     }
   }
 
-  // Already on the list and active: answer exactly as for a new signup (so the
-  // form cannot be used to find out who is subscribed) but change nothing. No
-  // second welcome email, no admin notification, and above all no new tokens:
-  // generating them would silently break the unsubscribe and preferences links
-  // in the email this person already received.
-  const existing = await db.newsletterSubscriber.findUnique({
-    where: { email },
-    select: { isSubscribed: true, isDeleted: true },
+  // The same address again and again, from any number of visitors: stop it here.
+  const perEmail = await perEmailLimiter.check(`newsletter:${email}`);
+  if (!perEmail.success) {
+    return NextResponse.json(
+      { error: 'This address has been tried too many times. Please wait a while and try again.' },
+      { status: 429 },
+    );
+  }
+
+  // Already on the list and active: say so, and change nothing. No second welcome
+  // email, no admin notification, and above all no new tokens: generating them would
+  // silently break the unsubscribe and preferences links in the email this person
+  // already received. (This does reveal that an address is subscribed, which is a fair price
+  // for telling a real visitor they are already in. The limits above - 10 tries an hour
+  // per visitor, 3 per address - slow anyone down who tries to use it to probe addresses.)
+  const existing = await db.newsletterSubscriber.findFirst({
+    where: { email: { equals: email, mode: 'insensitive' } },
+    select: { email: true, isSubscribed: true, isDeleted: true },
   });
   if (existing?.isSubscribed && !existing.isDeleted) {
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, alreadySubscribed: true });
   }
 
   // Generate tokens
@@ -80,8 +91,10 @@ export const POST = withRateLimit(apiLimiter, 'newsletter-subscribe', async (req
   tokenExpiresAt.setDate(tokenExpiresAt.getDate() + 30); // 30 days expiry
 
   // Upsert via Prisma
+  // An older row may be stored with capital letters: update that one, not a duplicate.
+  const storedEmail = existing?.email ?? email;
   const subscriber = await db.newsletterSubscriber.upsert({
-    where: { email },
+    where: { email: storedEmail },
     update: {
       // A blank name must not erase one we already have.
       ...(name ? { name } : {}),

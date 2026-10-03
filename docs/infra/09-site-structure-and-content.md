@@ -241,6 +241,29 @@ Unsubscribe links in newsletters no longer expire (the old 30-day limit would ha
 the link in older emails). Scheduling a newsletter for later was removed from the form:
 nothing sent it at the chosen time, so the option would have been misleading.
 
+### Repeat submissions and abuse (newsletter sign-up and contact form)
+
+Both forms are public, so each has layers. A request must pass all of them.
+
+| Layer | Newsletter sign-up | Contact form |
+|---|---|---|
+| Per visitor (by real IP) | 10 an hour (`subscribeLimiter`) | 5 an hour (`contactFormLimiter`) |
+| Per **address**, from any number of visitors | 3 an hour (`perEmailLimiter`), so one inbox cannot be hammered from many places | 3 an hour, same limiter |
+| The same thing twice | An address already on the list gets **"You're already subscribed. Nothing more to do."** and nothing else happens: no second email, no new tokens | An identical message from the same address within 24 hours gets "We already have this message" and is **not saved or emailed again** |
+| Mail the site sends to a stranger | One welcome email per sign-up, never a repeat | The auto-reply goes only to an address's **first** message of the day |
+| Bots | A repeated-failure tracker and a CAPTCHA step (existing) | A hidden "website" field that people never see; a bot that fills it gets a fake success and nothing is stored |
+| Capital letters | `Ada@X.com` and `ada@x.com` are the same inbox (one row, not two) | Matched without regard to case |
+| Errors | Plain messages | The real reason stays in the log, never sent to the visitor |
+
+Trade-off to know about: saying "you're already subscribed" tells anyone who asks that an
+address is on the list. For a public newsletter that is a fair price for being clear to real
+visitors, and the limits above (10 tries an hour per visitor, 3 per address) slow down
+anyone trying to check a list of addresses.
+
+Still open, and worth doing: **double opt-in** (a confirmation link, so nobody can sign up
+or re-subscribe someone else's address; today a stranger can re-subscribe a person who had
+unsubscribed) and a **CAPTCHA on the contact form** (it has none).
+
 ### Showing, hiding and moving sections
 
 On **Pages → Home / About / Learning**, the first card is **Sections on this page**: every

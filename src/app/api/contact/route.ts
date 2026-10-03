@@ -1,6 +1,10 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import { withRateLimit, contactFormLimiter } from "@/lib/rate-limit";
+import {
+  withRateLimit,
+  contactFormLimiter,
+  perEmailLimiter,
+} from "@/lib/rate-limit";
 import {
   sanitizeEmail,
   sanitizeSubject,
@@ -16,7 +20,13 @@ export const POST = withRateLimit(
   "contact-form",
   async (request: Request) => {
     try {
-      const { name, email, subject, message } = await request.json();
+      const { name, email, subject, message, website } = await request.json();
+
+      // A hidden field no person sees or fills. A bot that fills every field gives itself
+      // away: answer as if it worked, and do nothing.
+      if (typeof website === "string" && website.trim() !== "") {
+        return NextResponse.json({ message: "Message sent successfully" });
+      }
 
       // Sanitize inputs
       const sanitizedEmail = sanitizeEmail(email);
@@ -39,6 +49,38 @@ export const POST = withRateLimit(
           { error: "Invalid email format" },
           { status: 400 },
         );
+      }
+
+      // The same address again and again, from any number of visitors.
+      const perEmail = await perEmailLimiter.check(
+        `contact:${sanitizedEmail.toLowerCase()}`,
+      );
+      if (!perEmail.success) {
+        return NextResponse.json(
+          {
+            error:
+              "You have sent several messages from this address already. Please wait a while before sending another.",
+          },
+          { status: 429 },
+        );
+      }
+
+      // The identical message from the same address in the last day is a repeat (a double
+      // click, a refresh, or a bot): say so, and do not save or email it a second time.
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+      const recentFromSender = await db.contactMessage.findMany({
+        where: {
+          email: { equals: sanitizedEmail, mode: "insensitive" },
+          createdAt: { gte: oneDayAgo },
+        },
+        select: { message: true },
+        take: 20,
+      });
+      if (recentFromSender.some((m) => m.message === sanitizedMessage)) {
+        return NextResponse.json({
+          message: "We already have this message. I will reply soon.",
+          duplicate: true,
+        });
       }
 
       // Save to database using Prisma
@@ -113,10 +155,15 @@ export const POST = withRateLimit(
         );
       }
 
-      // Auto-reply to the sender. This is best-effort — if it fails (e.g. the
+      // Auto-reply to the sender, but only to their first message of the day: the form must
+      // not become a way to make this site send repeated email to someone else's address.
+      // This is best-effort — if it fails (e.g. the
       // sender's mail server rejects), the operator still got the submission.
       // Log loudly but return success to the user.
       try {
+        if (recentFromSender.length > 0) {
+          return NextResponse.json({ message: "Message sent successfully" });
+        }
         await resend.emails.send({
           from: `Bamise Omolaso <${process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev"}>`,
           to: sanitizedEmail,
@@ -136,11 +183,9 @@ export const POST = withRateLimit(
         "Contact form error:",
         err instanceof Error ? err.message : err,
       );
+      // The reason stays in the log; the visitor gets a plain message.
       return NextResponse.json(
-        {
-          error:
-            err instanceof Error ? err.message : "Failed to process request",
-        },
+        { error: "Failed to process request" },
         { status: 500 },
       );
     }

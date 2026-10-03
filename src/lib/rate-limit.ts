@@ -223,6 +223,23 @@ export const apiLimiter = new RateLimiter({
   prefix: "api:",
 });
 
+/** Newsletter sign-ups: a real person signs up once, so a handful per hour per address is plenty. */
+export const subscribeLimiter = new RateLimiter({
+  maxRequests: 10,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  prefix: "subscribe:",
+});
+
+/**
+ * Limits per email address rather than per visitor, so one inbox cannot be hammered from
+ * many addresses (a distributed attack). Used as `perEmailLimiter.check("scope:email")`.
+ */
+export const perEmailLimiter = new RateLimiter({
+  maxRequests: 3,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  prefix: "per-email:",
+});
+
 export const adminLimiter = new RateLimiter({
   maxRequests: 50,
   windowMs: 60 * 60 * 1000, // 1 hour
