@@ -12,7 +12,7 @@ spec:
   project: default
   source:
     repoURL: https://github.com/BamiseOmolaso/cloudportfoliowebsite.git
-    targetRevision: develop
+    targetRevision: main
     path: infra/k8s/argocd/applications
     directory:
       recurse: false

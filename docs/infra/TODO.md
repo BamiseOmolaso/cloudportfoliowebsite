@@ -44,8 +44,9 @@ honest: it is the shared memory of the project.
   Let's Encrypt contact email in a public repo.
 - [ ] **Validate Kubernetes YAML in CI** (kubeconform), so a bad manifest fails the pull
   request instead of ArgoCD.
-- [ ] **Move ArgoCD to follow `main`** (instead of `develop`) once the Hetzner setup is
-  promoted and the old AWS pipeline on `main` is retired or disabled.
+- [x] **Move ArgoCD to follow `main`** (done 3 October 2026): the AWS auto-deploy and Terraform
+  workflows were switched to manual-only first, then `develop` was promoted to `main` with
+  `targetRevision: main` in one pull request (docs 05, section 4).
 - [ ] **Tighten the Postgres container** (read-only root filesystem with small writable
   folders), and consider point-in-time recovery if the data ever matters more.
 - [ ] **Restrict the web ports to Cloudflare's address ranges** in the Hetzner firewall
