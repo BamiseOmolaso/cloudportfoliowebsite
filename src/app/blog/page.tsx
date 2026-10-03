@@ -5,6 +5,7 @@ import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
+import Lessons from '@/components/portfolio/Lessons';
 
 interface BlogPost {
   id: string;
@@ -309,6 +310,9 @@ const BlogPage = () => {
             </button>
           </div>
         )}
+
+        {/* What broke and what I learnt while building this site. */}
+        <Lessons />
       </div>
     </div>
   );

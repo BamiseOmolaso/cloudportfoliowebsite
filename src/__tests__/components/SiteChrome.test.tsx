@@ -1,6 +1,6 @@
 /**
  * Which header and footer wraps which page:
- *  - "/", "/architecture", "/about": nothing (they bring their own header and footer)
+ *  - "/", "/about": nothing (they bring their own header and footer)
  *  - /admin, /login : the plain legacy header and footer
  *  - everything else: the new header (links back to the home page's sections)
  *                     and the new footer
@@ -33,7 +33,7 @@ const renderAt = (path: string) => {
 };
 
 describe("SiteChrome", () => {
-  it.each(["/", "/architecture", "/about"])(
+  it.each(["/", "/about"])(
     "adds nothing around %s (it brings its own header and footer)",
     (path) => {
       renderAt(path);

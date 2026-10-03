@@ -2,6 +2,7 @@ import AboutTeaser from "@/components/portfolio/AboutTeaser";
 import Contact from "@/components/portfolio/Contact";
 import Hero from "@/components/portfolio/Hero";
 import { LivePosts } from "@/components/portfolio/LiveFeeds";
+import PlatformFeature from "@/components/portfolio/PlatformFeature";
 import PortfolioShell from "@/components/portfolio/PortfolioShell";
 import Results from "@/components/portfolio/Results";
 import SiteFooter from "@/components/portfolio/SiteFooter";
@@ -14,12 +15,12 @@ export const metadata = { alternates: { canonical: "/" } };
 
 // The landing page, in the order a visitor decides to hire someone:
 //   Attention  the hero and the tools I build with
-//   Interest   the numbers, then the featured projects and the latest posts
+//   Interest   the numbers, the platform this site runs on, then featured projects and posts
 //   Desire     why a doctor, and the teaching channel
 //   Action     one clear way to get in touch
 // Each section shows a few items and links to a full page, so nothing is said twice:
 //   /projects, /blog   the full lists (managed in the admin panel)
-//   /architecture      the case study of how this site is built
+//   /projects/production-platform-on-hetzner   the case study of how this site is built
 //   /about             where I've worked and why a doctor
 export default function HomePage() {
   return (
@@ -28,6 +29,7 @@ export default function HomePage() {
         <Hero />
         <ToolsStrip />
         <Results />
+        <PlatformFeature />
         <Work />
         <LivePosts />
         <AboutTeaser />

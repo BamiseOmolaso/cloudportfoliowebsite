@@ -79,7 +79,6 @@ export interface Project {
   links: Link[];
   note?: string;
   /** A page on this site that tells the whole story. */
-  caseStudy?: Link;
   /** A shorter line for the home page card; the full `body` is on the project's own page. */
   blurb?: string;
 }
@@ -218,10 +217,20 @@ export const aboutTeaser = {
   href: "/about",
 } as const;
 
-
 /** "See all" links from the home page into each full page. */
 export const seeAll = {
   projects: { label: "See all projects", href: "/projects" },
+  platform: {
+    label: "Read how I built it",
+    href: "/projects/production-platform-on-hetzner",
+  },
+} as const;
+
+/** The home page's showcase of the platform this site runs on. */
+export const platformFeature = {
+  title: "This site runs on a platform I built.",
+  intro:
+    "A hardened server, Kubernetes, deploys from Git and a database restore I have tested. Pick a tab to follow a request, a change or a backup.",
 } as const;
 
 /** The five scroll steps that follow the hero (edge → app → data → security → cost). */
@@ -303,7 +312,8 @@ export const stats: Stat[] = [
   },
   {
     value: "Under $5",
-    label: "monthly idle cost of the AWS version of this site (paused), down from about $250",
+    label:
+      "monthly idle cost of the AWS version of this site (paused), down from about $250",
   },
   {
     value: "3",
@@ -509,7 +519,6 @@ export const work = {
 export const projects: Project[] = [
   {
     title: "Production platform on Hetzner",
-    featured: true,
     status: "Live",
     blurb:
       "A hardened server, Kubernetes, GitOps deploys and a database restore I have tested, all built from code and documented.",
@@ -525,7 +534,6 @@ export const projects: Project[] = [
       "Next.js",
     ],
     links: [{ label: "Repository", href: repo("cloudportfoliowebsite") }],
-    caseStudy: { label: "Read the case study", href: "/architecture" },
   },
   {
     title: "Cloud portfolio on AWS",
@@ -543,7 +551,6 @@ export const projects: Project[] = [
       "PostgreSQL",
     ],
     links: [{ label: "Repository", href: repo("cloudportfoliowebsite") }],
-    caseStudy: { label: "Read the case study", href: "/architecture" },
   },
   {
     title: "Hotel booking platform",
@@ -558,6 +565,9 @@ export const projects: Project[] = [
   },
   {
     title: "Self-hosted automation on a VPS",
+    featured: true,
+    blurb:
+      "n8n behind Nginx and HTTPS, rebuildable from the docs, with encrypted off-server backups and a restore I have tested.",
     status: "Live",
     body: "A workflow-automation tool behind Nginx and HTTPS, with every step documented so it can be rebuilt from scratch: encrypted off-server backups with a tested restore, key-only SSH, and secrets kept out of git.",
     stack: [

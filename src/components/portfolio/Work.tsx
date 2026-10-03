@@ -30,11 +30,6 @@ export default function Work() {
                 ))}
               </div>
               <div className="proj-links">
-                {p.caseStudy && (
-                  <Link className="case-study" href={p.caseStudy.href}>
-                    {p.caseStudy.label} →
-                  </Link>
-                )}
                 {p.links.map((l) => (
                   <a
                     key={l.href}

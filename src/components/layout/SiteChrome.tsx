@@ -9,7 +9,7 @@ import SiteFooter from "@/components/portfolio/SiteFooter";
 // These pages bring their own header, footer and full-bleed layout, so nothing
 // may wrap them. "/" matches the home page only: the startsWith check below
 // adds a trailing slash, so "//" matches nothing.
-const BARE_ROUTES = ["/", "/architecture", "/about"];
+const BARE_ROUTES = ["/", "/about"];
 
 // The admin tool keeps the plain header and footer: it is a working screen,
 // not part of the public look.

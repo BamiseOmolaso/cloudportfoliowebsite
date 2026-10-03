@@ -15,25 +15,30 @@ where the logos, diagrams and copy come from.
 ```mermaid
 flowchart TD
   H["Home /<br/>the landing page"]
+  H -->|"the platform, drawn"| PS
   H -->|"3 featured, then See all"| P["/projects<br/>the full list"]
   H -->|"3 latest, then All posts"| B["/blog<br/>the full list"]
   H -->|"More about me"| AB["/about<br/>record and why a doctor"]
   H -->|"Send a message"| CF["/contact<br/>the full form"]
   P --> PS["/projects/slug<br/>one project, with its diagram"]
-  PS -->|"Read the case study"| A["/architecture<br/>how this site is built"]
+  PS --> PL["/projects/production-platform-on-hetzner<br/>diagram, Terraform timeline, pipeline, patterns"]
+  B --> L["/blog<br/>posts, then lessons learnt"]
   B --> BS["/blog/slug"]
 ```
 
-The menu is **Home, Projects, Blog, About, Contact**. "How it's built" is not in the menu
-any more: it is a **project** (the platform this site runs on), and its case study is
-reached from that project's card and page.
+The menu is **Home, Projects, Blog, About, Contact**. "How it's built" is not in the menu:
+it is a **project** (the platform this site runs on). The home page draws that platform
+with its tabs and a "Read how I built it" link; the case study itself lives on the
+project's page under Projects. The old `/architecture` address redirects there (308,
+permanent). What broke and what I learnt sits at the foot of the blog.
 
 | Page | Job | Content comes from |
 |---|---|---|
 | `/` | Persuade: hero, proof, featured work, latest posts, one way to get in touch | The content file, plus the database for posts |
 | `/projects`, `/projects/slug` | Every project; a project page shows its architecture diagram | The **database**, plus the content file for the diagrams |
 | `/blog`, `/blog/slug` | Every post | The **database** |
-| `/architecture` | The case study: the platform today, the AWS design, Terraform timeline, pipeline, patterns, incidents, further reading | The content file |
+| `/projects/production-platform-on-hetzner` | The case study: the platform's diagram, Terraform timeline, pipeline, patterns | The content file, below the project's own text |
+| `/blog` (foot of the page) | Lessons: incidents and what changed, plus the long-form write-ups | The content file |
 | `/about` | Where I've worked, what I hold, why a doctor | The content file |
 | `/contact` | The full contact form | Code (posts to `/api/contact`) |
 

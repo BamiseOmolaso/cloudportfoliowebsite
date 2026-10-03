@@ -1,6 +1,6 @@
 import { db } from '@/lib/db';
 import ProjectView from '@/components/portfolio/ProjectView';
-import { projectSlug, projects } from '@/content/portfolio';
+import CaseStudy from '@/components/portfolio/CaseStudy';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -140,8 +140,6 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
       // Not valid JSON, use as-is
     }
   }
-
-  const caseStudy = projects.find((p) => projectSlug(p.title) === slug)?.caseStudy;
 
   // Sanitize content (server-safe sanitization)
   const sanitizedContent = sanitizeHtmlServer(content);
@@ -288,18 +286,9 @@ export default async function ProjectPage({ params }: { params: Promise<{ slug: 
           </div>
         </article>
 
-        {/* The curated projects have an architecture view and a case study. */}
+        {/* The curated projects have an architecture view; the platform also has a case study. */}
         <ProjectView slug={slug} />
-        {caseStudy && (
-          <p className="mt-8">
-            <Link
-              href={caseStudy.href}
-              className="inline-flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors"
-            >
-              {caseStudy.label} →
-            </Link>
-          </p>
-        )}
+        <CaseStudy slug={slug} />
       </div>
     </div>
   );
