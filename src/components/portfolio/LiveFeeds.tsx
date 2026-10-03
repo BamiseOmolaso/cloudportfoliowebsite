@@ -63,12 +63,14 @@ export function LivePosts() {
             </span>
             <h3>{p.title}</h3>
             <p>{p.excerpt}</p>
-            <span className="go">Read →</span>
+            <span className="btn primary go">Read more →</span>
           </Link>
         ))}
       </div>
       <p className="more">
-        <Link href="/blog">{livePosts.all}</Link>
+        <Link className="btn primary" href="/blog">
+          {livePosts.all}
+        </Link>
       </p>
     </section>
   );
@@ -95,9 +97,12 @@ export function LiveProjects() {
               ))}
             </div>
             <div className="proj-links">
-              <Link href={`/projects/${p.slug}`}>Details →</Link>
+              <Link className="btn primary" href={`/projects/${p.slug}`}>
+                Details →
+              </Link>
               {p.github_url && (
                 <a
+                  className="btn primary"
                   href={p.github_url}
                   target="_blank"
                   rel="noopener noreferrer"
@@ -110,7 +115,9 @@ export function LiveProjects() {
         ))}
       </div>
       <p className="more">
-        <Link href="/projects">{liveProjects.all}</Link>
+        <Link className="btn primary" href="/projects">
+          {liveProjects.all}
+        </Link>
       </p>
     </div>
   );

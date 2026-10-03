@@ -2041,7 +2041,8 @@
 .pf .post {
   display: grid;
   gap: 0.55rem;
-  align-content: start;
+  /* label, title, summary (takes the spare room), then the button along the bottom */
+  grid-template-rows: auto auto 1fr auto;
   text-decoration: none;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -2060,10 +2061,10 @@
   color: var(--ink-2);
   font-size: 0.92rem;
 }
+/* "Read more" is a button drawn inside the card, which is itself the link */
 .pf .post .go {
-  color: var(--accent);
-  font-family: var(--font-mono);
-  font-size: 0.75rem;
+  justify-self: start;
+  margin-top: 0.5rem;
 }
 .pf .more {
   margin-top: 1.2rem;
