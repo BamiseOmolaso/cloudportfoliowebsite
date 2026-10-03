@@ -1,16 +1,11 @@
 name: Terraform Infrastructure
 
 on:
-  # Run after CI passes — restricted to main only so develop and staging
-  # serve as branch-progression / code-review stages without spending money
-  # on duplicate AWS environments. The actual apply happens once code reaches
-  # main, with the production-environment approval gate as a safety net.
-  workflow_run:
-    workflows: ["CI Pipeline"]
-    types:
-      - completed
-    branches:
-      - main
+  # RETIRED AS AN AUTOMATIC STEP (October 2026). This used to plan and apply the AWS Terraform in
+  # terraform/ whenever CI passed on main. The site now runs on Hetzner (infra/terraform, workflow
+  # infra.yml) and the AWS stack is paused, so a push to main must not apply AWS changes. To bring
+  # AWS back, add the `workflow_run` trigger again (workflows: ["CI Pipeline"], types:
+  # [completed], branches: [main]) or use the manual trigger below. Pull-request plans still run.
   # PR plans only for PRs targeting main (the only branch that actually
   # deploys). PRs into develop/staging still run CI Pipeline; they just
   # don't need a Terraform plan since neither will apply.
