@@ -256,7 +256,7 @@ You should see `drwx------ ... 999 999 ... /srv/data/postgres`. The two `999`s a
 
 ### Step C: merge, and let ArgoCD deploy
 
-After the pull request is merged to `develop`, ArgoCD creates the namespace, storage,
+After the pull request is merged to `staging`, ArgoCD creates the namespace, storage,
 config, service, database and backup job within a few minutes:
 
 ```bash

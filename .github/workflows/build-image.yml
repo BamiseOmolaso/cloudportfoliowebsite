@@ -4,11 +4,11 @@ name: Build and publish images
 #   app      -> the Next.js website        (Dockerfile target "runner")
 #   migrator -> applies database migrations (Dockerfile target "migrator")
 # On a pull request we only BUILD (proves the Dockerfile works).
-# On a push to develop we also PUSH to GitHub's registry (GHCR), tagged with
+# On a push to staging we also PUSH to GitHub's registry (GHCR), tagged with
 # the commit, so the cluster can pull exactly that version.
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main, staging]
     paths:
       - 'Dockerfile'
       - '.dockerignore'
@@ -24,7 +24,7 @@ on:
   # "Run workflow": workflow_dispatch below.) A release then names the newest commit that HAS an
   # image, which is the last one that changed the website.
   push:
-    branches: [develop]
+    branches: [staging]
     paths:
       - 'Dockerfile'
       - '.dockerignore'
@@ -91,7 +91,7 @@ jobs:
           tags: |
             type=sha,prefix=sha-,format=short
 
-      - name: Build (and push on develop)
+      - name: Build (and push on staging)
         uses: docker/build-push-action@v6
         with:
           context: .

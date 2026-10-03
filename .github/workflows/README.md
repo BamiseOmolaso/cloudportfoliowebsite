@@ -7,10 +7,10 @@ What runs, when, and why. (The site runs on Hetzner and is deployed by ArgoCD fr
 
 | Workflow | Runs when | What it does |
 |---|---|---|
-| **`ci.yml`** (CI Pipeline) | Every pull request to `main` or `develop`; pushes to `main`, `develop` and `feature/**` (not docs-only pushes) | Decides what changed, then lints, type-checks, tests and security-scans the website **only if website files changed**; validates the old AWS Terraform **only if `terraform/` changed**. **CI Summary** is the one check to require: it fails if any job failed, and accepts skipped ones |
-| **`build-image.yml`** (Build and publish images) | Pull requests that touch website files; pushes to `develop` that touch website files; by hand ("Run workflow") | Builds the two container images (app and migrator). On a pull request it only builds (proves the Dockerfile works). On a push to `develop` it **publishes both to GitHub's registry tagged with the commit** (`sha-<7 letters>`) and **scans the published image with Trivy** (findings under Security, reported but not blocking) |
+| **`ci.yml`** (CI Pipeline) | Every pull request to `main` or `staging`; pushes to `main`, `staging` and `feature/**` (not docs-only pushes) | Decides what changed, then lints, type-checks, tests and security-scans the website **only if website files changed**; validates the old AWS Terraform **only if `terraform/` changed**. **CI Summary** is the one check to require: it fails if any job failed, and accepts skipped ones |
+| **`build-image.yml`** (Build and publish images) | Pull requests that touch website files; pushes to `staging` that touch website files; by hand ("Run workflow") | Builds the two container images (app and migrator). On a pull request it only builds (proves the Dockerfile works). On a push to `staging` it **publishes both to GitHub's registry tagged with the commit** (`sha-<7 letters>`) and **scans the published image with Trivy** (findings under Security, reported but not blocking) |
 | **`infra.yml`** (Hetzner Infrastructure) | Pull requests touching `infra/terraform/**`; pushes to `main` touching it; by hand | Formats and validates the Hetzner Terraform, shows a **plan** on pull requests, and on `main` offers an **apply that waits for approval** in the `hetzner-production` environment |
-| **`secret-scan.yml`** | Every pull request; pushes to `main`, `develop`, `staging` | Scans the whole history for committed secrets (gitleaks) |
+| **`secret-scan.yml`** | Every pull request; pushes to `main`, `staging` | Scans the whole history for committed secrets (gitleaks) |
 | `terraform.yml` (old AWS) | Pull-request plans for `terraform/**`; by hand | The AWS Terraform plan and apply. **No longer runs automatically on `main`** |
 | `deploy-app.yml` (old AWS) | By hand only | Builds and deploys to AWS ECS. **No longer runs automatically on `main`** |
 
@@ -23,7 +23,7 @@ flowchart LR
   CH -->|"website files"| IM["build-image.yml: build only"]
   CH -->|"Terraform files"| INF["infra.yml: validate + plan"]
   CH -->|"anything"| SS["secret-scan.yml"]
-  MERGE["Merge to develop"] -->|"website files"| PUB["build-image.yml: build, publish to GHCR, scan"]
+  MERGE["Merge to staging"] -->|"website files"| PUB["build-image.yml: build, publish to GHCR, scan"]
   REL["Release PR to main<br/>changes the image tag"] --> ARGO["ArgoCD deploys"]
   PUB -.->|"the tag comes from here"| REL
 ```
@@ -47,6 +47,6 @@ flowchart LR
 |---|---|
 | A pull request shows many "skipping" jobs | Expected: nothing those jobs cover changed |
 | `Image (app)` failed fetching fonts | A temporary network problem on Google's side; re-run the failed job (`docs/infra/runbooks/02-troubleshooting-log.md`, B1) |
-| Which commit has an image? | The newest one on `develop` that changed website files. A release uses that tag |
+| Which commit has an image? | The newest one on `staging` that changed website files. A release uses that tag |
 | An infrastructure "Apply" is waiting | Don't approve until the GitHub secret `TF_VAR_ADMIN_CIDRS` matches the real firewall (troubleshooting log, E1) |
 | Where do Trivy findings appear? | GitHub: **Security** tab, **Code scanning**, category `trivy-app` or `trivy-migrator` |
