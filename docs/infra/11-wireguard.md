@@ -190,6 +190,30 @@ is then your only way in.
 | Handshake, but `ssh`/`ping` to `10.8.0.1` fails | `AllowedIPs` on the laptop is not `10.8.0.1/32`, or the peer's `address` on the server does not match the laptop's `Address` |
 | `ssh` works, `kubectl` says the certificate is not valid for `10.8.0.1` | Step 5 was skipped (k3s has not re-issued its certificate) |
 | Worked, then stopped on a new network | Some networks block UDP. Try the phone hotspot; if only one network fails, that network blocks it |
+| Works on its own, but not while another VPN is on | See "Using it with another VPN" below |
+
+### Using it with another VPN
+
+Yes, it works, and it is a good reason to have it: with the tunnel your IP address no longer
+matters, so a commercial VPN (which changes your address) cannot lock you out. The
+tunnel simply runs *inside* the other VPN. It needs three things:
+
+1. **The other VPN must let UDP out.** Most do. Some block unusual ports; if the handshake
+   never appears only while that VPN is on, that is the cause. Try another server or protocol
+   in that VPN's settings, or disconnect it for admin work.
+2. **No clash on `10.8.0.0/24`.** Some company or home VPNs use `10.x` addresses. Only
+   `10.8.0.1/32` is routed through the tunnel, so a clash is rare; if one happens, change
+   `wireguard_server_address` and the laptop addresses to another range (for example
+   `10.77.0.0/24`) and run the playbook again.
+3. **Smaller packets.** One VPN inside another adds wrapping, so large packets may not fit.
+   Symptoms: the handshake works and `ping` works but `ssh` hangs, or `kubectl` is slow or
+   times out. Fix: write the laptop config with a smaller size, then bring it up again:
+   `WG_MTU=1280 SERVER_PUBLIC_KEY=... SERVER_ENDPOINT=... bash infra/scripts/wireguard-client.sh`
+
+Until you have proven the tunnel, keep your current address in `admin_cidrs`, and remember
+that the address the firewall sees is the **other VPN's exit address**, not your home one.
+That is exactly what happened when `kubectl` timed out for you: the VPN changed what the
+server saw.
 
 ## 8. Verified results
 

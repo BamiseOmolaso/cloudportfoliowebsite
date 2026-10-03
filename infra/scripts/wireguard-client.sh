@@ -20,6 +20,8 @@ DIR="${HOME}/.config/wireguard-hetzner"
 CLIENT_ADDRESS="${CLIENT_ADDRESS:-10.8.0.2/32}"   # this laptop's address inside the tunnel
 SERVER_TUNNEL_IP="${SERVER_TUNNEL_IP:-10.8.0.1}"  # the server's address inside the tunnel
 PORT="${WG_PORT:-51820}"
+# Set WG_MTU=1280 if you connect through another VPN (see docs/infra/11-wireguard.md).
+WG_MTU="${WG_MTU:-}"
 
 if ! command -v wg >/dev/null 2>&1; then
   echo "WireGuard tools are not installed. Run:  brew install wireguard-tools" >&2
@@ -53,6 +55,7 @@ CONF="$DIR/hetzner.conf"
 [Interface]
 PrivateKey = $(cat "$DIR/private.key")
 Address = ${CLIENT_ADDRESS}
+${WG_MTU:+MTU = ${WG_MTU}}
 
 [Peer]
 PublicKey = ${SERVER_PUBLIC_KEY}
