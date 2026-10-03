@@ -1,0 +1,62 @@
+%%{init: {"theme": "base", "themeVariables": {"fontFamily": "Helvetica, Arial, sans-serif", "fontSize": "16px", "primaryColor": "#1b1b2f", "primaryTextColor": "#ecebf7", "primaryBorderColor": "#9b7bff", "lineColor": "#b9b8d0", "secondaryColor": "#11111e", "tertiaryColor": "#0c0c16", "clusterBkg": "#0c0c16", "clusterBorder": "#4a4a6a", "edgeLabelBackground": "#0c0c16"}, "flowchart": {"curve": "basis", "htmlLabels": true, "nodeSpacing": 34, "rankSpacing": 46}}}%%
+flowchart TB
+  V(["Visitor's browser"])
+  CF["<b>Cloudflare</b><br/>DNS, proxy, HTTPS, Web Analytics<br/>Access: a second login for /admin"]
+  V -->|"HTTPS"| CF
+  CF -->|"ports 80 and 443,<br/>Cloudflare addresses only"| FW
+
+  subgraph HZ["Hetzner Cloud: one server, one firewall"]
+    direction TB
+    FW{{"Cloud firewall<br/>drops everything else"}}
+    subgraph SRV["Server: Ubuntu, hardened with Ansible"]
+      direction TB
+      subgraph K3S["k3s (Kubernetes)"]
+        direction TB
+        TR["Traefik<br/>the front door"]
+        APP["Next.js app<br/>site, admin and API"]
+        PG[("PostgreSQL<br/>on its own data disk")]
+        BK["Backup job<br/>daily, 02:17 UTC"]
+        TR --> APP
+        APP --> PG
+        BK --> PG
+      end
+      WG["WireGuard tunnel<br/>10.8.0.1"]
+    end
+    FW --> TR
+  end
+
+  subgraph EXT["Services the app uses"]
+    direction LR
+    R2M[("R2: uploaded images<br/>media.oluwabamiseomolaso.com.ng")]
+    R2B[("R2: database backups<br/>kept 30 days")]
+    RS["Resend<br/>sends newsletters and mail"]
+    RC["Redis Cloud<br/>rate limits"]
+    CAP["Google reCAPTCHA"]
+  end
+
+  APP --> R2M
+  BK --> R2B
+  APP -->|"send"| RS
+  RS -.->|"delivered, opened, bounced"| APP
+  APP --> RC
+  APP --> CAP
+
+  ME(["You: laptop, any network"])
+  ME -.->|"encrypted tunnel for<br/>ssh and kubectl"| WG
+
+  subgraph GIT["Delivery: git is the only way in"]
+    direction LR
+    GH["GitHub<br/>main branch"]
+    GHCR["GHCR<br/>container images"]
+    ARGO["ArgoCD<br/>runs in the cluster"]
+    GH --> ARGO
+    GHCR --> ARGO
+  end
+  ARGO -.->|"applies changes"| K3S
+
+  classDef edge fill:#1b1b2f,stroke:#9b7bff,color:#ecebf7;
+  classDef store fill:#11111e,stroke:#4fd1c5,color:#ecebf7;
+  classDef ext fill:#0c0c16,stroke:#8a89a8,color:#d6d5e6;
+  class CF,FW,WG,TR edge;
+  class PG,R2M,R2B store;
+  class RS,RC,CAP,GH,GHCR,ARGO,ME ext;
