@@ -2,6 +2,16 @@ import Contact from "@/components/portfolio/Contact";
 import PortfolioShell from "@/components/portfolio/PortfolioShell";
 import { Clinical, Record } from "@/components/portfolio/Record";
 import SiteFooter from "@/components/portfolio/SiteFooter";
+import {
+  certifications,
+  clinical,
+  contact,
+  experience,
+  newsletter,
+  record,
+} from "@/content/portfolio";
+import { withOverrides } from "@/content/editable";
+import { getOverrides } from "@/lib/site-content";
 import { fontVars } from "../fonts";
 
 export const metadata = {
@@ -11,14 +21,21 @@ export const metadata = {
   alternates: { canonical: "/about" },
 };
 
-export default function AboutPage() {
+export const dynamic = "force-dynamic";
+
+export default async function AboutPage() {
+  const o = await getOverrides();
   return (
     <PortfolioShell className={fontVars} onHome={false}>
       <div className="wrap page-top" id="main">
-        <Record />
-        <Clinical />
-        <Contact />
-        <SiteFooter />
+        <Record
+          content={withOverrides("record", record, o)}
+          jobs={withOverrides("experience", experience, o)}
+          certs={withOverrides("certifications", certifications, o)}
+        />
+        <Clinical content={withOverrides("clinical", clinical, o)} />
+        <Contact content={withOverrides("contact", contact, o)} />
+        <SiteFooter newsletter={withOverrides("newsletter", newsletter, o)} />
       </div>
     </PortfolioShell>
   );

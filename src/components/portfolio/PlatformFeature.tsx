@@ -7,12 +7,16 @@ import StackTabs from "./StackTabs";
  * The platform this site runs on, drawn on the landing page, with a link to the
  * full case study (which lives under Projects).
  */
-export default function PlatformFeature() {
+export default function PlatformFeature({
+  content = platformFeature,
+}: {
+  content?: { title: string; intro: string };
+}) {
   return (
     <section className="block" id="platform">
       <div className="sec-head rise">
-        <h2>{platformFeature.title}</h2>
-        <p>{platformFeature.intro}</p>
+        <h2>{content.title}</h2>
+        <p>{content.intro}</p>
       </div>
       <div className="rise">
         <StackTabs view={hetznerView} idPrefix="home-platform" />

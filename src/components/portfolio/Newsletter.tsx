@@ -11,7 +11,11 @@ type Status = "idle" | "sending" | "done" | "error" | "captcha";
  * asks for a CAPTCHA (it does after repeated attempts) the visitor is sent
  * to the newsletter page, where the CAPTCHA lives.
  */
-export default function Newsletter() {
+export default function Newsletter({
+  content = newsletter,
+}: {
+  content?: typeof newsletter;
+}) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
@@ -33,7 +37,7 @@ export default function Newsletter() {
       }
       if (!res.ok) throw new Error(data?.error || "Failed to subscribe");
       setStatus("done");
-      setMessage(newsletter.success);
+      setMessage(content.success);
       setEmail("");
     } catch (err) {
       setStatus("error");
@@ -43,8 +47,8 @@ export default function Newsletter() {
 
   return (
     <form className="news" onSubmit={submit}>
-      <h3>{newsletter.title}</h3>
-      <p>{newsletter.body}</p>
+      <h3>{content.title}</h3>
+      <p>{content.body}</p>
       <div className="news-row">
         <label className="sr-only" htmlFor="pf-news-email">
           Email address
@@ -54,7 +58,7 @@ export default function Newsletter() {
           type="email"
           required
           autoComplete="email"
-          placeholder={newsletter.placeholder}
+          placeholder={content.placeholder}
           value={email}
           onChange={(e) => setEmail(e.target.value)}
         />
@@ -63,14 +67,14 @@ export default function Newsletter() {
           type="submit"
           disabled={status === "sending"}
         >
-          {status === "sending" ? "Subscribing…" : newsletter.button}
+          {status === "sending" ? "Subscribing…" : content.button}
         </button>
       </div>
       <p className="news-msg" role="status" aria-live="polite">
         {status === "captcha" ? (
           <>
-            {newsletter.captcha}{" "}
-            <Link href="/newsletter">{newsletter.captchaLink}</Link>
+            {content.captcha}{" "}
+            <Link href="/newsletter">{content.captchaLink}</Link>
           </>
         ) : (
           message

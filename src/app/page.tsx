@@ -10,9 +10,25 @@ import SiteFooter from "@/components/portfolio/SiteFooter";
 import ToolsStrip from "@/components/portfolio/ToolsStrip";
 import Work from "@/components/portfolio/Work";
 import YouTube from "@/components/portfolio/YouTube";
+import {
+  contact,
+  hero,
+  homeHero,
+  newsletter,
+  patterns,
+  patternsSection,
+  platformFeature,
+  profile,
+  work,
+} from "@/content/portfolio";
+import { withOverrides } from "@/content/editable";
+import { getOverrides } from "@/lib/site-content";
 import { fontVars } from "./fonts";
 
 export const metadata = { alternates: { canonical: "/" } };
+
+// Text edited in the admin panel is read per request.
+export const dynamic = "force-dynamic";
 
 // The landing page, in the order a visitor decides to hire someone:
 //   Attention  the hero and the tools I build with
@@ -25,21 +41,34 @@ export const metadata = { alternates: { canonical: "/" } };
 //   /projects/production-platform-on-hetzner   the platform in full
 //   /learning          how my Terraform went from one server to a production stack
 //   /about             where I've worked and why a doctor (in the menu, not repeated here)
-export default function HomePage() {
+export default async function HomePage() {
+  const o = await getOverrides();
   return (
     <PortfolioShell className={fontVars}>
       <div className="wrap">
-        <Hero />
+        <Hero
+          content={{
+            hero: withOverrides("hero", hero, o),
+            homeHero: withOverrides("homeHero", homeHero, o),
+            role: withOverrides("profile", profile, o).role,
+          }}
+        />
         <ToolsStrip />
         <Results />
-        <Work />
-        <PlatformFeature />
+        <Work content={withOverrides("work", work, o)} />
+        <PlatformFeature
+          content={withOverrides("platformFeature", platformFeature, o)}
+        />
         <PipelineDemo />
-        <Patterns limit={2} />
+        <Patterns
+          limit={2}
+          section={withOverrides("patternsSection", patternsSection, o)}
+          items={withOverrides("patterns", patterns, o)}
+        />
         <LivePosts />
         <YouTube />
-        <Contact />
-        <SiteFooter />
+        <Contact content={withOverrides("contact", contact, o)} />
+        <SiteFooter newsletter={withOverrides("newsletter", newsletter, o)} />
       </div>
     </PortfolioShell>
   );

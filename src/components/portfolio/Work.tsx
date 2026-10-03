@@ -4,12 +4,12 @@ import { ToolChip } from "./BrandIcon";
 import FlowStrip from "./FlowStrip";
 
 /** Selected work: the featured projects; the rest are on /projects. */
-export default function Work() {
+export default function Work({ content = work }: { content?: typeof work }) {
   return (
     <section className="block" id="work">
       <div className="sec-head rise">
-        <h2>{work.title}</h2>
-        <p>{work.intro}</p>
+        <h2>{content.title}</h2>
+        <p>{content.intro}</p>
       </div>
       <div className="projects">
         {projects

@@ -4,19 +4,24 @@ import { hero, homeHero, profile } from "@/content/portfolio";
  * The landing page's opening: who I am, what I do, and two ways to act. One small
  * line above the headline, no tagline below it, and the headline fits on two lines.
  */
-export default function Hero() {
+export default function Hero({
+  content = { hero, homeHero, role: profile.role },
+}: {
+  content?: { hero: typeof hero; homeHero: typeof homeHero; role: string };
+}) {
+  const { hero: h, homeHero: hh, role } = content;
   return (
     <section className="home-hero" aria-labelledby="home-title">
-      <span className="label">{profile.role}</span>
+      <span className="label">{role}</span>
       <h1 id="home-title">
-        {hero.headlineStart}
-        <em>{hero.headlineEmphasis}</em>
-        {hero.headlineEnd}
+        {h.headlineStart}
+        <em>{h.headlineEmphasis}</em>
+        {h.headlineEnd}
       </h1>
-      <p>{homeHero.intro}</p>
+      <p>{hh.intro}</p>
       <div className="ctas">
         <a className="btn primary" href="#work">
-          {homeHero.primaryCta}
+          {hh.primaryCta}
         </a>
         <a
           className="btn"
@@ -24,7 +29,7 @@ export default function Hero() {
           target="_blank"
           rel="noopener noreferrer"
         >
-          {homeHero.secondaryCta}
+          {hh.secondaryCta}
         </a>
       </div>
     </section>

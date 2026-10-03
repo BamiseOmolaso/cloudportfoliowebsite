@@ -71,7 +71,7 @@ gradient" cliché, stays because it is the look you chose.
 |---|---|---|
 | Good for | Curated text that rarely changes and is reviewed in a pull request | Things you add often, without a code change |
 | Changing it | Edit, open a PR, release | Log in to `/admin`, edit, save: live immediately |
-| Examples | Hero text, results, the curated projects, the diagrams | Blog posts, projects |
+| Examples | Results, the diagrams, links, logos | Blog posts, projects, and (since the Pages screen) the wording of Home, About, Learning and Contact, laid over the text in the code |
 
 **The seven curated projects live in both places, on purpose.** The home page shows three
 *featured* ones straight from the content file, so it never looks empty and never depends
@@ -181,7 +181,46 @@ harmless and can be removed.
 
 *To be filled in after the release.*
 
-## 10. Glossary
+## 10. The admin panel
+
+The admin panel (`/admin`) has its own sidebar layout, in three groups:
+
+| Group | Screens |
+|---|---|
+| Content | **Overview**, **Pages**, **Blog**, **Projects** |
+| Audience | **Messages** (contact-form inbox), **Subscribers**, **Newsletters** |
+| Site | **Performance** |
+
+**Blog and Projects** share one list (`ContentList`): tabs for All, Published, Drafts and
+Scheduled with counts, a search box, and on each row Edit, View (published items), Publish
+or Unpublish, and Delete. Before, the projects list asked the public API, which only
+returns published projects, so a draft project could not be seen in the admin; there is
+now an admin-only `GET /api/admin/projects` that returns every status.
+
+**Pages** edits the wording of Home, About, Learning and Contact:
+
+| Piece | Job |
+|---|---|
+| `src/content/editable.ts` | The list of editable text, found by walking the content file. Links, addresses, logos and the patterns' drawing data are not in the list, so they cannot be edited |
+| `site_content` table | One row per edited field: `key` (a dotted path such as `homeHero.intro`) and `value`. No row means "use the text in the code" |
+| `withOverrides(root, defaults, edits)` | Returns a copy of the defaults with the edits laid over. It only replaces text at listed paths, so an edit can never change the shape of a page |
+| `getOverrides()` | Reads all edits once per request; if the database is down it returns none, and the page shows the text in the code |
+| `GET/PUT /api/admin/pages/[page]` | Read a page's fields (default and current text); save changes. Saving the original text, or an empty box, deletes the edit ("Reset to original") |
+
+The four public pages are now rendered on each request (`dynamic = "force-dynamic"`), so a
+saved edit is live at once and the image build needs no database.
+
+**Messages** lists what the contact form saved: open one to read it (it is marked read),
+reply by email (marks it replied), or delete it.
+
+## 11. Flow strips
+
+Each curated project has a `flow` (in `portfolio.ts`): a short chain of named steps such
+as Visitor, Cloudflare, Traefik, Next.js, PostgreSQL. `FlowStrip` draws it with a logo
+where a step is a known tool, on the home cards, `/projects` and each project page. It is
+a one-line version of the full diagram, not a replacement for it.
+
+## 12. Glossary
 
 - **Landing page:** the page most visitors see first; its job is to get them to act.
 - **AIDA:** Attention, Interest, Desire, Action: the order a persuasive page follows.
@@ -190,10 +229,5 @@ harmless and can be removed.
 - **Seed:** loading starting data into a database. **Idempotent:** safe to run twice.
 - **Slug:** the URL-safe name of an item (`cloud-portfolio-on-aws`).
 - **Mask (CSS):** using a shape as a stencil, so a block of colour shows only through it.
-
-## 11. Flow strips
-
-Each curated project has a `flow` (in `portfolio.ts`): a short chain of named steps such
-as Visitor, Cloudflare, Traefik, Next.js, PostgreSQL. `FlowStrip` draws it with a logo
-where a step is a known tool, on the home cards, `/projects` and each project page. It is
-a one-line version of the full diagram, not a replacement for it.
+- **Override:** text saved in the database that replaces the default text in the code.
+- **Inbox:** here, the Messages screen listing what the contact form saved.

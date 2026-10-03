@@ -295,3 +295,17 @@ model ContactMessage {
   @@index([createdAt])
   @@map("contact_messages")
 }
+
+// ============================================
+// Site text edited in the admin panel
+// ============================================
+// One row per edited piece of text. "key" is a dotted path into the content file
+// (for example "homeHero.intro"); a missing row means "use the text in the code".
+
+model SiteContent {
+  key       String   @id
+  value     String   @db.Text
+  updatedAt DateTime @default(now()) @updatedAt @map("updated_at") @db.Timestamptz
+
+  @@map("site_content")
+}

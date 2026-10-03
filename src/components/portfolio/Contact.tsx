@@ -5,7 +5,11 @@ import { useRef, useState } from "react";
 import { contact, profile } from "@/content/portfolio";
 
 /** The closing call to action, with a copy-email button, and the footer. */
-export default function Contact() {
+export default function Contact({
+  content = contact,
+}: {
+  content?: typeof contact;
+}) {
   const emailRef = useRef<HTMLElement>(null);
   const [state, setState] = useState<"idle" | "copied" | "manual">("idle");
 
@@ -32,23 +36,23 @@ export default function Contact() {
   return (
     <section className="block" id="contact" style={{ paddingBottom: "1rem" }}>
       <div className="contact rise">
-        <h2>{contact.title}</h2>
-        <p>{contact.body}</p>
+        <h2>{content.title}</h2>
+        <p>{content.body}</p>
         <div className="mail">
           <code ref={emailRef}>{profile.email}</code>
           <button className="btn primary" type="button" onClick={copy}>
             {state === "copied"
-              ? contact.copiedLabel
+              ? content.copiedLabel
               : state === "manual"
                 ? "Press Ctrl+C"
-                : contact.copyLabel}
+                : content.copyLabel}
           </button>
-          <Link className="btn" href={contact.formHref}>
-            {contact.formLabel}
+          <Link className="btn" href={content.formHref}>
+            {content.formLabel}
           </Link>
         </div>
         <div className="links">
-          {contact.links.map((l) => (
+          {content.links.map((l) => (
             <a
               className="btn"
               key={l.label}

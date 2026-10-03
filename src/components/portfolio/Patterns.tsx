@@ -3,14 +3,22 @@ import { patterns, patternsSection, seeAll } from "@/content/portfolio";
 import PatternVisual from "./PatternVisual";
 
 /** The patterns I use. `limit` shows the first few (the home page) with a link to all of them. */
-export default function Patterns({ limit }: { limit?: number }) {
-  const shown = limit ? patterns.slice(0, limit) : patterns;
+export default function Patterns({
+  limit,
+  section = patternsSection,
+  items = patterns,
+}: {
+  limit?: number;
+  section?: typeof patternsSection;
+  items?: typeof patterns;
+}) {
+  const shown = limit ? items.slice(0, limit) : items;
   return (
     <section className="block" id="patterns">
       <div className="sec-head rise">
-        <span className="label">{patternsSection.label}</span>
-        <h2>{patternsSection.title}</h2>
-        <p>{patternsSection.intro}</p>
+        <span className="label">{section.label}</span>
+        <h2>{section.title}</h2>
+        <p>{section.intro}</p>
       </div>
       <div className={`patterns${limit === 2 ? " two" : ""}`}>
         {shown.map((p) => (
@@ -24,7 +32,7 @@ export default function Patterns({ limit }: { limit?: number }) {
           </article>
         ))}
       </div>
-      {limit && limit < patterns.length && (
+      {limit && limit < items.length && (
         <p className="more">
           <Link className="btn primary" href={seeAll.patterns.href}>
             {seeAll.patterns.label} →

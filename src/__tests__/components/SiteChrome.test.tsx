@@ -1,7 +1,7 @@
 /**
  * Which header and footer wraps which page:
  *  - "/", "/about", "/learning": nothing (they bring their own header and footer)
- *  - /admin, /login : the plain legacy header and footer
+ *  - /login : the plain legacy header and footer (/admin brings its own sidebar layout)
  *  - everything else: the new header (links back to the home page's sections)
  *                     and the new footer
  */
@@ -44,7 +44,7 @@ describe("SiteChrome", () => {
     },
   );
 
-  it.each(["/admin", "/admin/blog/new", "/login"])(
+  it.each(["/login"])(
     "keeps the legacy chrome on %s",
     (path) => {
       renderAt(path);
