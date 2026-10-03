@@ -8,7 +8,13 @@ Read this first. It explains the whole system in pictures, then each numbered do
 > Support"** and open the Markdown preview. Section 1 also has a plain-text
 > picture that always works.
 
-**Legend.** A solid box is **built and verified**. A dashed box is **planned or in
+**The system today (October 2026)** is drawn below. Everything in it is built and running;
+the older sections that follow explain it layer by layer and keep the original design
+pictures. (The editable source is `docs/diagrams/architecture.mmd`.)
+
+![Architecture of the platform](../images/architecture.png)
+
+**Legend for the pictures below.** A solid box is **built and verified**. A dashed box is **planned or in
 progress**, not yet seen working. We only call something "working" once we have
 actually seen it work. (Today: the firewall, server, disk, k3s, Traefik, Cloudflare
 routing, cert-manager, ArgoCD, PostgreSQL with backups, and the website itself are
