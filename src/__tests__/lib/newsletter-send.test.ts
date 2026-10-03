@@ -100,7 +100,7 @@ describe("buildEmail", () => {
 
 describe("runSend", () => {
   it("emails each person, records each send, and marks the newsletter sent", async () => {
-    const send = jest.fn<any>().mockResolvedValue({ error: null });
+    const send = jest.fn<any>().mockResolvedValue({ id: "re_1", error: null });
     const result = await runSend("n1", [person("a"), person("b")], {
       send,
       delayMs: 0,
@@ -113,6 +113,10 @@ describe("runSend", () => {
       headers: { "List-Unsubscribe": `<${BASE}/unsubscribe?token=tok>` },
     });
     expect(sendUpsert).toHaveBeenCalledTimes(2);
+    // The id from Resend is kept so its delivery reports can be matched to this email.
+    expect(sendUpsert.mock.calls[0][0]).toMatchObject({
+      create: { resendId: "re_1", status: "sent" },
+    });
     expect(nlUpdate).toHaveBeenNthCalledWith(1, {
       where: { id: "n1" },
       data: { status: "sending" },

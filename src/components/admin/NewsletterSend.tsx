@@ -25,7 +25,7 @@ interface Status {
  * always a decision. People who already received this issue are shown but cannot be
  * picked again.
  */
-function RecipientDialog({
+export function RecipientDialog({
   newsletterId,
   subject,
   onClose,

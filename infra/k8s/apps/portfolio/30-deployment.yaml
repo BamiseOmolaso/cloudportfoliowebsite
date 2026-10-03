@@ -49,6 +49,10 @@ spec:
             - secretRef:
                 name: portfolio-media
                 optional: true
+            # Resend's signing secret for delivery reports (infra/scripts/create-webhook-secret.sh).
+            - secretRef:
+                name: portfolio-webhooks
+                optional: true
           # Next.js needs somewhere to write temporary files; give it throwaway folders.
           volumeMounts:
             - name: tmp

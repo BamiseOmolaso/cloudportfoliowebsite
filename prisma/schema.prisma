@@ -109,6 +109,13 @@ model NewsletterSend {
   sentAt       DateTime @default(now()) @map("sent_at") @db.Timestamptz
   status       String   @default("pending") // pending, sent, failed
   errorMessage String?  @map("error_message")
+  // Filled in later from Resend's webhooks (see docs/infra/09-site-structure-and-content.md)
+  resendId       String?   @map("resend_id")
+  deliveredAt    DateTime? @map("delivered_at") @db.Timestamptz
+  openedAt       DateTime? @map("opened_at") @db.Timestamptz
+  bouncedAt      DateTime? @map("bounced_at") @db.Timestamptz
+  bounceReason   String?   @map("bounce_reason")
+  complainedAt   DateTime? @map("complained_at") @db.Timestamptz
 
   // Relations
   newsletter Newsletter           @relation(fields: [newsletterId], references: [id], onDelete: Cascade)
@@ -119,6 +126,7 @@ model NewsletterSend {
   @@index([newsletterId, status])
   @@index([subscriberId, status])
   @@index([sentAt])
+  @@index([resendId])
   @@map("newsletter_sends")
 }
 

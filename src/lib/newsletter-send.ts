@@ -89,11 +89,11 @@ type Sender = (message: {
   html: string;
   text: string;
   headers?: Record<string, string>;
-}) => Promise<{ error: { message: string } | null }>;
+}) => Promise<{ id?: string | null; error: { message: string } | null }>;
 
 const defaultSender: Sender = async (message) => {
-  const { error } = await resend().emails.send(message);
-  return { error };
+  const { data, error } = await resend().emails.send(message);
+  return { id: data?.id ?? null, error };
 };
 
 const from = () => process.env.RESEND_FROM_EMAIL || "onboarding@resend.dev";
@@ -158,6 +158,7 @@ export async function runSend(
       const recipient = recipients[i];
       let status: "sent" | "failed" = "sent";
       let errorMessage: string | null = null;
+      let resendId: string | null = null;
       try {
         const link = `${base}/unsubscribe?token=${await tokenFor(recipient)}`;
         const { html, text } = buildEmail(
@@ -166,7 +167,7 @@ export async function runSend(
           link,
           base,
         );
-        const { error } = await send({
+        const { id, error } = await send({
           from: from(),
           to: recipient.email,
           subject: newsletter.subject,
@@ -178,6 +179,7 @@ export async function runSend(
           },
         });
         if (error) throw new Error(error.message);
+        resendId = id ?? null;
       } catch (e) {
         status = "failed";
         errorMessage = e instanceof Error ? e.message : "Unknown error";
@@ -194,12 +196,24 @@ export async function runSend(
             subscriberId: recipient.id,
           },
         },
-        update: { status, errorMessage, sentAt: new Date() },
+        // A retry starts the delivery record afresh.
+        update: {
+          status,
+          errorMessage,
+          resendId,
+          sentAt: new Date(),
+          deliveredAt: null,
+          openedAt: null,
+          bouncedAt: null,
+          bounceReason: null,
+          complainedAt: null,
+        },
         create: {
           newsletterId,
           subscriberId: recipient.id,
           status,
           errorMessage,
+          resendId,
           sentAt: new Date(),
         },
       });

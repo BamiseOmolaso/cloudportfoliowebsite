@@ -241,6 +241,59 @@ Unsubscribe links in newsletters no longer expire (the old 30-day limit would ha
 the link in older emails). Scheduling a newsletter for later was removed from the form:
 nothing sent it at the chosen time, so the option would have been misleading.
 
+### Tracking what happened to each email
+
+The **Newsletters** list works like the Blog list: tabs (All, Drafts, Sending, Sent) with
+counts, a search box, and on each row **Edit**, **Send** (opens the recipient chooser
+straight from the list; *Send to more* once it has gone out), **Report** and **Delete**.
+A sent newsletter shows its results under the title, and **Report** opens the full table.
+
+| Count | Meaning |
+|---|---|
+| **Delivered** | Reached the inbox (Resend's `email.delivered`) |
+| **Opened** | The picture Resend adds was loaded (`email.opened`), so it counts as read |
+| **Not opened** | Delivered, not opened yet |
+| **Bounced** | Sent but could not be delivered: wrong or dead address (`email.bounced`) |
+| **Failed** | Resend refused it when we tried to send (for example a malformed address) |
+| **Waiting** | Resend has accepted it but has not reported back yet |
+
+Two honest limits. **"Opened" is an estimate**: mail apps that block pictures hide real
+reads, and some (Apple Mail) load them automatically, which counts as a read when nobody
+looked. And results arrive from Resend after the send, usually within minutes.
+
+Two automatic actions protect your sender reputation: a **permanent bounce** (the address
+does not exist) and a **spam report** both unsubscribe that person (shown in Subscribers
+as unsubscribed, with the reason), so you never write to them again. A temporary bounce
+(a full mailbox) does not.
+
+How the reports reach the site:
+
+| Piece | Job |
+|---|---|
+| `newsletter_sends` columns `resend_id`, `delivered_at`, `opened_at`, `bounced_at`, `bounce_reason`, `complained_at` | The email's id at Resend (saved when it is sent) and the times Resend reports |
+| `POST /api/webhooks/resend` | Resend calls this. It is public (Resend cannot sign in), so the **signature is the gate**: a Svix-style HMAC over `id.timestamp.body` with your signing secret, refused if wrong or older than 5 minutes. Without the secret set it answers 503 and reads nothing |
+| `src/lib/resend-webhook.ts` | `verifySignature` and `applyEvent` (matches the event to a send by `resend_id`; ignores other emails such as contact-form mail; never overwrites an earlier time) |
+| `src/lib/newsletter-stats.ts` | Turns the records into the counts above |
+| `GET /api/admin/newsletters/[id]/report` | The per-person table behind **Report** |
+
+**Turning it on (once):**
+
+1. Resend dashboard → *Domains* → your domain → switch **Open tracking** on (it is off by
+   default; without it there are no "Opened" results).
+2. Resend dashboard → *Webhooks* → *Add webhook*: address
+   `https://oluwabamiseomolaso.com.ng/api/webhooks/resend`, events **email.delivered,
+   email.opened, email.bounced, email.complained**. Copy the *Signing secret* (`whsec_…`).
+3. ```bash
+   export KUBECONFIG=~/.kube/hetzner-portfolio.yaml
+   bash infra/scripts/create-webhook-secret.sh
+   kubectl -n portfolio rollout restart deployment/portfolio
+   ```
+4. Send a test newsletter to yourself and watch it go from *Waiting* to *Delivered* in
+   the report. Resend's webhook page also has a *Send test event* button.
+
+Cloudflare Access protects `/api/admin` but not `/api/webhooks`, which is what lets Resend
+reach it. Check that no Access rule covers `/api/webhooks`.
+
 ## 11. Flow strips
 
 Each curated project has a `flow` (in `portfolio.ts`): a short chain of named steps such
