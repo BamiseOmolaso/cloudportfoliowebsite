@@ -1,180 +1,127 @@
-import { db } from '@/lib/db';
-import Link from 'next/link';
-import { AnimatedCard } from '@/components/admin/AnimatedCard';
+import Link from "next/link";
+import { db } from "@/lib/db";
+import { EDITABLE_PAGES } from "@/content/editable";
+import { Card, PageHeader, button } from "@/components/admin/ui";
 
-export const dynamic = 'force-dynamic'
+export const dynamic = "force-dynamic";
 
 async function getStats() {
   try {
     const [
-      totalSubscribers,
-      activeSubscribers,
-      totalNewsletters,
-      sentNewsletters,
-      totalProjects,
-      activeProjects,
+      subscribers,
+      newsletters,
+      projects,
+      publishedProjects,
+      posts,
+      publishedPosts,
+      unread,
+      edited,
     ] = await Promise.all([
-      db.newsletterSubscriber.count(),
       db.newsletterSubscriber.count({ where: { isSubscribed: true } }),
-      db.newsletter.count(),
-      db.newsletter.count({ where: { status: 'sent' } }),
+      db.newsletter.count({ where: { status: "sent" } }),
       db.project.count(),
-      db.project.count({ where: { status: 'published' } }),
+      db.project.count({ where: { status: "published" } }),
+      db.blogPost.count(),
+      db.blogPost.count({ where: { status: "published" } }),
+      db.contactMessage.count({ where: { read: false } }),
+      db.siteContent.count(),
     ]);
-
-    // Note: openRate and clickRate are not stored in the Newsletter model
-    // These would need to be calculated from tracking data or stored separately
     return {
-      totalSubscribers,
-      activeSubscribers,
-      totalNewsletters,
-      sentNewsletters,
-      totalProjects,
-      activeProjects,
-      averageOpenRate: 0,
-      averageClickRate: 0,
+      subscribers,
+      newsletters,
+      projects,
+      publishedProjects,
+      posts,
+      publishedPosts,
+      unread,
+      edited,
     };
   } catch (error) {
-    console.error('Error fetching admin stats:', error);
-    // Return default values if database is unavailable
-    return {
-      totalSubscribers: 0,
-      activeSubscribers: 0,
-      totalNewsletters: 0,
-      sentNewsletters: 0,
-      totalProjects: 0,
-      activeProjects: 0,
-      averageOpenRate: 0,
-      averageClickRate: 0,
-    };
+    console.error("Error fetching admin stats:", error);
+    return null;
   }
 }
 
 export default async function AdminDashboard() {
-  const stats = await getStats();
+  const s = await getStats();
+  const tiles = [
+    {
+      label: "Blog posts",
+      value: s?.posts,
+      note: `${s?.publishedPosts ?? 0} published`,
+      href: "/admin/blog",
+    },
+    {
+      label: "Projects",
+      value: s?.projects,
+      note: `${s?.publishedProjects ?? 0} published`,
+      href: "/admin/projects",
+    },
+    {
+      label: "Unread messages",
+      value: s?.unread,
+      note: "from the contact form",
+      href: "/admin/messages",
+    },
+    {
+      label: "Subscribers",
+      value: s?.subscribers,
+      note: `${s?.newsletters ?? 0} newsletters sent`,
+      href: "/admin/subscribers",
+    },
+  ];
 
   return (
-    <div className="p-4 pt-6">
-      <h1 className="text-3xl font-bold text-white mb-8">Admin Dashboard</h1>
-
-      {/* Stats Cards - Better spacing, consistent heights */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        <AnimatedCard className="bg-gray-900 rounded-lg border border-gray-800 p-5 h-full shadow-lg hover:shadow-xl transition-all hover:border-gray-700">
-          <h2 className="text-lg font-medium text-gray-300 mb-2">Subscribers</h2>
-          <p className="text-3xl font-bold text-white">{stats?.totalSubscribers}</p>
-          <p className="text-sm text-gray-400 mt-2">
-            {stats?.activeSubscribers} active
-          </p>
-          <div className="mt-4">
-            <Link
-              href="/admin/subscribers"
-              className="inline-block text-indigo-400 hover:text-indigo-300 hover:underline"
-            >
-              View all →
+    <>
+      <PageHeader
+        title="Overview"
+        subtitle="Everything on the site, in one place."
+        actions={
+          <>
+            <Link href="/admin/blog/new" className={button("primary")}>
+              New post
             </Link>
-          </div>
-        </AnimatedCard>
-
-        <AnimatedCard delay={0.1} className="bg-gray-900 rounded-lg border border-gray-800 p-5 h-full shadow-lg hover:shadow-xl transition-all hover:border-gray-700">
-          <h2 className="text-lg font-medium text-gray-300 mb-2">Newsletters</h2>
-          <p className="text-3xl font-bold text-white">{stats?.totalNewsletters}</p>
-          <p className="text-sm text-gray-400 mt-2">
-            {stats?.sentNewsletters} sent
-          </p>
-          <div className="mt-4">
-            <Link
-              href="/admin/newsletters"
-              className="inline-block text-indigo-400 hover:text-indigo-300 hover:underline"
-            >
-              View all →
+            <Link href="/admin/projects/new" className={button("secondary")}>
+              New project
             </Link>
-          </div>
-        </AnimatedCard>
-
-        <AnimatedCard delay={0.2} className="bg-gray-900 rounded-lg border border-gray-800 p-5 h-full shadow-lg hover:shadow-xl transition-all hover:border-gray-700">
-          <h2 className="text-lg font-medium text-gray-300 mb-2">Projects</h2>
-          <p className="text-3xl font-bold text-white">{stats?.totalProjects}</p>
-          <p className="text-sm text-gray-400 mt-2">
-            {stats?.activeProjects} active
-          </p>
-          <div className="mt-4">
-            <Link
-              href="/admin/projects"
-              className="inline-block text-indigo-400 hover:text-indigo-300 hover:underline"
-            >
-              View all →
-            </Link>
-          </div>
-        </AnimatedCard>
-
-        <AnimatedCard delay={0.3} className="bg-gray-900 rounded-lg border border-gray-800 p-5 h-full shadow-lg hover:shadow-xl transition-all hover:border-gray-700">
-          <h2 className="text-lg font-medium text-gray-300 mb-2">Newsletter Performance</h2>
-          <p className="text-3xl font-bold text-white">
-            {stats?.averageOpenRate?.toFixed(1) || "0"}%
-          </p>
-          <p className="text-sm text-gray-400 mt-2">
-            Average open rate
-          </p>
-          <div className="mt-4">
-            <Link
-              href="/admin/performance"
-              className="inline-block text-indigo-400 hover:text-indigo-300 hover:underline"
-            >
-              View metrics →
-            </Link>
-          </div>
-        </AnimatedCard>
+          </>
+        }
+      />
+      {!s && (
+        <p
+          role="alert"
+          className="mb-6 rounded-lg border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-300"
+        >
+          The numbers could not be loaded. The database may be unreachable.
+        </p>
+      )}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {tiles.map((t) => (
+          <Link key={t.label} href={t.href} className="group">
+            <Card className="h-full p-5 transition-colors group-hover:border-gray-600">
+              <p className="text-sm text-gray-400">{t.label}</p>
+              <p className="mt-2 text-3xl font-bold text-white">
+                {t.value ?? "–"}
+              </p>
+              <p className="mt-1 text-xs text-gray-500">{t.note}</p>
+            </Card>
+          </Link>
+        ))}
       </div>
 
-      {/* Action Cards - Better spacing */}
-      <div className="mt-10 grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <AnimatedCard delay={0.4} className="bg-gray-900 rounded-lg border border-gray-800 p-6 shadow-lg hover:shadow-xl transition-all">
-          <h2 className="text-xl font-semibold text-white mb-5">Quick Actions</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Link
-              href="/admin/blog/new"
-              className="flex items-center justify-center px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md"
-            >
-              Create New Blog Post
-            </Link>
-            <Link
-              href="/admin/projects/new"
-              className="flex items-center justify-center px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md"
-            >
-              Add New Project
-            </Link>
-            <Link
-              href="/admin/newsletters/new"
-              className="flex items-center justify-center px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md"
-            >
-              Create Newsletter
-            </Link>
-            <Link
-              href="/admin/subscribers"
-              className="flex items-center justify-center px-4 py-3 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors shadow-md"
-            >
-              Manage Subscribers
-            </Link>
-          </div>
-        </AnimatedCard>
-
-        <AnimatedCard delay={0.5} className="bg-gray-900 rounded-lg border border-gray-800 p-6 shadow-lg hover:shadow-xl transition-all">
-          <h2 className="text-xl font-semibold text-white mb-5">Recent Activity</h2>
-          <div className="space-y-4">
-            {/* Add recent activity items here */}
-            <div className="flex items-center p-3 border border-gray-800 rounded-lg bg-gray-800/50">
-              <div className="w-2 h-2 bg-green-500 rounded-full mr-3"></div>
-              <div className="text-gray-300">No recent activity</div>
-            </div>
-            <Link 
-              href="/admin/performance" 
-              className="block text-center mt-4 text-indigo-400 hover:text-indigo-300 hover:underline"
-            >
-              View all activity →
-            </Link>
-          </div>
-        </AnimatedCard>
+      <h2 className="mb-3 mt-10 text-lg font-semibold text-white">
+        Edit the pages
+      </h2>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        {EDITABLE_PAGES.map((p) => (
+          <Link key={p.id} href={`/admin/pages/${p.id}`} className="group">
+            <Card className="h-full p-5 transition-colors group-hover:border-gray-600">
+              <p className="font-medium text-white">{p.title}</p>
+              <p className="mt-1 text-xs text-gray-400">{p.description}</p>
+            </Card>
+          </Link>
+        ))}
       </div>
-    </div>
+    </>
   );
-} 
+}

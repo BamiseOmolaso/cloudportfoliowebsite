@@ -4,6 +4,7 @@ import { secureAdminRoute, handleError, mapPrismaError, sanitizeContent } from '
 import { projectUpdateSchema, projectPatchSchema } from '@/lib/validation-schemas';
 import { z } from 'zod';
 import type { ProjectUpdateData } from '@/types/database';
+import { getClientIp } from "@/lib/client-ip";
 
 export const dynamic = 'force-dynamic';
 
@@ -127,7 +128,7 @@ async function putHandler(request: NextRequest, user: { id: string; email: strin
       resourceType: 'Project',
       resourceId: project.id,
       details: { title: project.title, slug: project.slug },
-      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+      ipAddress: getClientIp(request.headers),
       userAgent: request.headers.get('user-agent') || null,
       timestamp: new Date().toISOString(),
     });
@@ -200,7 +201,7 @@ async function deleteHandler(request: NextRequest, user: { id: string; email: st
       resourceType: 'Project',
       resourceId: project.id,
       details: { title: project.title, slug: project.slug },
-      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+      ipAddress: getClientIp(request.headers),
       userAgent: request.headers.get('user-agent') || null,
       timestamp: new Date().toISOString(),
     });
@@ -267,7 +268,7 @@ async function patchHandler(request: NextRequest, user: { id: string; email: str
       resourceType: 'Project',
       resourceId: project.id,
       details: { status: project.status, publishedAt: project.publishedAt },
-      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+      ipAddress: getClientIp(request.headers),
       userAgent: request.headers.get('user-agent') || null,
       timestamp: new Date().toISOString(),
     });

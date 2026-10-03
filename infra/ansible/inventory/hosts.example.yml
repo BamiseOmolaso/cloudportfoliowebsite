@@ -1,0 +1,20 @@
+# Copy to hosts.yml (git-ignored) and fill in.
+#
+# Deliberately NO `ansible_user` here: you pass the user on the command line
+# (-u root for the first run, -u <admin user> afterwards), so you always see
+# which account a run uses.
+all:
+  children:
+    k8s_nodes:
+      hosts:
+        portfolio-prod-node:
+          ansible_host: 203.0.113.10                      # terraform output -raw server_ipv4
+          ansible_ssh_private_key_file: ~/.ssh/hetzner_portfolio
+          # terraform output -raw data_volume_device
+          data_volume_device: /dev/disk/by-id/scsi-0HC_Volume_XXXXXXXXX
+          # Devices allowed into the WireGuard tunnel (docs/infra/11-wireguard.md).
+          # The public key comes from `bash infra/scripts/wireguard-client.sh`.
+          wireguard_peers:
+            - name: macbook
+              public_key: "REPLACE_WITH_YOUR_PUBLIC_KEY"
+              address: 10.8.0.2/32

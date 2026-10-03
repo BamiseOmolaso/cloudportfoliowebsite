@@ -1,0 +1,11 @@
+---
+# Step 3 - run as the admin user (root login is off after step 2):
+#   ansible-playbook playbooks/03-k3s.yml -u bamise
+#
+# Installs k3s (a small, certified Kubernetes) on the node and writes a
+# kubeconfig to your laptop so `kubectl` can talk to it.
+- name: Install Kubernetes (k3s)
+  hosts: k8s_nodes
+  become: true
+  roles:
+    - k3s

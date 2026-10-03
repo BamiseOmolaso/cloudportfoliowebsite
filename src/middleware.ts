@@ -16,7 +16,9 @@ export function middleware(_request: NextRequest) {
   );
   response.headers.set(
     'Content-Security-Policy',
-    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self';"
+    // Google reCAPTCHA ("I am not a robot") loads one script and draws itself in a frame; both are
+    // allowed from Google's recaptcha paths only. Without these two entries the check never appears.
+    "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/recaptcha/;"
   );
 
   return response;

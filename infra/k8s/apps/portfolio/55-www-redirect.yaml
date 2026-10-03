@@ -1,0 +1,51 @@
+# Sends www.oluwabamiseomolaso.com.ng to oluwabamiseomolaso.com.ng, keeping the path
+# (www.…/blog becomes …/blog), with a permanent (301) redirect so search engines learn
+# that the bare domain is the real one.
+#
+# A Traefik "Middleware" is a small step a request passes through on its way in.
+# This one rewrites the address with a regular expression:
+#   ^https://www\.oluwabamiseomolaso\.com\.ng/(.*)   matches the whole www address and
+#                                                   remembers everything after the "/"
+#   https://oluwabamiseomolaso.com.ng/${1}          the new address, with that part put back
+apiVersion: traefik.io/v1alpha1
+kind: Middleware
+metadata:
+  name: www-to-apex
+  namespace: portfolio
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  redirectRegex:
+    regex: ^https://www\.oluwabamiseomolaso\.com\.ng/(.*)
+    replacement: https://oluwabamiseomolaso.com.ng/${1}
+    permanent: true
+---
+# The Ingress for the www name. It has no cert-manager annotation on purpose: the one
+# certificate is requested by the `portfolio` Ingress (which lists www among its names),
+# and this Ingress just reuses the resulting Secret.
+# The annotation attaches the redirect: "<namespace>-<middleware>@kubernetescrd".
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: portfolio-www
+  namespace: portfolio
+  annotations:
+    traefik.ingress.kubernetes.io/router.middlewares: portfolio-www-to-apex@kubernetescrd
+    argocd.argoproj.io/sync-wave: "2"
+spec:
+  ingressClassName: traefik
+  tls:
+    - hosts:
+        - www.oluwabamiseomolaso.com.ng
+      secretName: portfolio-tls
+  rules:
+    - host: www.oluwabamiseomolaso.com.ng
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: portfolio
+                port:
+                  number: 80

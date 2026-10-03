@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { getClientIp } from "@/lib/client-ip";
 
 export async function GET(request: Request) {
   try {
@@ -83,6 +84,7 @@ export async function POST(request: Request) {
       where: { id: subscriber.id },
       data: {
         isSubscribed: false,
+        unsubscribedAt: new Date(),
         unsubscribeReason: reason || null,
         unsubscribeFeedback: feedback || null,
         updatedAt: new Date(),
@@ -95,7 +97,7 @@ export async function POST(request: Request) {
         subscriberId: subscriber.id,
         action: 'unsubscribed',
         details: { reason, feedback },
-        ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+        ipAddress: getClientIp(request.headers),
         userAgent: request.headers.get('user-agent') || null,
       },
     });

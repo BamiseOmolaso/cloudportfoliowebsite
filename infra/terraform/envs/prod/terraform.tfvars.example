@@ -1,0 +1,8 @@
+# Copy to terraform.tfvars (git-ignored) and fill in. Never put real values in
+# this example file: it is committed to git.
+ssh_public_key     = "ssh-ed25519 AAAA... hetzner-portfolio"
+admin_cidrs        = ["203.0.113.7/32"] # your public IP, find it with: curl -4 ifconfig.me
+server_type        = "REPLACE_ME"       # see docs/infra/01-terraform-hetzner.md
+location           = "fsn1"
+volume_size_gb     = 10
+cloudflare_zone_id = "REPLACE_ME" # Cloudflare dashboard > your domain > Overview > Zone ID

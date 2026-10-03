@@ -56,6 +56,16 @@ export default function PrivacyPolicy() {
         <p className="mb-4">
           You can instruct your browser to refuse all cookies or to indicate when a cookie is being sent. However, if you do not accept cookies, you may not be able to use some portions of our website.
         </p>
+        <h3 className="text-xl font-semibold mb-2">How we count visits</h3>
+        <p className="mb-4">
+          To see which pages are read and how fast they load, this site counts page views
+          itself. It uses no cookies, stores no IP address, and does not follow you across
+          sites. Each visit records the page, the site you came from, your country, the
+          kind of device and the page&apos;s load time. A visitor is a one-way scrambled
+          value that changes every day, so it cannot identify you. A browser set to &quot;Do
+          Not Track&quot; is not counted.
+        </p>
+
         <h3 className="text-xl font-semibold mb-2">Types of Cookies We Use</h3>
         <ul className="list-disc pl-6 mb-4 space-y-2">
           <li><strong>Essential Cookies:</strong> These cookies are necessary for the website to function and cannot be switched off in our systems.</li>

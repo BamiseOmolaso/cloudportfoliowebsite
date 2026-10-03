@@ -1,0 +1,54 @@
+# Where the database files live: the Hetzner data volume, mounted by Ansible at /srv/data.
+#
+# A PersistentVolume (PV) is "a piece of storage the cluster can hand out". A
+# PersistentVolumeClaim (PVC) is "a pod's request for storage". Here we describe the
+# storage by hand (a `local` volume, a directory on this one node) and bind the claim
+# to it by name, so the data always lands on the disk we chose.
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: postgres-data
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+    # Never let ArgoCD delete the storage object, even if the file leaves git.
+    argocd.argoproj.io/sync-options: Prune=false
+spec:
+  capacity:
+    storage: 9Gi # the volume is 10 GB; this figure is informational for a local volume
+  accessModes:
+    - ReadWriteOnce # one node at a time
+  # Retain: if the claim is ever deleted, KEEP the data on disk (the default for
+  # manually created volumes, stated here so nobody has to wonder).
+  persistentVolumeReclaimPolicy: Retain
+  storageClassName: "" # static volume: not created by a provisioner
+  claimRef:
+    namespace: postgres
+    name: postgres-data # reserved for exactly this claim
+  local:
+    path: /srv/data/postgres # created and owned (uid 999) by Ansible
+  # A local volume exists on ONE machine, so the pod must run on that machine.
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - portfolio-prod-node
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  namespace: postgres
+  annotations:
+    argocd.argoproj.io/sync-wave: "-1"
+    argocd.argoproj.io/sync-options: Prune=false
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ""
+  volumeName: postgres-data
+  resources:
+    requests:
+      storage: 9Gi

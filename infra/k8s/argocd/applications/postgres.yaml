@@ -1,0 +1,20 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: postgres
+  namespace: argocd
+  # NOTE: deliberately NO `resources-finalizer` here (unlike the hello app). Deleting
+  # this Application must never cascade into deleting a database.
+spec:
+  project: portfolio
+  source:
+    repoURL: https://github.com/BamiseOmolaso/cloudportfoliowebsite.git
+    targetRevision: main
+    path: infra/k8s/apps/postgres
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: postgres
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

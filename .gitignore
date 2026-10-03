@@ -72,3 +72,14 @@ redis_data/
 # Database files (if using SQLite for testing)
 *.db
 *.db-journal
+# Hetzner infra: commit the provider lock file, never local config or secrets
+!infra/terraform/envs/*/.terraform.lock.hcl
+infra/terraform/envs/*/backend.hcl
+infra/terraform/envs/*/terraform.tfvars
+infra/terraform/envs/*/*.tfplan
+
+# Ansible: the real inventory holds the server address
+infra/ansible/inventory/hosts.yml
+
+# images uploaded while developing without a bucket
+/public/uploads/

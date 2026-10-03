@@ -4,6 +4,8 @@
 
 A modern, responsive portfolio website showcasing Dr. Oluwabamise David Omolaso's expertise in healthcare data science, AI applications, and cloud technologies.
 
+> **Building or editing this site?** Read the [design and build guide](docs/DESIGN-GUIDE.md) first.
+
 ## Features
 
 - Modern dark theme with purple accent colors

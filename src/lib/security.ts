@@ -89,6 +89,17 @@ export async function isCaptchaRequired(ip: string, email?: string): Promise<boo
   return hoursSinceOldest < 1; // Require CAPTCHA if 3+ attempts in last hour
 }
 
+/**
+ * Should a form that always asks for a CAPTCHA check it?
+ *  - "verify":      the secret key is set: check every token.
+ *  - "skip":        no secret and not in production (local development): let it through.
+ *  - "unavailable": no secret in production: refuse, rather than leave the form unprotected.
+ */
+export function captchaGate(): 'verify' | 'skip' | 'unavailable' {
+  if (process.env.RECAPTCHA_SECRET_KEY) return 'verify';
+  return process.env.NODE_ENV === 'production' ? 'unavailable' : 'skip';
+}
+
 // Verify CAPTCHA token
 export async function verifyCaptcha(token: string, ip?: string): Promise<boolean> {
   try {
@@ -97,7 +108,12 @@ export async function verifyCaptcha(token: string, ip?: string): Promise<boolean
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded',
       },
-      body: `secret=${process.env.RECAPTCHA_SECRET_KEY}&response=${token}${ip ? `&remoteip=${ip}` : ''}`,
+      // URLSearchParams encodes the values, so a crafted token cannot add or replace fields.
+      body: new URLSearchParams({
+        secret: process.env.RECAPTCHA_SECRET_KEY ?? '',
+        response: token,
+        ...(ip ? { remoteip: ip } : {}),
+      }).toString(),
     });
 
     const data = await response.json();

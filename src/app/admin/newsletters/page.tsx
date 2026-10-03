@@ -1,137 +1,273 @@
-'use client';
+"use client";
 
-import { useState, useEffect } from 'react';
-import Link from 'next/link';
-import { motion } from 'framer-motion';
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { format } from "date-fns";
+import { BarChart3, Send } from "lucide-react";
+import { RecipientDialog } from "@/components/admin/NewsletterSend";
+import { StatChips, type Stats } from "@/components/admin/DeliveryStats";
+import {
+  Card,
+  EmptyState,
+  ErrorBanner,
+  PageHeader,
+  StatusBadge,
+  button,
+  inputClass,
+} from "@/components/admin/ui";
 
 interface Newsletter {
   id: string;
   subject: string;
-  status: 'draft' | 'sent' | 'scheduled';
+  status: "draft" | "sending" | "sent" | "scheduled";
   recipients_count: number;
   sent_count?: number;
   created_at: string;
   sent_at?: string | null;
+  stats: Stats;
 }
 
+const TABS = [
+  { id: "all", label: "All" },
+  { id: "draft", label: "Drafts" },
+  { id: "sending", label: "Sending" },
+  { id: "sent", label: "Sent" },
+] as const;
+
+const badge = (s: Newsletter["status"]) =>
+  s === "sent" ? "published" : s === "sending" ? "scheduled" : "draft";
+
 export default function NewslettersPage() {
-  const [newsletters, setNewsletters] = useState<Newsletter[]>([]);
+  const [items, setItems] = useState<Newsletter[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [tab, setTab] = useState<(typeof TABS)[number]["id"]>("all");
+  const [query, setQuery] = useState("");
+  const [picking, setPicking] = useState<Newsletter | null>(null);
 
-  useEffect(() => {
-    fetchNewsletters();
-  }, []);
-
-  const fetchNewsletters = async () => {
+  const load = useCallback(async (quiet = false) => {
+    if (!quiet) setLoading(true);
+    setError(null);
     try {
-      const response = await fetch('/api/admin/newsletters');
-      if (!response.ok) throw new Error('Failed to fetch newsletters');
-      const data = await response.json();
-      setNewsletters(data || []);
-    } catch (error) {
-      console.error('Error fetching newsletters:', error);
-      setError('Failed to load newsletters');
+      const res = await fetch("/api/admin/newsletters");
+      if (!res.ok) throw new Error("Could not load the newsletters");
+      setItems((await res.json()) ?? []);
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Could not load the newsletters",
+      );
     } finally {
       setLoading(false);
     }
+  }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  // While anything is being sent, refresh the list every few seconds.
+  const anySending = items.some((n) => n.status === "sending");
+  useEffect(() => {
+    if (!anySending) return;
+    const t = window.setInterval(() => load(true), 3000);
+    return () => window.clearInterval(t);
+  }, [anySending, load]);
+
+  const counts = useMemo(() => {
+    const c: Record<string, number> = { all: items.length };
+    for (const n of items) c[n.status] = (c[n.status] ?? 0) + 1;
+    return c;
+  }, [items]);
+
+  const shown = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return items.filter(
+      (n) =>
+        (tab === "all" || n.status === tab) &&
+        (!q || n.subject.toLowerCase().includes(q)),
+    );
+  }, [items, tab, query]);
+
+  const remove = async (n: Newsletter) => {
+    if (!confirm(`Delete "${n.subject}"? This cannot be undone.`)) return;
+    setBusy(n.id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/admin/newsletters/${n.id}`, {
+        method: "DELETE",
+      });
+      if (!res.ok)
+        throw new Error(
+          (await res.json().catch(() => ({}))).error ||
+            "Could not delete the newsletter",
+        );
+      setItems((prev) => prev.filter((x) => x.id !== n.id));
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Could not delete the newsletter",
+      );
+    } finally {
+      setBusy(null);
+    }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
-      </div>
-    );
-  }
-
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h2 className="text-2xl font-bold text-white">Newsletters</h2>
-        <Link
-          href="/admin/newsletters/create"
-          className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-md"
-        >
-          Create Newsletter
-        </Link>
-      </div>
+    <>
+      <PageHeader
+        title="Newsletters"
+        subtitle="Write an issue, choose who gets it, and see what happened to each email."
+        actions={
+          <Link href="/admin/newsletters/new" className={button("primary")}>
+            New newsletter
+          </Link>
+        }
+      />
+      {error && <ErrorBanner message={error} onRetry={() => load()} />}
 
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-4 rounded-md bg-red-500/10 border border-red-500 p-4"
-        >
-          <div className="flex">
-            <div className="ml-3">
-              <h3 className="text-sm font-medium text-red-400">{error}</h3>
-            </div>
+      <Card>
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 p-3">
+          <div
+            role="tablist"
+            aria-label="Filter by status"
+            className="flex flex-wrap gap-1"
+          >
+            {TABS.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                aria-selected={tab === t.id}
+                onClick={() => setTab(t.id)}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
+                  tab === t.id
+                    ? "bg-purple-500/15 text-white"
+                    : "text-gray-400 hover:bg-gray-800 hover:text-white"
+                }`}
+              >
+                {t.label}
+                <span className="ml-1.5 text-xs text-gray-500">
+                  {counts[t.id] ?? 0}
+                </span>
+              </button>
+            ))}
           </div>
-        </motion.div>
-      )}
-
-      <div className="bg-gray-800 rounded-lg overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-700">
-            <thead>
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Subject
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Recipients
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Created
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-400 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-700">
-              {newsletters.map((newsletter) => (
-                <tr key={newsletter.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-white">
-                    {newsletter.subject}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        newsletter.status === 'sent'
-                          ? 'bg-green-100 text-green-800'
-                          : newsletter.status === 'scheduled'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-gray-100 text-gray-800'
-                      }`}
-                    >
-                      {newsletter.status.charAt(0).toUpperCase() + newsletter.status.slice(1)}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {newsletter.recipients_count}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                    {new Date(newsletter.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <Link
-                      href={`/admin/newsletters/${newsletter.id}`}
-                      className="text-purple-400 hover:text-purple-300"
-                    >
-                      View
-                    </Link>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search newsletters"
+            aria-label="Search newsletters"
+            className={`${inputClass} sm:max-w-xs`}
+          />
         </div>
-      </div>
-    </div>
+
+        {loading ? (
+          <div className="h-40 animate-pulse" aria-busy="true" />
+        ) : shown.length === 0 ? (
+          <EmptyState
+            title={
+              items.length === 0 ? "No newsletters yet" : "No newsletters match"
+            }
+            body={
+              items.length === 0
+                ? "Write your first issue. Saving it does not send it."
+                : "Try another tab or clear the search."
+            }
+            action={
+              items.length === 0 ? (
+                <Link
+                  href="/admin/newsletters/new"
+                  className={button("primary")}
+                >
+                  New newsletter
+                </Link>
+              ) : undefined
+            }
+          />
+        ) : (
+          <ul className="divide-y divide-gray-800">
+            {shown.map((n) => {
+              const hasSends = n.stats.total > 0;
+              return (
+                <li
+                  key={n.id}
+                  className="flex flex-wrap items-start justify-between gap-3 px-4 py-3.5"
+                >
+                  <div className="min-w-0 flex-1 basis-64">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Link
+                        href={`/admin/newsletters/edit/${n.id}`}
+                        className="truncate font-medium text-white hover:text-purple-300"
+                      >
+                        {n.subject}
+                      </Link>
+                      <StatusBadge status={badge(n.status)} label={n.status} />
+                    </div>
+                    <p className="mt-0.5 text-xs text-gray-500">
+                      Created {format(new Date(n.created_at), "d MMM yyyy")}
+                      {n.status === "sent" &&
+                        n.sent_at &&
+                        ` · sent ${format(new Date(n.sent_at), "d MMM yyyy, HH:mm")}`}
+                      {n.status === "sending" &&
+                        ` · sending… ${n.stats.total} done`}
+                    </p>
+                    {hasSends && <StatChips stats={n.stats} />}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1">
+                    <Link
+                      href={`/admin/newsletters/edit/${n.id}`}
+                      className={button("secondary")}
+                    >
+                      Edit
+                    </Link>
+                    {n.status !== "sending" && (
+                      <button
+                        type="button"
+                        className={button("primary")}
+                        onClick={() => setPicking(n)}
+                      >
+                        <Send className="h-4 w-4" aria-hidden="true" />
+                        {n.status === "sent" ? "Send to more" : "Send"}
+                      </button>
+                    )}
+                    {hasSends && (
+                      <Link
+                        href={`/admin/newsletters/report/${n.id}`}
+                        className={button("ghost")}
+                      >
+                        <BarChart3 className="h-4 w-4" aria-hidden="true" />
+                        Report
+                      </Link>
+                    )}
+                    {n.status !== "sent" && n.status !== "sending" && (
+                      <button
+                        type="button"
+                        disabled={busy === n.id}
+                        onClick={() => remove(n)}
+                        className={button("danger")}
+                      >
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </Card>
+
+      {picking && (
+        <RecipientDialog
+          newsletterId={picking.id}
+          subject={picking.subject}
+          onClose={() => setPicking(null)}
+          onStarted={() => {
+            setPicking(null);
+            load(true);
+          }}
+        />
+      )}
+    </>
   );
-} 
+}

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import { getRedisClient } from "./redis-client";
+import { getClientIp } from "@/lib/client-ip";
 
 interface RateLimiterConfig {
   maxRequests: number;
@@ -118,8 +119,11 @@ async function redisRateLimit(
 
     const results = await multi.exec();
 
-    // results[1] is the count before adding current request
-    const count = (results[1]?.[1] as number) || 0;
+    // exec() of the `redis` package (node-redis) returns the plain replies in
+    // order: [removed, count, added, expire]. (ioredis returns [error, reply]
+    // pairs instead; reading this like that always gave 0, so nothing was
+    // ever blocked.) results[1] is the count before adding this request.
+    const count = Number(results[1] ?? 0);
     const currentCount = count + 1;
 
     const remaining = Math.max(0, limit - currentCount);
@@ -219,22 +223,28 @@ export const apiLimiter = new RateLimiter({
   prefix: "api:",
 });
 
+/** Newsletter sign-ups: a real person signs up once, so a handful per hour per address is plenty. */
+export const subscribeLimiter = new RateLimiter({
+  maxRequests: 10,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  prefix: "subscribe:",
+});
+
+/**
+ * Limits per email address rather than per visitor, so one inbox cannot be hammered from
+ * many addresses (a distributed attack). Used as `perEmailLimiter.check("scope:email")`.
+ */
+export const perEmailLimiter = new RateLimiter({
+  maxRequests: 3,
+  windowMs: 60 * 60 * 1000, // 1 hour
+  prefix: "per-email:",
+});
+
 export const adminLimiter = new RateLimiter({
   maxRequests: 50,
   windowMs: 60 * 60 * 1000, // 1 hour
   prefix: "admin:",
 });
-
-function getClientIp(req: NextRequest): string {
-  const forwarded = req.headers.get("x-forwarded-for");
-  if (forwarded) {
-    const first = forwarded.split(",")[0]?.trim();
-    if (first) return first;
-  }
-  const realIp = req.headers.get("x-real-ip");
-  if (realIp) return realIp;
-  return "unknown";
-}
 
 export function withRateLimit(
   limiter: RateLimiter,
@@ -242,7 +252,7 @@ export function withRateLimit(
   handler: (req: NextRequest) => Promise<NextResponse>,
 ) {
   return async (req: NextRequest) => {
-    const key = `${identifier}:${getClientIp(req)}`;
+    const key = `${identifier}:${getClientIp(req.headers) ?? "unknown"}`;
     const result = await limiter.check(key);
 
     if (!result.success) {

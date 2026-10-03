@@ -1,0 +1,33 @@
+# Who may talk to the website pods. Rule 1 blocks all incoming connections to this
+# namespace; rule 2 re-allows only Traefik (which lives in kube-system), on port 3000.
+# Outgoing traffic is left open: the app must reach the database, Redis Cloud, Resend
+# and Google reCAPTCHA.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: portfolio
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: allow-traefik
+  namespace: portfolio
+spec:
+  podSelector:
+    matchLabels:
+      app: portfolio
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+      ports:
+        - protocol: TCP
+          port: 3000

@@ -1,0 +1,15 @@
+# A stable internal address for the website pods (pods come and go; this stays).
+apiVersion: v1
+kind: Service
+metadata:
+  name: portfolio
+  namespace: portfolio
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+spec:
+  selector:
+    app: portfolio
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

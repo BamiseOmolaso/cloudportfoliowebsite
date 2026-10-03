@@ -1,0 +1,16 @@
+# Managed by Ansible. k3s reads this file at start-up.
+
+# Only the owner (root) may read the admin kubeconfig on the server.
+write-kubeconfig-mode: "0600"
+
+# The API server's TLS certificate must list every address you connect to,
+# otherwise kubectl from your laptop refuses it. We use the public IP, and the server's
+# address inside the WireGuard tunnel (docs/infra/11-wireguard.md).
+tls-san:
+  - "{{ ansible_host }}"
+  - "{{ wireguard_server_ip }}"
+
+# Encrypt Kubernetes Secrets in the cluster's database (not just base64).
+secrets-encryption: true
+
+node-name: "{{ inventory_hostname }}"

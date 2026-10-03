@@ -1,0 +1,16 @@
+# The address other pods use: postgres.postgres.svc.cluster.local:5432
+# (`clusterIP: None` makes it a "headless" Service, the form a StatefulSet expects.
+# With one database pod it simply resolves to that pod.)
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  namespace: postgres
+spec:
+  clusterIP: None
+  selector:
+    app: postgres
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: 5432

@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
+import { summarize } from '@/lib/newsletter-stats';
 import { secureAdminRoute, handleError, mapPrismaError, sanitizeContent } from '@/lib/api-security';
 import { newsletterCreateSchema } from '@/lib/validation-schemas';
 import { z } from 'zod';
+import { getClientIp } from "@/lib/client-ip";
 
 export const dynamic = 'force-dynamic';
 
@@ -15,6 +17,10 @@ export const GET = secureAdminRoute(async (request: NextRequest) => {
           select: {
             id: true,
             status: true,
+            deliveredAt: true,
+            openedAt: true,
+            bouncedAt: true,
+            complainedAt: true,
           },
         },
       },
@@ -30,6 +36,7 @@ export const GET = secureAdminRoute(async (request: NextRequest) => {
         subject: newsletter.subject,
         status: newsletter.status,
         recipients_count: totalCount,
+        stats: summarize(newsletter.newsletterSends),
         sent_count: sentCount,
         failed_count: failedCount,
         created_at: newsletter.createdAt.toISOString(),
@@ -71,7 +78,7 @@ export const POST = secureAdminRoute(async (request: NextRequest, user) => {
       resourceType: 'Newsletter',
       resourceId: newsletter.id,
       details: { subject: newsletter.subject },
-      ipAddress: request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || null,
+      ipAddress: getClientIp(request.headers),
       userAgent: request.headers.get('user-agent') || null,
       timestamp: new Date().toISOString(),
     });

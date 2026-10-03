@@ -1,0 +1,79 @@
+# Keeps one copy of the website running and replaces it safely on updates.
+# The image tag `sha-<commit>` is a fixed version, never `latest`. To release a new
+# version: change the tag here (in a pull request); ArgoCD does the rest.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: portfolio
+  namespace: portfolio
+  annotations:
+    argocd.argoproj.io/sync-wave: "1" # after the migration Job
+spec:
+  replicas: 1 # one node with 4 GB: a second copy would only add memory pressure
+  selector:
+    matchLabels:
+      app: portfolio
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 0 # never remove the old copy until the new one is ready
+      maxSurge: 1
+  template:
+    metadata:
+      labels:
+        app: portfolio
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: web
+          image: ghcr.io/bamiseomolaso/cloudportfoliowebsite:sha-46f7254
+          ports:
+            - name: http
+              containerPort: 3000
+          securityContext:
+            runAsUser: 1001 # the image's built-in "nextjs" user
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true # the app cannot change its own files
+            capabilities:
+              drop: ["ALL"]
+          envFrom:
+            - configMapRef:
+                name: portfolio-config
+            - secretRef:
+                name: portfolio-secrets
+            # Where uploaded images are stored (infra/scripts/create-media-secret.sh).
+            # Optional: without it the site runs and image uploads are switched off.
+            - secretRef:
+                name: portfolio-media
+                optional: true
+            # Resend's signing secret for delivery reports (infra/scripts/create-webhook-secret.sh).
+            - secretRef:
+                name: portfolio-webhooks
+                optional: true
+          # Next.js needs somewhere to write temporary files; give it throwaway folders.
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: next-cache
+              mountPath: /app/.next/cache
+          # "Is it alive?" restart it if this keeps failing.
+          livenessProbe:
+            httpGet: { path: /api/health, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          # "Is it ready for visitors?" no traffic is sent until this passes.
+          readinessProbe:
+            httpGet: { path: /api/health, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 100m, memory: 256Mi }
+            limits: { memory: 512Mi }
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: next-cache
+          emptyDir: {}
