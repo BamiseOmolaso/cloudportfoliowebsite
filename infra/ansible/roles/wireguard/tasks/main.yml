@@ -56,6 +56,8 @@
     name: "wg-quick@{{ wireguard_interface }}"
     state: started
     enabled: true
+  # In a dry run the package is not really installed, so its service does not exist yet.
+  ignore_errors: "{{ ansible_check_mode }}"
 
 - name: Show what to put in your laptop's config
   ansible.builtin.debug:
