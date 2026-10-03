@@ -104,7 +104,11 @@ export async function applyEvent(event: ResendEvent): Promise<string> {
       if (bounce?.type === "Permanent") {
         await db.newsletterSubscriber.update({
           where: { id: send.subscriberId },
-          data: { isSubscribed: false, unsubscribeReason: "bounced" },
+          data: {
+            isSubscribed: false,
+            unsubscribedAt: new Date(),
+            unsubscribeReason: "bounced",
+          },
         });
       }
       return "bounced";
@@ -118,7 +122,11 @@ export async function applyEvent(event: ResendEvent): Promise<string> {
       // Someone marked it as spam: never email them again.
       await db.newsletterSubscriber.update({
         where: { id: send.subscriberId },
-        data: { isSubscribed: false, unsubscribeReason: "complained" },
+        data: {
+          isSubscribed: false,
+          unsubscribedAt: new Date(),
+          unsubscribeReason: "complained",
+        },
       });
       return "complained";
     default:

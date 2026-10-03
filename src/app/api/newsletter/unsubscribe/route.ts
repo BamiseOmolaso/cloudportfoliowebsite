@@ -84,6 +84,7 @@ export async function POST(request: Request) {
       where: { id: subscriber.id },
       data: {
         isSubscribed: false,
+        unsubscribedAt: new Date(),
         unsubscribeReason: reason || null,
         unsubscribeFeedback: feedback || null,
         updatedAt: new Date(),

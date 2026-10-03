@@ -241,6 +241,22 @@ Unsubscribe links in newsletters no longer expire (the old 30-day limit would ha
 the link in older emails). Scheduling a newsletter for later was removed from the form:
 nothing sent it at the chosen time, so the option would have been misleading.
 
+### First names and subscriber dates
+
+| What | How |
+|---|---|
+| **First name** | The sign-up form (footer on every page, and `/newsletter`) asks for it. It is optional, so it never costs a sign-up. A blank name on a re-sign-up does not erase one we already have |
+| **Greeting** | `{name}` in a newsletter becomes the first word of the name ("Ada Obi" gives "Ada"), or "there" if none. Names are escaped before going into the email |
+| **Adding names later** | Most existing subscribers signed up before names were asked. On **Subscribers**, click a name (or "Add name") to type one in; `PATCH /api/admin/subscribers/[id]` saves it (no `<` or `>`, up to 100 characters) |
+| **Joined** | `created_at`: the first time they signed up (never changes) |
+| **Last subscribed** | `subscribed_at`: set on every sign-up, including coming back after unsubscribing; the list shows "rejoined" when it is later than Joined |
+| **Unsubscribed** | `unsubscribed_at`: set when they use the unsubscribe link, when an address bounces permanently, or when they report spam; cleared if they sign up again. The reason is shown beneath it ("Too many emails", "Address does not exist", "Reported as spam") |
+| **CSV export** | First name, status, location, joined, last subscribed, unsubscribed on, reason and feedback, with exact times |
+
+For subscribers who already existed, the migration set "last subscribed" to their sign-up
+date, and for people already unsubscribed it used the last time their record changed,
+which is the closest record there is. Unsubscribes from now on are exact.
+
 ### Tracking what happened to each email
 
 The **Newsletters** list works like the Blog list: tabs (All, Drafts, Sending, Sent) with

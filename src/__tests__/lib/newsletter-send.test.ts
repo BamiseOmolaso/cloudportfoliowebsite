@@ -31,9 +31,10 @@ let buildEmail: Mod["buildEmail"];
 let isSending: Mod["isSending"];
 let runSend: Mod["runSend"];
 let sendTest: Mod["sendTest"];
+let firstNameOf: Mod["firstNameOf"];
 
 beforeAll(async () => {
-  ({ absolutizeImages, buildEmail, isSending, runSend, sendTest } =
+  ({ absolutizeImages, buildEmail, firstNameOf, isSending, runSend, sendTest } =
     await import("@/lib/newsletter-send"));
 });
 
@@ -95,6 +96,31 @@ describe("buildEmail", () => {
     expect(absolutizeImages('<img src="https://m.example/a.png">', BASE)).toBe(
       '<img src="https://m.example/a.png">',
     );
+  });
+});
+
+describe("firstNameOf", () => {
+  it("uses the first word of a name", () => {
+    expect(firstNameOf("Ada")).toBe("Ada");
+    expect(firstNameOf("  Ada Obi  ")).toBe("Ada");
+    expect(firstNameOf("Mary-Jane Watson")).toBe("Mary-Jane");
+  });
+
+  it("falls back to 'there' when there is no name", () => {
+    expect(firstNameOf(null)).toBe("there");
+    expect(firstNameOf(undefined)).toBe("there");
+    expect(firstNameOf("   ")).toBe("there");
+  });
+
+  it("greets a full name by first name in the email", () => {
+    const { html } = buildEmail(
+      "<p>Hi {name}</p>",
+      { name: "Ada Obi" },
+      "u",
+      BASE,
+    );
+    expect(html).toContain("Hi Ada");
+    expect(html).not.toContain("Obi");
   });
 });
 

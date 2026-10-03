@@ -351,6 +351,35 @@ describe('POST /api/newsletter/subscribe', () => {
     });
   });
 
+  it('records when they opted in, and clears any earlier unsubscribe date', async () => {
+    mockUpsert.mockResolvedValueOnce({ id: 'sub-1', email: 'test@example.com', name: 'Ada' });
+    mockCreate.mockResolvedValueOnce({ id: 'log-1' });
+    await POST(
+      new Request('http://localhost:3000/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': '192.168.1.1', 'user-agent': 'Mozilla/5.0' },
+        body: JSON.stringify({ email: 'test@example.com', name: 'Ada' }),
+      }),
+    );
+    const call = mockUpsert.mock.calls.at(-1)?.[0] as { update: Record<string, unknown> };
+    expect(call.update).toMatchObject({ name: 'Ada', unsubscribedAt: null });
+    expect(call.update.subscribedAt).toBeInstanceOf(Date);
+  });
+
+  it('does not erase a name we already have when the form leaves it blank', async () => {
+    mockUpsert.mockResolvedValueOnce({ id: 'sub-1', email: 'test@example.com', name: 'Ada' });
+    mockCreate.mockResolvedValueOnce({ id: 'log-1' });
+    await POST(
+      new Request('http://localhost:3000/api/newsletter/subscribe', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-forwarded-for': '192.168.1.1', 'user-agent': 'Mozilla/5.0' },
+        body: JSON.stringify({ email: 'test@example.com' }),
+      }),
+    );
+    const call = mockUpsert.mock.calls.at(-1)?.[0] as { update: Record<string, unknown> };
+    expect(call.update).not.toHaveProperty('name');
+  });
+
   const signup = (email = 'test@example.com') =>
     new Request('http://localhost:3000/api/newsletter/subscribe', {
       method: 'POST',

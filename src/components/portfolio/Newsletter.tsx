@@ -16,6 +16,7 @@ export default function Newsletter({
 }: {
   content?: typeof newsletter;
 }) {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<Status>("idle");
   const [message, setMessage] = useState("");
@@ -28,7 +29,7 @@ export default function Newsletter({
       const res = await fetch("/api/newsletter/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
+        body: JSON.stringify({ email, name }),
       });
       const data = await res.json().catch(() => ({}));
       if (data?.requiresCaptcha) {
@@ -39,6 +40,7 @@ export default function Newsletter({
       setStatus("done");
       setMessage(content.success);
       setEmail("");
+      setName("");
     } catch (err) {
       setStatus("error");
       setMessage(err instanceof Error ? err.message : "Failed to subscribe");
@@ -50,6 +52,18 @@ export default function Newsletter({
       <h3>{content.title}</h3>
       <p>{content.body}</p>
       <div className="news-row">
+        <label className="sr-only" htmlFor="pf-news-name">
+          First name
+        </label>
+        <input
+          id="pf-news-name"
+          type="text"
+          autoComplete="given-name"
+          maxLength={60}
+          placeholder="First name"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
         <label className="sr-only" htmlFor="pf-news-email">
           Email address
         </label>

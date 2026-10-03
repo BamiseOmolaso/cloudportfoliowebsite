@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
-import { Download } from "lucide-react";
+import { Check, Download, Pencil, X } from "lucide-react";
 import {
   Card,
   EmptyState,
@@ -21,6 +21,8 @@ interface Subscriber {
   unsubscribe_reason: string | null;
   unsubscribe_feedback: string | null;
   created_at: string;
+  subscribed_at: string;
+  unsubscribed_at: string | null;
   location?: string | null;
 }
 
@@ -30,6 +32,8 @@ const REASONS: Record<string, string> = {
   too_many_emails: "Too many emails",
   not_relevant: "Content not relevant",
   not_interesting: "Content not interesting",
+  bounced: "Address does not exist",
+  complained: "Reported as spam",
   other: "Other reason",
 };
 
@@ -38,6 +42,107 @@ const csvCell = (value: string) => {
   const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
   return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 };
+
+const day = (iso: string) => format(new Date(iso), "d MMM yyyy");
+const dayTime = (iso: string) => format(new Date(iso), "d MMM yyyy, HH:mm");
+/** Joined again later (they had unsubscribed and signed up once more). */
+const rejoined = (s: Subscriber) =>
+  new Date(s.subscribed_at).getTime() - new Date(s.created_at).getTime() >
+  60_000;
+
+/** A name that can be corrected in place: most people signed up before names were asked for. */
+function NameCell({
+  subscriber,
+  onSaved,
+  onError,
+}: {
+  subscriber: Subscriber;
+  onSaved: (name: string | null) => void;
+  onError: (message: string) => void;
+}) {
+  const [editing, setEditing] = useState(false);
+  const [value, setValue] = useState(subscriber.name ?? "");
+  const [saving, setSaving] = useState(false);
+
+  const save = async () => {
+    setSaving(true);
+    try {
+      const res = await fetch(`/api/admin/subscribers/${subscriber.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: value }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Could not save the name");
+      onSaved(data.name);
+      setEditing(false);
+    } catch (e) {
+      onError(e instanceof Error ? e.message : "Could not save the name");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (editing) {
+    return (
+      <form
+        className="flex items-center gap-1"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void save();
+        }}
+      >
+        <input
+          autoFocus
+          value={value}
+          maxLength={100}
+          aria-label={`First name for ${subscriber.email}`}
+          onChange={(e) => setValue(e.target.value)}
+          onKeyDown={(e) => e.key === "Escape" && setEditing(false)}
+          className={`${inputClass} !py-1.5`}
+        />
+        <button
+          type="submit"
+          disabled={saving}
+          aria-label="Save name"
+          className="rounded p-1.5 text-emerald-300 hover:bg-gray-800"
+        >
+          <Check className="h-4 w-4" aria-hidden="true" />
+        </button>
+        <button
+          type="button"
+          onClick={() => setEditing(false)}
+          aria-label="Cancel"
+          className="rounded p-1.5 text-gray-400 hover:bg-gray-800"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </button>
+      </form>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        setValue(subscriber.name ?? "");
+        setEditing(true);
+      }}
+      className="group flex items-center gap-1.5 text-left"
+      aria-label={`Edit the name of ${subscriber.email}`}
+    >
+      {subscriber.name ? (
+        <span className="text-gray-200">{subscriber.name}</span>
+      ) : (
+        <span className="text-gray-500">Add name</span>
+      )}
+      <Pencil
+        className="h-3.5 w-3.5 text-gray-500 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100"
+        aria-hidden="true"
+      />
+    </button>
+  );
+}
 
 export default function SubscribersPage() {
   const [subscribers, setSubscribers] = useState<Subscriber[]>([]);
@@ -85,27 +190,37 @@ export default function SubscribersPage() {
     );
   }, [subscribers, filter, query]);
 
+  const withoutName = subscribers.filter(
+    (s) => s.is_subscribed && !s.name,
+  ).length;
+
   const exportCsv = () => {
     const rows = [
       [
         "Email",
-        "Name",
+        "First name",
         "Status",
         "Location",
+        "Joined",
+        "Last subscribed",
+        "Unsubscribed on",
         "Unsubscribe reason",
         "Feedback",
-        "Subscribed on",
       ],
       ...shown.map((s) => [
         s.email,
         s.name ?? "",
         s.is_subscribed ? "Subscribed" : "Unsubscribed",
         s.location ?? "",
+        format(new Date(s.created_at), "yyyy-MM-dd HH:mm"),
+        format(new Date(s.subscribed_at), "yyyy-MM-dd HH:mm"),
+        s.unsubscribed_at
+          ? format(new Date(s.unsubscribed_at), "yyyy-MM-dd HH:mm")
+          : "",
         s.unsubscribe_reason
           ? (REASONS[s.unsubscribe_reason] ?? s.unsubscribe_reason)
           : "",
         s.unsubscribe_feedback ?? "",
-        format(new Date(s.created_at), "yyyy-MM-dd"),
       ]),
     ];
     const csv = rows.map((r) => r.map(csvCell).join(",")).join("\n");
@@ -131,7 +246,7 @@ export default function SubscribersPage() {
     <>
       <PageHeader
         title="Subscribers"
-        subtitle="People who signed up for the newsletter."
+        subtitle="People who signed up for the newsletter. Their first name is used to greet them in each email."
         actions={
           <button
             type="button"
@@ -160,6 +275,15 @@ export default function SubscribersPage() {
           </Card>
         ))}
       </div>
+
+      {!loading && withoutName > 0 && (
+        <p className="mb-4 text-sm text-gray-400">
+          {withoutName}{" "}
+          {withoutName === 1 ? "subscriber has" : "subscribers have"} no first
+          name yet, so they are greeted as &ldquo;there&rdquo;. Click a name to
+          add one.
+        </p>
+      )}
 
       <Card>
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-800 p-3">
@@ -213,9 +337,12 @@ export default function SubscribersPage() {
           />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[40rem] text-left text-sm">
+            <table className="w-full min-w-[48rem] text-left text-sm">
               <thead className="text-xs uppercase tracking-wider text-gray-500">
                 <tr>
+                  <th scope="col" className="px-4 py-3 font-medium">
+                    First name
+                  </th>
                   <th scope="col" className="px-4 py-3 font-medium">
                     Email
                   </th>
@@ -223,10 +350,10 @@ export default function SubscribersPage() {
                     Status
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Location
+                    Joined
                   </th>
                   <th scope="col" className="px-4 py-3 font-medium">
-                    Joined
+                    Unsubscribed
                   </th>
                 </tr>
               </thead>
@@ -234,9 +361,22 @@ export default function SubscribersPage() {
                 {shown.map((s) => (
                   <tr key={s.id}>
                     <td className="px-4 py-3">
+                      <NameCell
+                        subscriber={s}
+                        onError={setError}
+                        onSaved={(name) =>
+                          setSubscribers((prev) =>
+                            prev.map((x) =>
+                              x.id === s.id ? { ...x, name } : x,
+                            ),
+                          )
+                        }
+                      />
+                    </td>
+                    <td className="px-4 py-3">
                       <p className="font-medium text-white">{s.email}</p>
-                      {s.name && (
-                        <p className="text-xs text-gray-500">{s.name}</p>
+                      {s.location && (
+                        <p className="text-xs text-gray-500">{s.location}</p>
                       )}
                     </td>
                     <td className="px-4 py-3">
@@ -244,21 +384,39 @@ export default function SubscribersPage() {
                         status={s.is_subscribed ? "published" : "draft"}
                         label={s.is_subscribed ? "subscribed" : "unsubscribed"}
                       />
-                      {!s.is_subscribed && s.unsubscribe_reason && (
+                    </td>
+                    <td className="px-4 py-3 text-gray-300">
+                      <span title={dayTime(s.created_at)}>
+                        {day(s.created_at)}
+                      </span>
+                      {rejoined(s) && (
                         <p
-                          className="mt-1 text-xs text-gray-500"
-                          title={s.unsubscribe_feedback ?? undefined}
+                          className="text-xs text-gray-500"
+                          title={dayTime(s.subscribed_at)}
                         >
-                          {REASONS[s.unsubscribe_reason] ??
-                            s.unsubscribe_reason}
+                          rejoined {day(s.subscribed_at)}
                         </p>
                       )}
                     </td>
                     <td className="px-4 py-3 text-gray-300">
-                      {s.location || "–"}
-                    </td>
-                    <td className="px-4 py-3 text-gray-300">
-                      {format(new Date(s.created_at), "d MMM yyyy")}
+                      {s.unsubscribed_at ? (
+                        <>
+                          <span title={dayTime(s.unsubscribed_at)}>
+                            {day(s.unsubscribed_at)}
+                          </span>
+                          {s.unsubscribe_reason && (
+                            <p
+                              className="text-xs text-gray-500"
+                              title={s.unsubscribe_feedback ?? undefined}
+                            >
+                              {REASONS[s.unsubscribe_reason] ??
+                                s.unsubscribe_reason}
+                            </p>
+                          )}
+                        </>
+                      ) : (
+                        "–"
+                      )}
                     </td>
                   </tr>
                 ))}

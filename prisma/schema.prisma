@@ -57,6 +57,10 @@ model NewsletterSubscriber {
   unsubscribeReason         String?   @map("unsubscribe_reason") @db.VarChar(50)
   unsubscribeFeedback       String?   @map("unsubscribe_feedback")
   location                  String?
+  // When they most recently opted in (first-time or after unsubscribing) and, if they
+  // have left, when. "createdAt" stays the date they first signed up.
+  subscribedAt              DateTime  @default(now()) @map("subscribed_at") @db.Timestamptz
+  unsubscribedAt            DateTime? @map("unsubscribed_at") @db.Timestamptz
   preferences               Json?     @default("{\"frequency\": \"weekly\", \"categories\": []}") // JSONB
   preferencesToken          String?   @map("preferences_token")
   preferencesTokenExpiresAt DateTime? @map("preferences_token_expires_at") @db.Timestamptz

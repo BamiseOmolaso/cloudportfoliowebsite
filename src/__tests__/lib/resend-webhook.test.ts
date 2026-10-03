@@ -154,7 +154,11 @@ describe("applyEvent", () => {
     });
     expect(subUpdate).toHaveBeenCalledWith({
       where: { id: "sub1" },
-      data: { isSubscribed: false, unsubscribeReason: "bounced" },
+      data: {
+        isSubscribed: false,
+        unsubscribedAt: expect.any(Date),
+        unsubscribeReason: "bounced",
+      },
     });
   });
 
@@ -174,7 +178,11 @@ describe("applyEvent", () => {
     await applyEvent(ev("email.complained"));
     expect(subUpdate).toHaveBeenCalledWith({
       where: { id: "sub1" },
-      data: { isSubscribed: false, unsubscribeReason: "complained" },
+      data: {
+        isSubscribed: false,
+        unsubscribedAt: expect.any(Date),
+        unsubscribeReason: "complained",
+      },
     });
   });
 

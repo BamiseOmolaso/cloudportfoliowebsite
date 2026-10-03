@@ -20,6 +20,10 @@ import { getSiteUrl } from "@/lib/site-url";
 /** Resend's limit is 2 requests a second; stay safely under it. */
 export const SEND_DELAY_MS = 600;
 
+/** The first word of a name, so "Ada Obi" is greeted as "Ada". */
+export const firstNameOf = (name: string | null | undefined): string =>
+  (name ?? "").trim().split(/\s+/)[0] || "there";
+
 const escapeHtml = (value: string) =>
   value
     .replace(/&/g, "&amp;")
@@ -51,7 +55,7 @@ export function buildEmail(
 ) {
   const body = absolutizeImages(sanitizeHtmlServer(content), base).replace(
     /{name}/g,
-    escapeHtml(recipient.name || "there"),
+    escapeHtml(firstNameOf(recipient.name)),
   );
   const html = `${body}
 <div style="margin-top:24px;padding-top:16px;border-top:1px solid #eee;font-size:12px;color:#666;">

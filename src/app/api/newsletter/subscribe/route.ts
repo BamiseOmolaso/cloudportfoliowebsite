@@ -83,9 +83,12 @@ export const POST = withRateLimit(apiLimiter, 'newsletter-subscribe', async (req
   const subscriber = await db.newsletterSubscriber.upsert({
     where: { email },
     update: {
-      name,
+      // A blank name must not erase one we already have.
+      ...(name ? { name } : {}),
       location,
       isSubscribed: true,
+      subscribedAt: new Date(),
+      unsubscribedAt: null,
       subscriptionCount: { increment: 1 },
       updatedAt: new Date(),
       isDeleted: false,

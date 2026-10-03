@@ -104,7 +104,7 @@ const Newsletter = () => {
                   value={name}
                   onChange={e => setName(e.target.value)}
                   className="w-full px-4 py-2 bg-gray-700 border border-gray-600 rounded-md text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                  placeholder="Your name"
+                  placeholder="Your first name"
                 />
               </div>
 

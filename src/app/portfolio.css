@@ -2115,7 +2115,7 @@
   flex-wrap: wrap;
   gap: 0.6rem;
   margin-top: 1rem;
-  max-width: 32rem;
+  max-width: 40rem;
 }
 .pf .news input {
   flex: 1 1 14rem;
@@ -2127,6 +2127,13 @@
   color: var(--ink);
   font: inherit;
   font-size: 0.95rem;
+}
+/* first name is the shorter box, the email address the longer one */
+.pf .news #pf-news-name {
+  flex: 1 1 8rem;
+}
+.pf .news #pf-news-email {
+  flex: 2 1 12rem;
 }
 .pf .news input::placeholder {
   color: var(--ink-2);
