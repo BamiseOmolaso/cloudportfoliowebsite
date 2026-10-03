@@ -1,12 +1,10 @@
 import { fontVars } from "@/app/fonts";
-import Incidents from "./Incidents";
 import { Writing } from "./Record";
 
-/** What broke and what I learnt, shown under the posts on /blog. */
+/** Where else I write, shown under the posts on /blog. (The lessons-learnt write-ups are blog posts now.) */
 export default function Lessons() {
   return (
     <div className={`pf pf-embed ${fontVars}`} data-theme="dark">
-      <Incidents />
       <Writing />
     </div>
   );

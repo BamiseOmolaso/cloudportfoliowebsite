@@ -31,7 +31,7 @@ The menu is **Home, Projects, Blog, Learning, About, Contact**. "How it's built"
 it is a **project** (the platform this site runs on). The home page draws that platform
 with its tabs and a "Read how I built it" link; the case study itself lives on the
 project's page under Projects. The old `/architecture` address redirects there (308,
-permanent). What broke and what I learnt sits at the foot of the blog.
+permanent). What broke and what I learnt is a set of blog posts.
 
 | Page | Job | Content comes from |
 |---|---|---|
@@ -40,7 +40,7 @@ permanent). What broke and what I learnt sits at the foot of the blog.
 | `/blog`, `/blog/slug` | Every post | The **database** |
 | `/projects/production-platform-on-hetzner` | The platform in full: its diagram, explained in three steps | The content file, below the project's own text |
 | `/learning` | Learning: the Terraform journey from one EC2 instance to a production stack, then every infrastructure pattern (the home page shows two) | The content file |
-| `/blog` (foot of the page) | Lessons: incidents and what changed, plus the long-form write-ups | The content file |
+| `/blog` | Every post, including the six "lessons learnt" write-ups (seeded as real posts so you can edit them); the long-form write-up cards sit at the foot | The **database**, plus the content file for the cards |
 | `/about` | Where I've worked, what I hold, why a doctor | The content file |
 | `/contact` | The full contact form | Code (posts to `/api/contact`) |
 
@@ -111,7 +111,7 @@ alias in `BrandIcon.tsx`.
 
 ## 5. Projects, the database, and the seed
 
-A script turns the content file into SQL:
+Two scripts turn the content file into SQL: `generate-projects-seed.ts` (the seven projects) and `generate-posts-seed.ts` (the six "found and fixed" write-ups, as published blog posts). Both work the same way; the projects one is shown:
 
 ```bash
 npx tsx scripts/generate-projects-seed.ts      # writes prisma/seed-projects.sql
@@ -127,7 +127,7 @@ npx tsx scripts/generate-projects-seed.ts      # writes prisma/seed-projects.sql
 A test fails if the committed SQL drifts from the content file. Run it locally with
 `npx prisma db execute --file prisma/seed-projects.sql --schema prisma/schema.prisma`
 (without `--schema` it only prints its help). On the cluster, use the one-off Job in
-`infra/k8s/ops/seed-projects.yaml` (the commands are in its header). It was tried through
+`infra/k8s/ops/seed-content.yaml` (the commands are in its header). It was tried through
 the real migrator image against a local database: empty table, seven rows, seven again on
 the second run.
 
