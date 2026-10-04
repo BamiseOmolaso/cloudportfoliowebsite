@@ -20,7 +20,10 @@ const nextConfig = {
         hostname: 'media.oluwabamiseomolaso.com.ng',
       },
     ],
-    formats: ['image/avif', 'image/webp'],
+    // WebP only. AVIF is switched off because Next.js 14 has an unpatched remote-code-execution
+    // flaw in the image optimiser when it handles AVIF files (fixed only in Next 15.5.24+).
+    // Remove this line's restriction again after upgrading Next.js.
+    formats: ['image/webp'],
   },
   experimental: {
     optimizePackageImports: ['framer-motion', '@heroicons/react', 'lucide-react'],
