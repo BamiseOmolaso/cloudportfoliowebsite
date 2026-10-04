@@ -16,12 +16,16 @@ Read [CLAUDE.md](../../CLAUDE.md) and [DESIGN-GUIDE.md](../DESIGN-GUIDE.md) firs
 
 - **The live site** (https://oluwabamiseomolaso.com.ng) runs on Hetzner k3s. ArgoCD follows
   the `main` branch. All three ArgoCD apps (`root`, `postgres`, `portfolio`) were Synced and Healthy.
-- **Latest release:** image `sha-de21114` (Next.js 15.5.27), release PR #94. Before that
-  `sha-117e7d6` (#92). Check what is actually running with
+- **Latest release:** image `sha-2868248`, the first one **pinned by digest** (release PR #98;
+  same app as `sha-de21114`, Next.js 15.5.27, on the digest-pinned base image). Before that
+  `sha-de21114` (#94) and `sha-117e7d6` (#92). Check what is actually running with
   `kubectl -n portfolio get deploy portfolio -o jsonpath='{.spec.template.spec.containers[0].image}'`.
 - **Branches:** `staging` (renamed from `develop` on 3 October) collects work; `main` is what
   deploys. Feature branch to `staging` by pull request; a release PR to `main` changes the
   image tag in `infra/k8s/apps/portfolio/30-deployment.yaml` and `20-migrate-job.yaml`.
+  **A release pins the image by digest** (a fingerprint of the contents; a tag can be moved, a
+  digest cannot): each publish run of `build-image.yml` prints the exact line, such as
+  `image: ghcr.io/...:sha-2868248@sha256:...`, in its run summary; paste it into both manifests.
   **Releasing is a manual step** (nothing opens the release PR automatically). Promotions to
   `main` use **merge commits, never squash**.
 - **Workflows** (`.github/workflows/README.md` explains each): `ci.yml` (checks, path-aware),
@@ -51,13 +55,15 @@ Read [CLAUDE.md](../../CLAUDE.md) and [DESIGN-GUIDE.md](../DESIGN-GUIDE.md) firs
 1. **Verify the Next.js 15 release by hand on the live site** (not testable locally: image
    upload to R2, the contact form with reCAPTCHA, real newsletter email, the Cloudflare Access
    login). Confirm the cluster shows `sha-de21114` and the migrate job completed.
-2. **Decide the stale code-scanning alerts** (above).
-3. **Add CodeQL** (GitHub's code scanner for the project's own code; free on public repos; one
-   workflow file; appears in the same Security tab). Proposed, not built. Self-hosted SonarQube
-   was rejected: too heavy for the single server.
+2. **Stale code-scanning alerts:** the owner has dealt with them (see above if any remain).
+3. **CodeQL is added** (`codeql.yml`, scans the project's own code, report-only, results in the
+   Security tab, category `codeql-javascript`). **Triage its first findings.** Self-hosted
+   SonarQube was rejected: too heavy for the single server.
 4. **Turn the vulnerability scan into a gate** on pull requests (fail on critical or high
    findings that have a fix), after the base-image findings are cleared. Today it is report-only.
-5. **Update the Node base image** regularly (clears the openssl items); consider Dependabot.
+5. **Base image is pinned by digest and Dependabot is on** (`.github/dependabot.yml`, weekly pull
+   requests into `staging` for the base image, npm and Actions). Review and merge those.
+   **Image signing** (cosign, verified by a cluster policy) is the next artefact-trust step.
 6. **Automate the release pull request** after a successful image publish, and write a
    **rollback runbook** (`docs/infra/runbooks/`) including the migration caveat; rehearse one.
 7. Narrow `admin_cidrs` to a single break-glass address once WireGuard is trusted (see the
