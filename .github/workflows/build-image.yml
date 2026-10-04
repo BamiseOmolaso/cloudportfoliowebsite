@@ -49,6 +49,7 @@ jobs:
       contents: read
       packages: write # lets this job push to ghcr.io with the built-in token
       security-events: write # lets the scan below publish its findings to the Security tab
+      id-token: write # lets the signing step prove "this build came from this workflow" (no keys to store)
     strategy:
       fail-fast: false
       matrix:
@@ -98,6 +99,9 @@ jobs:
           context: .
           target: ${{ matrix.target }}
           push: ${{ github.event_name != 'pull_request' }}
+          # Attach a list of everything inside the image (SBOM) and a build record (provenance).
+          sbom: ${{ github.event_name != 'pull_request' }}
+          provenance: mode=max
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           # NEXT_PUBLIC_* values are baked into the browser bundle at build
@@ -109,6 +113,17 @@ jobs:
             NEXT_PUBLIC_GA_ID=${{ vars.NEXT_PUBLIC_GA_ID }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+
+      # Sign the image by its digest. The signature says "built by this repository's workflow on
+      # this branch" and is stored next to the image in GHCR. Nothing checks it yet (a later step
+      # adds a cluster rule that refuses unsigned images), so this cannot break a deployment.
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign the image (keyless)
+        if: github.event_name != 'pull_request'
+        run: cosign sign --yes "${{ steps.img.outputs.name }}@${{ steps.build.outputs.digest }}"
 
       # A tag can be moved to a different image; a digest (a fingerprint of the contents)
       # cannot. Print the exact line a release should put in the manifests.
@@ -122,6 +137,14 @@ jobs:
             echo
             echo '```'
             echo "image: ${{ steps.img.outputs.name }}:${{ steps.meta.outputs.version }}@${{ steps.build.outputs.digest }}"
+            echo '```'
+            echo
+            echo "Signed with cosign (keyless). Verify with:"
+            echo
+            echo '```'
+            echo "cosign verify ${{ steps.img.outputs.name }}@${{ steps.build.outputs.digest }} \\"
+            echo "  --certificate-identity-regexp '^https://github.com/${{ github.repository }}/' \\"
+            echo "  --certificate-oidc-issuer https://token.actions.githubusercontent.com"
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
