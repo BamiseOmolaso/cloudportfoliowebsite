@@ -20,9 +20,9 @@ const nextConfig = {
         hostname: 'media.oluwabamiseomolaso.com.ng',
       },
     ],
-    // WebP only. AVIF is switched off because Next.js 14 has an unpatched remote-code-execution
-    // flaw in the image optimiser when it handles AVIF files (fixed only in Next 15.5.24+).
-    // Remove this line's restriction again after upgrading Next.js.
+    // WebP only. AVIF was switched off while Next.js 14 had an unpatched remote-code-execution
+    // flaw in the AVIF path. Next.js 15.5.27 has the fix, so AVIF could be turned back on
+    // (it makes smaller files but costs more CPU); left off for now.
     formats: ['image/webp'],
   },
   experimental: {
@@ -36,8 +36,7 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  // Optimize bundle size
-  swcMinify: true,
+  // (swcMinify was removed: SWC minification is always on in Next.js 15)
   compress: true,
   poweredByHeader: false,
   webpack: (config, { isServer }) => {
