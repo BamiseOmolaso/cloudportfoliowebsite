@@ -228,7 +228,11 @@ jobs:
         # See TESTING.md for detailed coverage strategy and improvement plan
         run: npm test -- --passWithNoTests --runInBand --coverage
       
+      # Coverage upload is a nice-to-have. The action can crash on a network error before
+      # `fail_ci_if_error: false` applies (seen as "write EPROTO ... handshake failure"), so
+      # this step must never fail the build.
       - name: Upload coverage to Codecov
+        continue-on-error: true
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
