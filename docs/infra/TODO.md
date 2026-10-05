@@ -16,17 +16,18 @@ Read [CLAUDE.md](../../CLAUDE.md) and [DESIGN-GUIDE.md](../DESIGN-GUIDE.md) firs
 
 - **The live site** (https://oluwabamiseomolaso.com.ng) runs on Hetzner k3s. ArgoCD follows
   the `main` branch. All three ArgoCD apps (`root`, `postgres`, `portfolio`) were Synced and Healthy.
-- **Latest release:** image `sha-2868248`, the first one **pinned by digest** (release PR #98;
-  same app as `sha-de21114`, Next.js 15.5.27, on the digest-pinned base image). Before that
+- **Latest release:** image `sha-8f7b6c4` (release PR #102: the OO favicon; signed images,
+  pinned by digest). Before that `sha-2868248` (#98, the first digest-pinned release),
   `sha-de21114` (#94) and `sha-117e7d6` (#92). Check what is actually running with
   `kubectl -n portfolio get deploy portfolio -o jsonpath='{.spec.template.spec.containers[0].image}'`.
 - **Branches:** `staging` (renamed from `develop` on 3 October) collects work; `main` is what
   deploys. Feature branch to `staging` by pull request; a release PR to `main` changes the
   image tag in `infra/k8s/apps/portfolio/30-deployment.yaml` and `20-migrate-job.yaml`.
   **A release pins the image by digest** (a fingerprint of the contents; a tag can be moved, a
-  digest cannot): each publish run of `build-image.yml` prints the exact line, such as
-  `image: ghcr.io/...:sha-2868248@sha256:...`, in its run summary; paste it into both manifests.
-  **Releasing is a manual step** (nothing opens the release PR automatically). Promotions to
+  digest cannot). **`scripts/release.sh` opens the release pull request** for you (see
+  `docs/infra/runbooks/03-release-and-rollback.md`; it also covers rollback). Images are
+  **signed** (cosign, keyless) and carry an SBOM; nothing in the cluster enforces the signature
+  yet (Kyverno was proposed but not installed). **Merging the release pull request is a manual step** (nothing opens the release PR automatically). Promotions to
   `main` use **merge commits, never squash**.
 - **Workflows** (`.github/workflows/README.md` explains each): `ci.yml` (checks, path-aware),
   `build-image.yml` (builds both images; on a push to `staging` it publishes and scans them
@@ -64,8 +65,11 @@ Read [CLAUDE.md](../../CLAUDE.md) and [DESIGN-GUIDE.md](../DESIGN-GUIDE.md) firs
 5. **Base image is pinned by digest and Dependabot is on** (`.github/dependabot.yml`, weekly pull
    requests into `staging` for the base image, npm and Actions). Review and merge those.
    **Image signing** (cosign, verified by a cluster policy) is the next artefact-trust step.
-6. **Automate the release pull request** after a successful image publish, and write a
-   **rollback runbook** (`docs/infra/runbooks/`) including the migration caveat; rehearse one.
+6. **Release pull request script and rollback runbook are written** (`scripts/release.sh`,
+   runbook 03). **Rehearse a rollback once** and record it in the runbook table.
+   Pull requests to staging now run a **Trivy gate**: fixable CRITICAL findings fail the
+   `Image (app)` / `Image (migrator)` checks. HIGH is report-only until the base image is
+   clean. The owner must add those two checks to the required checks in branch protection.
 7. Narrow `admin_cidrs` to a single break-glass address once WireGuard is trusted (see the
    WireGuard item below).
 8. Keep **Cloudflare Access off `/api/webhooks`** (Resend's delivery reports must get through).

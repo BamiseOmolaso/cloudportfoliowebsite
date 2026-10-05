@@ -166,6 +166,20 @@ jobs:
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # Keep the exact reference as a small file so `scripts/release.sh` can open the release pull
+      # request without anyone copying digests by hand.
+      - name: Save the image reference for the release script
+        if: github.event_name != 'pull_request'
+        run: echo "${{ steps.img.outputs.name }}:${{ steps.meta.outputs.version }}@${{ steps.build.outputs.digest }}" > image.txt
+
+      - name: Upload the image reference
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.name }}
+          path: image.txt
+          retention-days: 30
+
       # Scan the image that was just published (the one that will run), not a copy. Findings
       # appear under Security > Code scanning. This reports and does not block: a newly found
       # weakness in a base image must not stop a release. Only HIGH and CRITICAL issues that

@@ -114,7 +114,7 @@ cookies and no stored IP addresses.
 | [09](docs/infra/09-site-structure-and-content.md) | Site structure, the admin panel, the newsletter system, analytics, abuse protection |
 | [10](docs/infra/10-images-and-media.md) | Image uploads to Cloudflare R2 |
 | [11](docs/infra/11-wireguard.md) | The private tunnel |
-| [Runbooks](docs/infra/runbooks/) | [My IP changed](docs/infra/runbooks/01-my-ip-changed.md) and the [troubleshooting log](docs/infra/runbooks/02-troubleshooting-log.md) |
+| [Runbooks](docs/infra/runbooks/) | [My IP changed](docs/infra/runbooks/01-my-ip-changed.md), [release and rollback](docs/infra/runbooks/03-release-and-rollback.md) and the [troubleshooting log](docs/infra/runbooks/02-troubleshooting-log.md) |
 | [TODO](docs/infra/TODO.md) | What is done and what is next |
 
 Each doc explains *why* before *how*, shows commands with each part explained, records
