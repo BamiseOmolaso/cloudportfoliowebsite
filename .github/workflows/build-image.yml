@@ -49,6 +49,7 @@ jobs:
       contents: read
       packages: write # lets this job push to ghcr.io with the built-in token
       security-events: write # lets the scan below publish its findings to the Security tab
+      id-token: write # lets the signing step prove "this build came from this workflow" (no keys to store)
     strategy:
       fail-fast: false
       matrix:
@@ -92,11 +93,18 @@ jobs:
             type=sha,prefix=sha-,format=short
 
       - name: Build (and push on staging)
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: .
           target: ${{ matrix.target }}
           push: ${{ github.event_name != 'pull_request' }}
+          # Attach a list of everything inside the image (SBOM) and a build record (provenance).
+          sbom: ${{ github.event_name != 'pull_request' }}
+          # The build record cannot be loaded into the runner's Docker, which the PR scan needs.
+          provenance: ${{ github.event_name == 'pull_request' && 'false' || 'mode=max' }}
+          # On a pull request, keep the image on the runner so the gate below can scan it.
+          load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           # NEXT_PUBLIC_* values are baked into the browser bundle at build
@@ -109,6 +117,69 @@ jobs:
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
 
+      # Sign the image by its digest. The signature says "built by this repository's workflow on
+      # this branch" and is stored next to the image in GHCR. Nothing checks it yet (a later step
+      # adds a cluster rule that refuses unsigned images), so this cannot break a deployment.
+      - name: Install cosign
+        if: github.event_name != 'pull_request'
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign the image (keyless)
+        if: github.event_name != 'pull_request'
+        run: cosign sign --yes "${{ steps.img.outputs.name }}@${{ steps.build.outputs.digest }}"
+
+      # THE GATE. On a pull request, scan the image this change would produce and FAIL on any
+      # CRITICAL weakness that has a fix available. HIGH is reported after merge (below) but does
+      # not block, because today's HIGH items all come from the operating system inside the base
+      # image, which a pull request to our code cannot fix. Raise this to CRITICAL,HIGH once the
+      # base image is clean.
+      - name: Block critical vulnerabilities (Trivy)
+        if: github.event_name == 'pull_request'
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8  # v0.36.0
+        with:
+          image-ref: ${{ steps.img.outputs.name }}:${{ steps.meta.outputs.version }}
+          format: 'table'
+          severity: 'CRITICAL'
+          ignore-unfixed: true
+          exit-code: '1'
+
+      # A tag can be moved to a different image; a digest (a fingerprint of the contents)
+      # cannot. Print the exact line a release should put in the manifests.
+      - name: Show the immutable image reference
+        if: github.event_name != 'pull_request'
+        run: |
+          {
+            echo "### ${{ matrix.name }} image"
+            echo
+            echo "Put this in the release PR (tag for people, digest for the cluster):"
+            echo
+            echo '```'
+            echo "image: ${{ steps.img.outputs.name }}:${{ steps.meta.outputs.version }}@${{ steps.build.outputs.digest }}"
+            echo '```'
+            echo
+            echo "Signed with cosign (keyless). Verify with:"
+            echo
+            echo '```'
+            echo "cosign verify ${{ steps.img.outputs.name }}@${{ steps.build.outputs.digest }} \\"
+            echo "  --certificate-identity-regexp '^https://github.com/${{ github.repository }}/' \\"
+            echo "  --certificate-oidc-issuer https://token.actions.githubusercontent.com"
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Keep the exact reference as a small file so `scripts/release.sh` can open the release pull
+      # request without anyone copying digests by hand.
+      - name: Save the image reference for the release script
+        if: github.event_name != 'pull_request'
+        run: echo "${{ steps.img.outputs.name }}:${{ steps.meta.outputs.version }}@${{ steps.build.outputs.digest }}" > image.txt
+
+      - name: Upload the image reference
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-${{ matrix.name }}
+          path: image.txt
+          retention-days: 30
+
       # Scan the image that was just published (the one that will run), not a copy. Findings
       # appear under Security > Code scanning. This reports and does not block: a newly found
       # weakness in a base image must not stop a release. Only HIGH and CRITICAL issues that
@@ -117,7 +188,8 @@ jobs:
         if: github.event_name != 'pull_request'
         uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8  # v0.36.0
         with:
-          image-ref: ${{ steps.img.outputs.name }}:${{ steps.meta.outputs.version }}
+          # By digest, so the scan covers exactly the bytes that were published.
+          image-ref: ${{ steps.img.outputs.name }}@${{ steps.build.outputs.digest }}
           format: 'sarif'
           output: 'trivy-${{ matrix.name }}.sarif'
           severity: 'CRITICAL,HIGH'

@@ -1,0 +1,38 @@
+name: CodeQL
+
+# CodeQL reads our own TypeScript/JavaScript code (not the packages we install) looking for
+# security mistakes such as injection, cross-site scripting and unsafe use of user input.
+# Findings appear under Security > Code scanning. It reports and does not block a merge.
+on:
+  pull_request:
+    branches: [main, staging]
+    paths: ['src/**', 'prisma/**', 'next.config.*', 'package-lock.json', '.github/workflows/codeql.yml']
+  push:
+    branches: [staging]
+    paths: ['src/**', 'prisma/**', 'next.config.*', 'package-lock.json', '.github/workflows/codeql.yml']
+  schedule:
+    - cron: '17 4 * * 1' # weekly, so newly discovered patterns are checked against unchanged code
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    name: Analyze (javascript-typescript)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      security-events: write # lets the scan publish findings to the Security tab
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: github/codeql-action/init@52485aec7be33610227643b0fe83936b8b5f061a  # v3
+        with:
+          languages: javascript-typescript
+          queries: security-extended
+      - uses: github/codeql-action/analyze@52485aec7be33610227643b0fe83936b8b5f061a  # v3
+        with:
+          category: codeql-javascript

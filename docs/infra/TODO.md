@@ -7,6 +7,101 @@ honest: it is the shared memory of the project.
 
 ---
 
+## Pick up here (state on 4 October 2026)
+
+Written so that a person or another AI agent can continue without the earlier conversation.
+Read [CLAUDE.md](../../CLAUDE.md) and [DESIGN-GUIDE.md](../DESIGN-GUIDE.md) first.
+
+### Where things stand
+
+- **The live site** (https://oluwabamiseomolaso.com.ng) runs on Hetzner k3s. ArgoCD follows
+  the `main` branch. All three ArgoCD apps (`root`, `postgres`, `portfolio`) were Synced and Healthy.
+- **Latest release:** image `sha-8f7b6c4` (release PR #102: the OO favicon; signed images,
+  pinned by digest). Before that `sha-2868248` (#98, the first digest-pinned release),
+  `sha-de21114` (#94) and `sha-117e7d6` (#92). Check what is actually running with
+  `kubectl -n portfolio get deploy portfolio -o jsonpath='{.spec.template.spec.containers[0].image}'`.
+- **Branches:** `staging` (renamed from `develop` on 3 October) collects work; `main` is what
+  deploys. Feature branch to `staging` by pull request; the image lines in
+  `infra/k8s/apps/portfolio/30-deployment.yaml` and `20-migrate-job.yaml` are updated on `staging`
+  and reach `main` when `staging` is promoted.
+  **A release pins the image by digest** (a fingerprint of the contents; a tag can be moved, a
+  digest cannot). **`scripts/release.sh prepare` opens a pull request into `staging` with the new digest; `scripts/release.sh promote` opens staging to main** (work moves one way only; see
+  `docs/infra/runbooks/03-release-and-rollback.md`; it also covers rollback). Images are
+  **signed** (cosign, keyless) and carry an SBOM; nothing in the cluster enforces the signature
+  yet (Kyverno was proposed but not installed). **Merging the promote pull request is a manual step and is what deploys** (the script only opens pull requests). Promotions to
+  `main` use **merge commits, never squash**.
+- **Workflows** (`.github/workflows/README.md` explains each): `ci.yml` (checks, path-aware),
+  `build-image.yml` (builds both images; on a push to `staging` it publishes and scans them
+  with Trivy, reporting only), `infra.yml` (Terraform plan on pull requests, apply only on a
+  push to `main` after approval), `secret-scan.yml`. The AWS-era deploy workflows are archived
+  in `.github/workflows-archive/`.
+- **Rollback** = revert the promote pull request (staging to main). Database migrations only go forward, so the
+  old app must tolerate the newer schema. Nothing reverts automatically and a rollback has
+  never been rehearsed.
+- **Access to the cluster:** WireGuard tunnel (doc 11). Use the Hetzner kubectl context; the
+  local `kind-...` context is a different, unrelated cluster.
+
+### Security scan state
+
+- Trivy (Security tab, Code scanning, **filter by branch `staging`**; categories `trivy-app` and
+  `trivy-migrator`). After the Next.js 15 upgrade the app image had 50 open items
+  (0 critical, 4 high, all openssl in the base operating system) and the migrator 53
+  (7 high, base image).
+- **Stale alerts:** about 120 alerts on `main` come from a deleted CI job
+  (`ci.yml:docker-build`). They never close on their own. The owner has not yet decided
+  between dismissing them ("won't fix", with a comment) and deleting those old scan results.
+  Ask before doing either (bulk change to security records).
+
+### To do next, in order
+
+1. **Verify the Next.js 15 release by hand on the live site** (not testable locally: image
+   upload to R2, the contact form with reCAPTCHA, real newsletter email, the Cloudflare Access
+   login). Confirm the cluster shows `sha-de21114` and the migrate job completed.
+2. **Stale code-scanning alerts:** the owner has dealt with them (see above if any remain).
+3. **CodeQL is added** (`codeql.yml`, scans the project's own code, report-only, results in the
+   Security tab, category `codeql-javascript`). **Triage its first findings.** Self-hosted
+   SonarQube was rejected: too heavy for the single server.
+4. **Turn the vulnerability scan into a gate** on pull requests (fail on critical or high
+   findings that have a fix), after the base-image findings are cleared. Today it is report-only.
+5. **Base image is pinned by digest and Dependabot is on** (`.github/dependabot.yml`, weekly pull
+   requests into `staging` for the base image, npm and Actions). Review and merge those.
+   **Image signing** (cosign, verified by a cluster policy) is the next artefact-trust step.
+6. **Release script and rollback runbook are written** (`scripts/release.sh prepare|promote`,
+   runbook 03). **Rehearse a rollback once** and record it in the runbook table.
+   Pull requests to staging now run a **Trivy gate**: fixable CRITICAL findings fail the
+   `Image (app)` / `Image (migrator)` checks. HIGH is report-only until the base image is
+   clean. The owner must add those two checks to the required checks in branch protection.
+7. Narrow `admin_cidrs` to a single break-glass address once WireGuard is trusted (see the
+   WireGuard item below).
+8. Keep **Cloudflare Access off `/api/webhooks`** (Resend's delivery reports must get through).
+9. **Cloudflare Web Analytics** still logs a console error in the browser; the owner chose to
+   leave it for now (analytics must stay on). The CSP allows it, so the cause is elsewhere.
+10. **Content only the owner can supply:** the Hetzner cost figure, the GCP logo, subscriber
+    first names, and their own blog posts.
+11. Pre-existing quirk: an unknown blog or project address returns HTTP 200 instead of 404
+    (a "soft 404"; bad for search engines). Not caused by the upgrade.
+
+### Things that went wrong before (so they are not repeated)
+
+- **`TF_VAR_ADMIN_CIDRS`** (GitHub secret) must be a JSON list such as `["203.0.113.7/32"]` and
+  must match the real firewall, or the infra Plan check fails. Set it with
+  `gh secret set TF_VAR_ADMIN_CIDRS` and paste at the prompt (shell quoting strips the quotes).
+  Never approve the infra Apply job unless the plan shows no unexpected firewall change.
+- Run the **type-check again after every edit**: the production build and CI check route
+  signatures that local tests do not.
+- **Format only the files you touched** (Prettier reformatted unrelated files before).
+- Never use a command that deletes a path held in a variable; the safety check blocks it.
+- Branch and repository changes that are hard to undo (deleting branches, bulk-dismissing
+  alerts, rewriting settings) need the owner's explicit yes first.
+
+### How the owner likes to work
+
+- Ask before opening or merging pull requests; bundle related changes; commit work freely.
+- Explain every term and abbreviation in plain language, in chat and in the docs.
+- Secrets are typed at hidden prompts and never pasted into chat or committed.
+- Keep the existing look of the site and admin (see the design guide); Cloudflare Analytics stays on.
+
+
 ## Infrastructure: next up
 
 - [x] **Postgres verified** (doc 06): backup to R2, restore test, crash survival and the

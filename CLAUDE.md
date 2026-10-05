@@ -5,6 +5,12 @@ Before you change any page, component, style, text, admin screen or database mod
 site's design rules, where content lives, how to add things, the quality checks to run and the
 git process.
 
+**Continuing earlier work?** Read the "Pick up here" section at the top of
+**[docs/infra/TODO.md](docs/infra/TODO.md)**: current state, what to do next and the traps to avoid.
+
+**Something broken or a check red?** Follow **[docs/troubleshooting/](docs/troubleshooting/README.md)**:
+read the real error first, find which step failed, change one thing at a time.
+
 The five rules to never forget:
 
 1. Do not redesign what exists. Extend it so it looks like it was always there.

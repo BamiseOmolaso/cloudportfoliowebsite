@@ -1,5 +1,5 @@
 # Use Node.js 20 Alpine to match CI/CD pipeline
-FROM node:20-alpine AS base
+FROM node:20-alpine@sha256:fb4cd12c85ee03686f6af5362a0b0d56d50c58a04632e6c0fb8363f609372293 AS base
 
 # Install dependencies only when needed
 FROM base AS deps
@@ -44,16 +44,31 @@ RUN npm run build
 # the Prisma command-line tool, so the migration needs its own image. Build it with
 #   docker build --target migrator .
 # It sits before `runner` so a plain `docker build .` still produces the app image.
+FROM base AS migrator-deps
+WORKDIR /app
+# Only the two packages the migration needs, at the exact versions in package-lock.json. The
+# full dependency tree (test and lint tools included) used to be copied here, which put about
+# 200 unrelated findings into the vulnerability scan for a pod that lives a few seconds.
+COPY package-lock.json ./
+RUN set -e; \
+    PRISMA_VERSION=$(node -p "require('./package-lock.json').packages['node_modules/prisma'].version"); \
+    CLIENT_VERSION=$(node -p "require('./package-lock.json').packages['node_modules/@prisma/client'].version"); \
+    npm init -y >/dev/null; \
+    npm install --omit=dev --no-audit --no-fund "prisma@$PRISMA_VERSION" "@prisma/client@$CLIENT_VERSION"
+
 FROM base AS migrator
 WORKDIR /app
 ENV NODE_ENV=production \
     CHECKPOINT_DISABLE=1 \
     PRISMA_HIDE_UPDATE_MESSAGE=1
-COPY --from=deps --chown=node:node /app/node_modules ./node_modules
+COPY --from=migrator-deps --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node package.json ./
 COPY --chown=node:node prisma ./prisma
+# npm is not needed to run the migration (node starts the Prisma CLI directly), and its own
+# bundled packages were being reported by the scan, so it is removed.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 USER node
-CMD ["npx", "prisma", "migrate", "deploy"]
+CMD ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
 
 # Production image, copy all the files and run next
 FROM base AS runner
@@ -76,6 +91,10 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=nextjs:nodejs /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+
+# npm is only needed to build; the site runs with `node`. Removing it drops about 35 scan findings
+# in packages the running site never loads.
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
 
 USER nextjs
 

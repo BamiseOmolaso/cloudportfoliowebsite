@@ -29,7 +29,7 @@ describe("GET /api/blog/[slug]", () => {
     mockFindFirst.mockResolvedValue(null);
 
     const request = new Request("http://localhost:3000/api/blog/non-existent");
-    const response = await GET(request, { params: { slug: "non-existent" } });
+    const response = await GET(request, { params: Promise.resolve({ slug: "non-existent" }) });
     const data = await response.json();
 
     expect(response.status).toBe(404);
@@ -65,7 +65,7 @@ describe("GET /api/blog/[slug]", () => {
     const request = new Request(
       "http://localhost:3000/api/blog/test-blog-post",
     );
-    const response = await GET(request, { params: { slug: "test-blog-post" } });
+    const response = await GET(request, { params: Promise.resolve({ slug: "test-blog-post" }) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -106,7 +106,7 @@ describe("GET /api/blog/[slug]", () => {
     const request = new Request(
       "http://localhost:3000/api/blog/test-blog-post",
     );
-    const response = await GET(request, { params: { slug: "test-blog-post" } });
+    const response = await GET(request, { params: Promise.resolve({ slug: "test-blog-post" }) });
     const data = await response.json();
 
     expect(response.status).toBe(200);
@@ -120,7 +120,7 @@ describe("GET /api/blog/[slug]", () => {
     mockFindFirst.mockResolvedValue(null);
 
     const request = new Request("http://localhost:3000/api/blog/draft-post");
-    await GET(request, { params: { slug: "draft-post" } });
+    await GET(request, { params: Promise.resolve({ slug: "draft-post" }) });
 
     expect(mockFindFirst).toHaveBeenCalledWith({
       where: {
@@ -153,7 +153,7 @@ describe("GET /api/blog/[slug]", () => {
     const request = new Request(
       "http://localhost:3000/api/blog/test-blog-post",
     );
-    const response = await GET(request, { params: { slug: "test-blog-post" } });
+    const response = await GET(request, { params: Promise.resolve({ slug: "test-blog-post" }) });
 
     expect(response.headers.get("Cache-Control")).toBe(
       "public, s-maxage=3600, stale-while-revalidate=86400",
@@ -166,7 +166,7 @@ describe("GET /api/blog/[slug]", () => {
     const request = new Request(
       "http://localhost:3000/api/blog/test-blog-post",
     );
-    const response = await GET(request, { params: { slug: "test-blog-post" } });
+    const response = await GET(request, { params: Promise.resolve({ slug: "test-blog-post" }) });
     const data = await response.json();
 
     expect(response.status).toBe(500);
