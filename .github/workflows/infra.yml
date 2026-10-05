@@ -69,8 +69,9 @@ jobs:
     name: Plan
     needs: validate
     runs-on: ubuntu-latest
-    # Fork PRs get no secrets, so they only get the validate job.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    # Fork PRs and Dependabot PRs get no repository secrets (Dependabot has its own separate
+    # secret store), so a plan would fail on empty credentials. They only get the validate job.
+    if: github.event_name != 'pull_request' || (github.event.pull_request.head.repo.full_name == github.repository && github.actor != 'dependabot[bot]')
     steps:
       - uses: actions/checkout@v4
         with:

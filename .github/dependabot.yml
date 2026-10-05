@@ -3,17 +3,25 @@
 # unchangeable fingerprint), so it only moves when Dependabot proposes a new digest and CI passes.
 version: 2
 updates:
+  # Major version jumps (a new Node line, a rewritten library) can break the site and are not
+  # covered by our tests, so they are ignored here and done by hand when we choose to.
   - package-ecosystem: docker
     directory: /
     target-branch: staging
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
   - package-ecosystem: npm
     directory: /
     target-branch: staging
     schedule:
       interval: weekly
     open-pull-requests-limit: 5
+    ignore:
+      - dependency-name: '*'
+        update-types: ['version-update:semver-major']
     groups:
       minor-and-patch:
         update-types: [minor, patch]
