@@ -59,7 +59,7 @@ in Cloudflare R2, email is sent with Resend, deploys are GitOps through ArgoCD.
 | `src/app/` | Routes. `page.tsx` per route; `api/` for endpoints |
 | `src/app/portfolio.css` | **All CSS for the public redesign**, scoped under `.pf` |
 | `src/app/globals.css`, `tailwind.config.js` | Tailwind base and the themed palette used by older pages and the admin |
-| `src/app/fonts.ts` | The three fonts (loaded at build time, served from this site) |
+| `src/app/fonts.ts` | The fonts (font files kept in `src/app/fonts/`, served from this site; no download at build time) |
 | `src/components/portfolio/` | Public sections and parts (Hero, Work, Patterns, BrandIcon, FlowStrip, ...) |
 | `src/components/admin/` | Admin building blocks (`ui.tsx`, `forms.tsx`, `RichEditor.tsx`, ...) |
 | `src/components/layout/SiteChrome.tsx` | Decides which header/footer wraps which route |
