@@ -101,7 +101,10 @@ jobs:
           push: ${{ github.event_name != 'pull_request' }}
           # Attach a list of everything inside the image (SBOM) and a build record (provenance).
           sbom: ${{ github.event_name != 'pull_request' }}
-          provenance: mode=max
+          # The build record cannot be loaded into the runner's Docker, which the PR scan needs.
+          provenance: ${{ github.event_name == 'pull_request' && 'false' || 'mode=max' }}
+          # On a pull request, keep the image on the runner so the gate below can scan it.
+          load: ${{ github.event_name == 'pull_request' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           # NEXT_PUBLIC_* values are baked into the browser bundle at build
@@ -124,6 +127,21 @@ jobs:
       - name: Sign the image (keyless)
         if: github.event_name != 'pull_request'
         run: cosign sign --yes "${{ steps.img.outputs.name }}@${{ steps.build.outputs.digest }}"
+
+      # THE GATE. On a pull request, scan the image this change would produce and FAIL on any
+      # CRITICAL weakness that has a fix available. HIGH is reported after merge (below) but does
+      # not block, because today's HIGH items all come from the operating system inside the base
+      # image, which a pull request to our code cannot fix. Raise this to CRITICAL,HIGH once the
+      # base image is clean.
+      - name: Block critical vulnerabilities (Trivy)
+        if: github.event_name == 'pull_request'
+        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8  # v0.36.0
+        with:
+          image-ref: ${{ steps.img.outputs.name }}:${{ steps.meta.outputs.version }}
+          format: 'table'
+          severity: 'CRITICAL'
+          ignore-unfixed: true
+          exit-code: '1'
 
       # A tag can be moved to a different image; a digest (a fingerprint of the contents)
       # cannot. Print the exact line a release should put in the manifests.
