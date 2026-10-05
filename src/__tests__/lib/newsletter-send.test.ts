@@ -1,6 +1,9 @@
 /** @jest-environment node */
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 
+// What the email sender returns (mirrors the Sender type in src/lib/newsletter-send.ts).
+type SendResult = { id?: string | null; error: { message: string } | null };
+
 const nlFind = jest.fn<(...a: unknown[]) => Promise<unknown>>();
 const nlUpdate = jest.fn<(...a: unknown[]) => Promise<unknown>>();
 const sendUpsert = jest.fn<(...a: unknown[]) => Promise<unknown>>();
@@ -126,7 +129,9 @@ describe("firstNameOf", () => {
 
 describe("runSend", () => {
   it("emails each person, records each send, and marks the newsletter sent", async () => {
-    const send = jest.fn<any>().mockResolvedValue({ id: "re_1", error: null });
+    const send = jest
+      .fn<(...a: unknown[]) => Promise<SendResult>>()
+      .mockResolvedValue({ id: "re_1", error: null });
     const result = await runSend("n1", [person("a"), person("b")], {
       send,
       delayMs: 0,
@@ -155,7 +160,7 @@ describe("runSend", () => {
 
   it("counts a Resend error as a failure and keeps going", async () => {
     const send = jest
-      .fn<any>()
+      .fn<(...a: unknown[]) => Promise<SendResult>>()
       .mockResolvedValueOnce({ error: { message: "rate limited" } })
       .mockResolvedValueOnce({ error: null });
     const result = await runSend("n1", [person("a"), person("b")], {
@@ -169,7 +174,9 @@ describe("runSend", () => {
   });
 
   it("counts a thrown error as a failure too", async () => {
-    const send = jest.fn<any>().mockRejectedValue(new Error("network"));
+    const send = jest
+      .fn<(...a: unknown[]) => Promise<SendResult>>()
+      .mockRejectedValue(new Error("network"));
     expect(await runSend("n1", [person("a")], { send, delayMs: 0 })).toEqual({
       sent: 0,
       failed: 1,
@@ -178,7 +185,9 @@ describe("runSend", () => {
 
   it("goes back to a draft when nobody received it, so it can be retried", async () => {
     sendCount.mockResolvedValue(0);
-    const send = jest.fn<any>().mockResolvedValue({ error: { message: "no" } });
+    const send = jest
+      .fn<(...a: unknown[]) => Promise<SendResult>>()
+      .mockResolvedValue({ error: { message: "no" } });
     await runSend("n1", [person("a")], { send, delayMs: 0 });
     expect(nlUpdate).toHaveBeenLastCalledWith({
       where: { id: "n1" },
@@ -187,7 +196,9 @@ describe("runSend", () => {
   });
 
   it("creates a never-expiring unsubscribe link for someone without one", async () => {
-    const send = jest.fn<any>().mockResolvedValue({ error: null });
+    const send = jest
+      .fn<(...a: unknown[]) => Promise<SendResult>>()
+      .mockResolvedValue({ error: null });
     await runSend("n1", [person("a", "Ada", null)], { send, delayMs: 0 });
     expect(subUpdate).toHaveBeenCalledWith({
       where: { id: "a" },
@@ -199,7 +210,9 @@ describe("runSend", () => {
   });
 
   it("makes an old, expiring unsubscribe link permanent", async () => {
-    const send = jest.fn<any>().mockResolvedValue({ error: null });
+    const send = jest
+      .fn<(...a: unknown[]) => Promise<SendResult>>()
+      .mockResolvedValue({ error: null });
     await runSend(
       "n1",
       [{ ...person("a"), unsubscribeTokenExpiresAt: new Date("2026-01-01") }],
@@ -216,7 +229,9 @@ describe("runSend", () => {
   });
 
   it("is not marked as sending once it has finished", async () => {
-    const send = jest.fn<any>().mockResolvedValue({ error: null });
+    const send = jest
+      .fn<(...a: unknown[]) => Promise<SendResult>>()
+      .mockResolvedValue({ error: null });
     await runSend("n1", [person("a")], { send, delayMs: 0 });
     expect(isSending("n1")).toBe(false);
   });
@@ -231,7 +246,9 @@ describe("runSend", () => {
 
 describe("sendTest", () => {
   it("sends one copy marked as a test and records nothing", async () => {
-    const send = jest.fn<any>().mockResolvedValue({ error: null });
+    const send = jest
+      .fn<(...a: unknown[]) => Promise<SendResult>>()
+      .mockResolvedValue({ error: null });
     await sendTest(newsletter, "me@example.com", send);
     expect(send.mock.calls[0][0]).toMatchObject({
       to: "me@example.com",
@@ -242,7 +259,7 @@ describe("sendTest", () => {
 
   it("reports a send error", async () => {
     const send = jest
-      .fn<any>()
+      .fn<(...a: unknown[]) => Promise<SendResult>>()
       .mockResolvedValue({ error: { message: "bad key" } });
     await expect(sendTest(newsletter, "me@example.com", send)).rejects.toThrow(
       "bad key",
