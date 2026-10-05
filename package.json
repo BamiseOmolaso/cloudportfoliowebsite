@@ -46,7 +46,7 @@
     "date-fns": "^4.1.0",
     "dompurify": "^3.2.4",
     "dotenv": "^16.6.1",
-    "framer-motion": "^10.18.0",
+    "framer-motion": "^13.5.0",
     "ioredis": "^5.6.0",
     "isomorphic-dompurify": "^2.33.0",
     "js-cookie": "^3.0.5",
