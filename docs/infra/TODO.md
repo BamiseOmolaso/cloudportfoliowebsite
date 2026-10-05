@@ -21,20 +21,21 @@ Read [CLAUDE.md](../../CLAUDE.md) and [DESIGN-GUIDE.md](../DESIGN-GUIDE.md) firs
   `sha-de21114` (#94) and `sha-117e7d6` (#92). Check what is actually running with
   `kubectl -n portfolio get deploy portfolio -o jsonpath='{.spec.template.spec.containers[0].image}'`.
 - **Branches:** `staging` (renamed from `develop` on 3 October) collects work; `main` is what
-  deploys. Feature branch to `staging` by pull request; a release PR to `main` changes the
-  image tag in `infra/k8s/apps/portfolio/30-deployment.yaml` and `20-migrate-job.yaml`.
+  deploys. Feature branch to `staging` by pull request; the image lines in
+  `infra/k8s/apps/portfolio/30-deployment.yaml` and `20-migrate-job.yaml` are updated on `staging`
+  and reach `main` when `staging` is promoted.
   **A release pins the image by digest** (a fingerprint of the contents; a tag can be moved, a
-  digest cannot). **`scripts/release.sh` opens the release pull request** for you (see
+  digest cannot). **`scripts/release.sh prepare` opens a pull request into `staging` with the new digest; `scripts/release.sh promote` opens staging to main** (work moves one way only; see
   `docs/infra/runbooks/03-release-and-rollback.md`; it also covers rollback). Images are
   **signed** (cosign, keyless) and carry an SBOM; nothing in the cluster enforces the signature
-  yet (Kyverno was proposed but not installed). **Merging the release pull request is a manual step** (nothing opens the release PR automatically). Promotions to
+  yet (Kyverno was proposed but not installed). **Merging the promote pull request is a manual step and is what deploys** (the script only opens pull requests). Promotions to
   `main` use **merge commits, never squash**.
 - **Workflows** (`.github/workflows/README.md` explains each): `ci.yml` (checks, path-aware),
   `build-image.yml` (builds both images; on a push to `staging` it publishes and scans them
   with Trivy, reporting only), `infra.yml` (Terraform plan on pull requests, apply only on a
   push to `main` after approval), `secret-scan.yml`. The AWS-era deploy workflows are archived
   in `.github/workflows-archive/`.
-- **Rollback** = revert the release PR on `main`. Database migrations only go forward, so the
+- **Rollback** = revert the promote pull request (staging to main). Database migrations only go forward, so the
   old app must tolerate the newer schema. Nothing reverts automatically and a rollback has
   never been rehearsed.
 - **Access to the cluster:** WireGuard tunnel (doc 11). Use the Hetzner kubectl context; the
@@ -65,7 +66,7 @@ Read [CLAUDE.md](../../CLAUDE.md) and [DESIGN-GUIDE.md](../DESIGN-GUIDE.md) firs
 5. **Base image is pinned by digest and Dependabot is on** (`.github/dependabot.yml`, weekly pull
    requests into `staging` for the base image, npm and Actions). Review and merge those.
    **Image signing** (cosign, verified by a cluster policy) is the next artefact-trust step.
-6. **Release pull request script and rollback runbook are written** (`scripts/release.sh`,
+6. **Release script and rollback runbook are written** (`scripts/release.sh prepare|promote`,
    runbook 03). **Rehearse a rollback once** and record it in the runbook table.
    Pull requests to staging now run a **Trivy gate**: fixable CRITICAL findings fail the
    `Image (app)` / `Image (migrator)` checks. HIGH is report-only until the base image is

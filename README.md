@@ -51,7 +51,7 @@ flowchart LR
 - **A merge to `main` is the deployment.** `staging` is where work is collected and tested.
 - Docs-only and infrastructure-only changes skip the website jobs and build no image.
 - A database migration runs first, as an ArgoCD hook, before the new version starts.
-- Rollback is reverting the release pull request.
+- Rollback is reverting the promote pull request (staging to main).
 
 ### How the platform is built
 

@@ -14,35 +14,49 @@ match whatever is on the `main` branch.
 
 ## 1. How a release works
 
+Work only ever moves one way: **feature, then `staging`, then `main`**. A release is two
+small pull requests, because the digest only exists once the image has been built.
+
 ```mermaid
 flowchart LR
-  PR["Pull request<br/>to staging"] --> ST["staging"]
+  F["Feature pull request"] --> ST["staging"]
   ST -->|"website files changed"| B["build-image.yml<br/>build, sign, scan, publish"]
   B --> A["image-app / image-migrator<br/>saved as small files"]
-  A -->|"scripts/release.sh"| R["Release pull request<br/>to main"]
-  R -->|"you merge"| M["main"]
+  A -->|"scripts/release.sh prepare"| P1["PR into staging<br/>manifests point at the new digest"]
+  P1 --> ST2["staging"]
+  ST2 -->|"scripts/release.sh promote"| P2["PR staging to main"]
+  P2 -->|"you merge"| M["main"]
   M --> ARGO["ArgoCD syncs<br/>1. migrate job<br/>2. rolling update"]
 ```
 
-Merging the release pull request is the deployment. Nothing else deploys.
+Merging the **promote** pull request (staging to main) is the deployment. Nothing else deploys.
+Because everything flows forward, `staging` and `main` never disagree about the image.
 
 ## 2. Release
 
 1. Make sure the change is merged to `staging` and its **Build and publish images** run is
    green (Actions tab). A change that touches no website file builds nothing, so there is
    nothing to release.
-2. From the repository, on any branch with a clean working tree:
+2. **Step 1, point the manifests at the new image.** On a clean working tree:
 
    ```bash
-   scripts/release.sh
+   scripts/release.sh prepare
    ```
 
    It takes the newest successful staging build, checks the signatures if `cosign` is
-   installed, branches from `main`, writes `tag@digest` into both manifests
-   (`30-deployment.yaml` and `20-migrate-job.yaml`) and opens the pull request. To release an
-   older build, pass its run number: `scripts/release.sh 37239706932`.
-3. Review the pull request (only two files, two lines) and wait for checks. **Merge with a
-   merge commit, never squash.**
+   installed, writes `tag@digest` into both manifests (`30-deployment.yaml` and
+   `20-migrate-job.yaml`) and opens a pull request **into `staging`**. (To use an older
+   build, pass its run number: `scripts/release.sh prepare 37239706932`. If `main` ever has
+   commits `staging` lacks, this step brings them in first.) Merge it. It touches only
+   infrastructure files, so it does not trigger another image build.
+3. **Step 2, promote.**
+
+   ```bash
+   scripts/release.sh promote
+   ```
+
+   Opens the pull request **staging to main** and lists the files it changes. Review that
+   list, wait for checks, and **merge with a merge commit, never squash**.
 4. Watch it roll out (needs the WireGuard tunnel, doc 11, and the Hetzner kubectl context):
 
    ```bash
@@ -57,7 +71,7 @@ Merging the release pull request is the deployment. Nothing else deploys.
 
 ## 3. Roll back
 
-Revert the release pull request on GitHub ("Revert" button), merge the revert pull request.
+Revert the **promote** pull request (staging to main) on GitHub ("Revert" button), merge the revert pull request.
 ArgoCD returns the cluster to the previous digest within a few minutes. (ArgoCD's own
 "Rollback" button does nothing here because automatic sync is on and would undo it.)
 
@@ -75,13 +89,8 @@ revert, and time it. Write the result below.
 |---|---|---|---|
 | | | | |
 
-## 4. After a release: keep `staging` in step
+## 4. Everything on `staging` goes live together
 
-Releases only edit `main`, so the image tags in the manifests **on `staging` fall behind**.
-That matters on the day you promote other changes from `staging` to `main` (for example
-documentation or infrastructure files): a plain promotion would also carry the old image
-tags and **roll the website back by accident**.
-
-Avoid it by bringing `main` into `staging` after each release (a merge pull request from
-`main` to `staging`), or, if you promote without doing that, check the pull request's file
-list: it must not touch the two image lines unless you mean it to.
+A promotion carries **all** of `staging`, not only the image: documentation, workflows and
+infrastructure files too. That is the point of `staging`: only merge things there that are
+ready. If something on `staging` is not ready, finish or revert it before promoting.
