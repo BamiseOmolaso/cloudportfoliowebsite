@@ -403,10 +403,10 @@ Also:
   model, admin or analytics change. Update this guide when a design rule changes.
 - Define terms for a beginner. Prefer tables to long paragraphs.
 - **Git:** work on a feature branch (`feat/...`, `fix/...`, `docs/...`), never on `main`.
-  Commit messages are short and say what and why; end them with the attribution line the
-  tooling asks for. **Ask before opening a pull request or merging**, and bundle related
-  changes into one PR. Flow: feature branch -> `staging` -> **release PR to `main`** that updates
-  the image tag -> ArgoCD deploys from `main` (docs 05 and 07). Docs-only and infrastructure-only
+  Commit messages are short and say what and why; **no `Co-Authored-By` or "Generated with"
+  lines** (the owner does not want them). **Ask before opening a pull request or merging**, and bundle related
+  changes into one PR. Flow: feature branch -> `staging` -> promote PR `staging` -> `main` (`scripts/release.sh prepare`, then
+  `promote`; runbook 03) -> ArgoCD deploys from `main` (docs 05 and 07). Docs-only and infrastructure-only
   pull requests skip the website CI jobs and build no image; website changes run everything.
 - Do not take shortcuts that skip hooks or checks. If a check fails, fix the cause.
 - Never delete or overwrite something you have not looked at. Look first.

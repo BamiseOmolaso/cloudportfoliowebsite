@@ -37,7 +37,7 @@ flowchart LR
   has no build or Docker job.
 - **Docs-only and infrastructure-only changes run almost nothing:** change detection, the secret
   scan and the summary. They build no image.
-- **A merge to `main` is the deployment** (via a release pull request that changes the image tag).
+- **A merge to `main` is the deployment** (by promoting `staging`, after `scripts/release.sh prepare` has put the new image digest there).
   Nothing in these workflows deploys by itself.
 - **Pinned actions.** Third-party actions are pinned to a commit so a changed tag cannot change what runs.
 
