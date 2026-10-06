@@ -35,10 +35,9 @@ jobs:
     timeout-minutes: 5
     outputs:
       app: ${{ steps.filter.outputs.app }}
-      terraform: ${{ steps.filter.outputs.terraform }}
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           fetch-depth: 0
           persist-credentials: false
@@ -58,7 +57,6 @@ jobs:
              || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then
             echo "No usable base to compare with: running everything."
             echo "app=true" >> "$GITHUB_OUTPUT"
-            echo "terraform=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -68,11 +66,8 @@ jobs:
           # The website: its code, tests, database schema, dependencies, build and tool config,
           # and this workflow itself.
           APP='^(src/|prisma/|public/|scripts/|package(-lock)?\.json$|Dockerfile$|\.dockerignore$|next\.config|tailwind\.config|postcss\.config|tsconfig|jest\.|\.eslintrc|\.eslintignore|\.prettier|\.github/workflows/ci\.yml$)'
-          # The old AWS Terraform that this workflow validates.
-          TF='^(terraform/|\.github/workflows/ci\.yml$)'
 
           if echo "$FILES" | grep -Eq "$APP"; then echo "app=true" >> "$GITHUB_OUTPUT"; else echo "app=false" >> "$GITHUB_OUTPUT"; fi
-          if echo "$FILES" | grep -Eq "$TF"; then echo "terraform=true" >> "$GITHUB_OUTPUT"; else echo "terraform=false" >> "$GITHUB_OUTPUT"; fi
 
   # ============================================
   # Code Quality & Security
@@ -87,12 +82,12 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           persist-credentials: false
       
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -115,12 +110,12 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           persist-credentials: false
       
       - name: Setup Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7
         with:
           node-version: ${{ env.NODE_VERSION }}
           cache: 'npm'
@@ -180,12 +175,12 @@ jobs:
     
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           persist-credentials: false
       
       - name: Setup Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020  # v7
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
@@ -233,7 +228,7 @@ jobs:
       # this step must never fail the build.
       - name: Upload coverage to Codecov
         continue-on-error: true
-        uses: codecov/codecov-action@v7
+        uses: codecov/codecov-action@303a32d7a59b442fa8d48b6a1cc6825c09c847a5  # v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/lcov.info
@@ -248,85 +243,13 @@ jobs:
   # website pull request that the app builds. Building it a second time here was duplicate work.
 
   # ============================================
-  # Infrastructure Validation
-  # ============================================
-  # Lightweight validation only - validates Terraform syntax and module structure
-  # without connecting to AWS backends. Full plan/apply happens in terraform.yml workflow.
-  
-  terraform-validate:
-    name: Validate Terraform
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    needs: changes
-    if: needs.changes.outputs.terraform == 'true'
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          persist-credentials: false
-      
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v4
-        with:
-          terraform_version: 1.13.3
-      
-      - name: Terraform Format Check
-        run: |
-          cd terraform
-          echo "📋 Checking Terraform format..."
-          terraform fmt -check -recursive || echo "⚠️  Format check failed - run 'terraform fmt -recursive' to fix"
-      
-      - name: Validate Terraform Modules
-        run: |
-          cd terraform
-          echo "📁 Validating Terraform modules..."
-          find modules -name "*.tf" -type f | head -5
-          echo "✅ Module files found"
-      
-      - name: Validate Dev Environment
-        run: |
-          cd terraform/envs/dev
-          echo "🔧 Initializing dev environment (without backend)..."
-          terraform init -backend=false
-          echo "✅ Validating dev environment configuration..."
-          terraform validate -no-color
-      
-      - name: Validate Staging Environment
-        run: |
-          cd terraform/envs/staging
-          echo "🔧 Initializing staging environment (without backend)..."
-          terraform init -backend=false
-          echo "✅ Validating staging environment configuration..."
-          terraform validate -no-color
-      
-      - name: Validate Prod Environment
-        run: |
-          cd terraform/envs/prod
-          echo "🔧 Initializing prod environment (without backend)..."
-          terraform init -backend=false
-          echo "✅ Validating prod environment configuration..."
-          terraform validate -no-color
-      
-      - name: Run TFLint
-        uses: terraform-linters/setup-tflint@v6
-        with:
-          tflint_version: latest
-      
-      - name: Run TFLint
-        run: |
-          cd terraform
-          tflint --init
-          tflint
-
-  # ============================================
   # Summary
   # ============================================
   
   ci-summary:
     name: CI Summary
     runs-on: ubuntu-latest
-    needs: [changes, lint-and-typecheck, security-scan, test, terraform-validate]
+    needs: [changes, lint-and-typecheck, security-scan, test]
     if: always()
     
     steps:
@@ -339,9 +262,8 @@ jobs:
           echo "| Lint & Type Check | ${{ needs.lint-and-typecheck.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Security Scan | ${{ needs.security-scan.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "| Tests | ${{ needs.test.result }} |" >> $GITHUB_STEP_SUMMARY
-          echo "| Terraform Validate | ${{ needs.terraform-validate.result }} |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
-          echo "Website changed: ${{ needs.changes.outputs.app }}. Old AWS Terraform changed: ${{ needs.changes.outputs.terraform }}. A skipped job means nothing it checks was changed." >> $GITHUB_STEP_SUMMARY
+          echo "Website changed: ${{ needs.changes.outputs.app }}. A skipped job means nothing it checks was changed." >> $GITHUB_STEP_SUMMARY
 
       # This is the check to require on a pull request. A skipped job is fine (nothing it
       # covers changed); a failed or cancelled one is not. Without this step the summary

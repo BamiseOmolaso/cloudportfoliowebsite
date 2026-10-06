@@ -1,0 +1,70 @@
+name: Validate Kubernetes manifests
+
+# Catches a bad manifest in the pull request instead of in ArgoCD after the merge.
+#   kubeconform  checks each file against the Kubernetes API schema (typos, wrong field
+#                names, wrong types). It fails the build.
+#   checkov      checks the manifests against security best practice. It REPORTS and does
+#                not block: some findings are deliberate (see infra/k8s comments), so the
+#                list is for review, not a gate. Make it blocking when the list is clean.
+# Both run from official images pinned by digest (a fingerprint that cannot be moved).
+#
+# Terraform is not scanned here on purpose: Checkov and similar scanners have no rules for
+# the Hetzner or Cloudflare providers, so a scan would pass without checking anything.
+# infra.yml already runs terraform fmt and validate.
+on:
+  pull_request:
+    branches: [main, staging]
+    paths:
+      - 'infra/k8s/**'
+      - '.github/workflows/k8s-validate.yml'
+  push:
+    branches: [main, staging]
+    paths:
+      - 'infra/k8s/**'
+      - '.github/workflows/k8s-validate.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kubeconform:
+    name: Schema check (kubeconform)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
+
+      # -strict rejects unknown fields. The second schema location knows the custom
+      # resources we use (ArgoCD Application, cert-manager ClusterIssuer).
+      - name: Validate every manifest
+        run: |
+          docker run --rm -v "$PWD/infra/k8s:/k8s:ro" \
+            ghcr.io/yannh/kubeconform@sha256:6b90a5f23d846140ce0194fe050b1995e546eba938f3a6bf10c039dd5e24588f \
+            -strict -summary \
+            -schema-location default \
+            -schema-location 'https://raw.githubusercontent.com/datreeio/CRDs-catalog/main/{{.Group}}/{{.ResourceKind}}_{{.ResourceAPIVersion}}.json' \
+            /k8s
+
+  checkov:
+    name: Security best practice (checkov, report only)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
+        with:
+          persist-credentials: false
+
+      # --soft-fail keeps the exit code at 0 whatever is found.
+      - name: Scan the manifests
+        run: |
+          {
+            echo '### Checkov findings (report only)'
+            echo '```'
+            docker run --rm -v "$PWD/infra/k8s:/k8s:ro" \
+              bridgecrew/checkov@sha256:395ab21f8dc5d457f05001598638a98d142a98e264d610650c084d0ef2e1b4a5 \
+              -d /k8s --framework kubernetes --compact --quiet --soft-fail
+            echo '```'
+          } | tee -a "$GITHUB_STEP_SUMMARY"
