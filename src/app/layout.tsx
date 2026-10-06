@@ -2,32 +2,13 @@
 export const dynamic = "force-dynamic";
 
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import "./portfolio.css";
-import { fontVars } from "./fonts";
+import { fontVars, inter } from "./fonts";
 import SiteChrome from "@/components/layout/SiteChrome";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import CookieConsent from "@/components/CookieConsent";
 import PageViewTracker from "@/components/PageViewTracker";
-
-// Optimized font loading with fallbacks
-const inter = Inter({
-  subsets: ["latin"],
-  display: "swap", // Prevents invisible text during font load
-  fallback: [
-    "system-ui",
-    "-apple-system",
-    "BlinkMacSystemFont",
-    "Segoe UI",
-    "Roboto",
-    "Arial",
-    "sans-serif",
-  ],
-  adjustFontFallback: true,
-  preload: true,
-  variable: "--font-inter", // CSS variable for better performance
-});
 
 const TITLE = "Dr. Bamise Omolaso — Cloud & DevSecOps Engineer";
 const DESCRIPTION =

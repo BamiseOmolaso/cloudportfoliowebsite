@@ -5,6 +5,18 @@ so the pattern is easy to recognise next time. Add new ones at the top.
 
 ---
 
+## Image build failed in `next/font` (October 2026)
+
+- **Looked like:** `Image (app)` red, sometimes on a green change; a re-run often passed.
+- **Evidence:** `An error occurred in next/font. TypeError: Cannot read properties of null`
+  during `npm run build`. It clustered when many builds started at once.
+- **Cause:** the build downloaded the Google fonts from Google, and sometimes got an
+  unexpected reply (probably throttling of a burst of requests from GitHub's servers).
+- **Fix:** keep the font files in the repository (`src/app/fonts/`) and load them with
+  `next/font/local`. The build now needs no network and the site looks the same.
+- **Lesson:** a build that depends on an outside service will fail whenever that service does.
+  Prefer to vendor what the build needs.
+
 ## Coverage upload crashed the Test Suite (October 2026)
 
 - **Looked like:** `Test Suite` red on a documentation pull request.
