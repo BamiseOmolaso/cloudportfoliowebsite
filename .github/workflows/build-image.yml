@@ -135,7 +135,7 @@ jobs:
       # base image is clean.
       - name: Block critical vulnerabilities (Trivy)
         if: github.event_name == 'pull_request'
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8  # v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           image-ref: ${{ steps.img.outputs.name }}:${{ steps.meta.outputs.version }}
           format: 'table'
@@ -186,7 +186,7 @@ jobs:
       # have a fix are shown.
       - name: Scan the published image for known vulnerabilities (Trivy)
         if: github.event_name != 'pull_request'
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8  # v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           # By digest, so the scan covers exactly the bytes that were published.
           image-ref: ${{ steps.img.outputs.name }}@${{ steps.build.outputs.digest }}
