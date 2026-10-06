@@ -233,7 +233,7 @@ jobs:
       # this step must never fail the build.
       - name: Upload coverage to Codecov
         continue-on-error: true
-        uses: codecov/codecov-action@v4
+        uses: codecov/codecov-action@v7
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
           files: ./coverage/lcov.info
