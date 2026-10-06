@@ -30,7 +30,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: migrate
-          image: ghcr.io/bamiseomolaso/cloudportfoliowebsite-migrator:sha-c6c190a@sha256:0f20ea7e3f11b420b19c76935b60c2f1f62a112dd04660b5f837e7f8b5eb7ca4
+          image: ghcr.io/bamiseomolaso/cloudportfoliowebsite-migrator:sha-6729f9f@sha256:6d085cef064c1ca94eafb0f8d860324fc5bcaf54b09cac8324cf1dc43b04cb3e
           securityContext:
             runAsUser: 1000 # the image's built-in "node" user
             allowPrivilegeEscalation: false
