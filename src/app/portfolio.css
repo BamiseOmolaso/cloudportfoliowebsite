@@ -2441,3 +2441,29 @@
 .pf .door .btn {
   justify-self: start;
 }
+
+/* One moving row of tools per track, each with a small name above it. */
+.pf .tools-row + .tools-row {
+  margin-top: 1.4rem;
+}
+.pf .tools-row-name {
+  display: block;
+  margin-bottom: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+/* A short mark for a tool that has no logo, the same size as the logos. */
+.pf .tool-mark {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1.5px solid currentColor;
+  border-radius: 10px;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+}

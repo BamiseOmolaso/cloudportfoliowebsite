@@ -188,29 +188,52 @@ export const homeHero = {
   secondaryCta: "View CV",
 } as const;
 
-/** The logo strip under the hero. */
+/** The logo strip under the hero: one moving row per track. */
 export const tools = {
   label: "Technical tools",
-  items: [
-    "Terraform",
-    "Ansible",
-    "Kubernetes",
-    "Argo CD",
-    "Helm",
-    "Docker",
-    "AWS",
-    "GCP",
-    "Cloudflare",
-    "PostgreSQL",
-    "GitHub Actions",
-    "Prometheus",
-    "Grafana",
-    "Python",
-    "Go",
-    "Linux",
-    "Git",
-    "Next.js",
+  rows: [
+    {
+      name: "Cloud and DevOps",
+      items: [
+        "Terraform",
+        "Ansible",
+        "Kubernetes",
+        "Argo CD",
+        "Helm",
+        "Docker",
+        "AWS",
+        "GCP",
+        "Cloudflare",
+        "PostgreSQL",
+        "GitHub Actions",
+        "Prometheus",
+        "Grafana",
+        "Linux",
+        "Go",
+        "Git",
+        "Next.js",
+      ],
+    },
+    {
+      name: "Data and analytics",
+      items: [
+        "Python",
+        "SQL",
+        "Power BI",
+        "Tableau",
+        "Pandas",
+        "scikit-learn",
+        "TensorFlow",
+        "Streamlit",
+        "Jupyter",
+        "R",
+        "MongoDB",
+        "n8n",
+      ],
+    },
   ],
+  /** Tools with no logo in the open sets we use (the brand asked for its logo to be removed): drawn as a short mark. */
+  marks: { "Power BI": "BI", SQL: "SQL" } as Record<string, string>,
 } as const;
 
 /** "See all" links from the home page into each full page. */
