@@ -1,3 +1,5 @@
+import { existsSync } from "fs";
+import { join } from "path";
 import {
   dataProjects,
   projects,
@@ -13,6 +15,13 @@ describe("the data and cloud tracks", () => {
     Object.values(tracks).forEach((t) => {
       expect(t.cardTitle).toBeTruthy();
       expect(t.tools.length).toBeGreaterThan(0);
+    });
+  });
+
+  it("points each track at a CV that exists in public/cv", () => {
+    Object.values(tracks).forEach((t) => {
+      expect(t.cv.href).toMatch(/^\/cv\/.+\.pdf$/);
+      expect(existsSync(join(process.cwd(), "public", t.cv.href))).toBe(true);
     });
   });
 

@@ -13,6 +13,16 @@ export default function TrackPage({ track }: { track: TrackId }) {
         <span className="label">{t.label}</span>
         <h2 id="track-title">{t.title}</h2>
         <p>{t.intro}</p>
+        <p>
+          <a
+            className="btn primary"
+            href={t.cv.href}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            {t.cv.label} →
+          </a>
+        </p>
       </div>
       <div className="projects">
         {projectsByTrack[track].map((p) => (

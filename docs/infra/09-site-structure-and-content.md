@@ -41,7 +41,7 @@ permanent). What broke and what I learnt is a set of blog posts.
 | `/projects`, `/projects/slug` | Every project; a project page shows its architecture diagram | The **database**, plus the content file for the diagrams |
 | `/blog`, `/blog/slug` | Every post | The **database** |
 | `/projects/production-platform-on-hetzner` | The platform in full: its diagram, explained in three steps | The content file, below the project's own text |
-| `/data`, `/cloud` | The two tracks. The home page's "Choose a path" section offers one door into each; each page lists that track's projects as cards (title, status, flow, tools, public links). `/cloud` shows the curated `projects`; `/data` shows `dataProjects`. They are static content, not database rows, so they do not appear on `/projects` yet | The content file (`dataProjects`, `tracks`) |
+| `/data`, `/cloud` | The two tracks. The home page's "Choose a path" section offers one door into each; each page lists that track's projects as cards (title, status, flow, tools, public links). `/cloud` shows the curated `projects`; `/data` shows `dataProjects`. They are static content, not database rows, so they do not appear on `/projects` yet | The content file (`dataProjects`, `tracks`). Each page has a button to that track's CV, a PDF in `public/cv/` |
 | `/learning` | Learning: the Terraform journey from one EC2 instance to a production stack, then every infrastructure pattern (the home page shows two) | The content file |
 | `/blog` | Every post, including the six "lessons learnt" write-ups (seeded as real posts so you can edit them); the long-form write-up cards sit at the foot | The **database**, plus the content file for the cards |
 | `/about` | Where I've worked, what I hold, why a doctor | The content file |

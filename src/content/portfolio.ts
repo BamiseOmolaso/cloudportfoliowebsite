@@ -161,7 +161,7 @@ export const profile = {
   role: "Cloud and DevSecOps engineer · former medical doctor",
   email: "davidbams3@gmail.com",
   location: "Alberta, Canada · Ile-Ife, Nigeria",
-  cv: "https://oluwabamiseomolaso.com.ng/cv/Oluwabamise%20Omolaso_CV_2025.pdf",
+  cv: "https://oluwabamiseomolaso.com.ng/cv/Oluwabamise_Omolaso_DevOps_CV.pdf",
   links: {
     linkedin: "https://www.linkedin.com/in/dr-bamise-omolaso/",
     github: "https://github.com/BamiseOmolaso",
@@ -622,6 +622,8 @@ export interface Track {
   cardTitle: string;
   cardBody: string;
   tools: string[];
+  /** The CV written for this track (a PDF in public/cv). */
+  cv: { label: string; href: string };
   /** The track's own page. */
   label: string;
   title: string;
@@ -636,6 +638,10 @@ export const tracks: Record<TrackId, Track> = {
     cardBody:
       "Dashboards, forecasting and machine-learning models that turn raw data into decisions.",
     tools: ["Python", "SQL", "Power BI", "Streamlit"],
+    cv: {
+      label: "View data CV",
+      href: "/cv/Oluwabamise_Omolaso_Data_and_Analytics_CV.pdf",
+    },
     label: "Data and analytics",
     title: "Data projects, from raw numbers to a decision.",
     intro:
@@ -648,6 +654,10 @@ export const tracks: Record<TrackId, Track> = {
     cardBody:
       "Infrastructure as code, Kubernetes and CI/CD, built, run in production and written down.",
     tools: ["Terraform", "Kubernetes", "AWS", "Argo CD"],
+    cv: {
+      label: "View DevOps CV",
+      href: "/cv/Oluwabamise_Omolaso_DevOps_CV.pdf",
+    },
     label: "Cloud and DevOps",
     title: "Cloud projects, built and run in production.",
     intro:
