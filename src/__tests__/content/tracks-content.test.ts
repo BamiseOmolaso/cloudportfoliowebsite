@@ -1,8 +1,8 @@
-import { existsSync } from "fs";
-import { join } from "path";
 import {
+  cvBase,
   dataProjects,
   projects,
+  profile,
   projectsByTrack,
   trackChoice,
   tracks,
@@ -18,11 +18,12 @@ describe("the data and cloud tracks", () => {
     });
   });
 
-  it("points each track at a CV that exists in public/cv", () => {
+  it("points each track at a PDF in the CV bucket, not in the repository", () => {
     Object.values(tracks).forEach((t) => {
-      expect(t.cv.href).toMatch(/^\/cv\/.+\.pdf$/);
-      expect(existsSync(join(process.cwd(), "public", t.cv.href))).toBe(true);
+      expect(t.cv.href.startsWith(`${cvBase}/`)).toBe(true);
+      expect(t.cv.href).toMatch(/\.pdf$/);
     });
+    expect(profile.cv.startsWith(`${cvBase}/`)).toBe(true);
   });
 
   it("shows the curated cloud projects on /cloud and the data projects on /data", () => {

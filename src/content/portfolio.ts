@@ -154,6 +154,9 @@ export interface WritingCard {
   href: string;
 }
 
+/** Where the CV PDFs are kept: the public media bucket on Cloudflare R2, not this repository. */
+export const cvBase = "https://media.oluwabamiseomolaso.com.ng/cv";
+
 export const profile = {
   name: "Bamise Omolaso",
   fullName: "Dr. Oluwabamise David Omolaso",
@@ -161,7 +164,7 @@ export const profile = {
   role: "Cloud and DevSecOps engineer · former medical doctor",
   email: "davidbams3@gmail.com",
   location: "Alberta, Canada · Ile-Ife, Nigeria",
-  cv: "https://oluwabamiseomolaso.com.ng/cv/Oluwabamise_Omolaso_DevOps_CV.pdf",
+  cv: `${cvBase}/Oluwabamise_Omolaso_DevOps_CV.pdf`,
   links: {
     linkedin: "https://www.linkedin.com/in/dr-bamise-omolaso/",
     github: "https://github.com/BamiseOmolaso",
@@ -663,7 +666,7 @@ export const tracks: Record<TrackId, Track> = {
     tools: ["Python", "SQL", "Power BI", "Streamlit"],
     cv: {
       label: "View data CV",
-      href: "/cv/Oluwabamise_Omolaso_Data_and_Analytics_CV.pdf",
+      href: `${cvBase}/Oluwabamise_Omolaso_Data_and_Analytics_CV.pdf`,
     },
     label: "Data and analytics",
     title: "Data projects, from raw numbers to a decision.",
@@ -679,7 +682,7 @@ export const tracks: Record<TrackId, Track> = {
     tools: ["Terraform", "Kubernetes", "AWS", "Argo CD"],
     cv: {
       label: "View DevOps CV",
-      href: "/cv/Oluwabamise_Omolaso_DevOps_CV.pdf",
+      href: `${cvBase}/Oluwabamise_Omolaso_DevOps_CV.pdf`,
     },
     label: "Cloud and DevOps",
     title: "Cloud projects, built and run in production.",
