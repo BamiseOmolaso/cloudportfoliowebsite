@@ -9,7 +9,7 @@ import SiteFooter from "@/components/portfolio/SiteFooter";
 // These pages bring their own header, footer and full-bleed layout, so nothing
 // may wrap them. "/" matches the home page only: the startsWith check below
 // adds a trailing slash, so "//" matches nothing.
-const BARE_ROUTES = ["/", "/about", "/learning", "/admin"];
+const BARE_ROUTES = ["/", "/about", "/learning", "/data", "/cloud", "/admin"];
 
 // The sign-in screen keeps the plain header and footer. The admin panel (above) has
 // its own sidebar layout.

@@ -42,12 +42,7 @@ export interface PipelineStage {
 }
 
 export type PatternVisual =
-  | "three-tier"
-  | "iam"
-  | "oidc"
-  | "environments"
-  | "secrets"
-  | "defence";
+  "three-tier" | "iam" | "oidc" | "environments" | "secrets" | "defence";
 
 export interface Pattern {
   visual: PatternVisual;
@@ -613,6 +608,141 @@ export const projects: Project[] = [
     links: [{ label: "Argo CD practice repo", href: repo("argo-examples") }],
   },
 ];
+
+/* ------------------------------------------------------------------ */
+/* The two tracks: the home page offers a door into each               */
+/* ------------------------------------------------------------------ */
+
+export type TrackId = "data" | "cloud";
+
+export interface Track {
+  id: TrackId;
+  href: string;
+  /** The door on the home page. */
+  cardTitle: string;
+  cardBody: string;
+  tools: string[];
+  /** The track's own page. */
+  label: string;
+  title: string;
+  intro: string;
+}
+
+export const tracks: Record<TrackId, Track> = {
+  data: {
+    id: "data",
+    href: "/data",
+    cardTitle: "See my data projects",
+    cardBody:
+      "Dashboards, forecasting and machine-learning models that turn raw data into decisions.",
+    tools: ["Python", "SQL", "Power BI", "Streamlit"],
+    label: "Data and analytics",
+    title: "Data projects, from raw numbers to a decision.",
+    intro:
+      "Cleaning, modelling and dashboards for people who are not data specialists. Where a project is live or public, it links straight to it.",
+  },
+  cloud: {
+    id: "cloud",
+    href: "/cloud",
+    cardTitle: "See my cloud projects",
+    cardBody:
+      "Infrastructure as code, Kubernetes and CI/CD, built, run in production and written down.",
+    tools: ["Terraform", "Kubernetes", "AWS", "Argo CD"],
+    label: "Cloud and DevOps",
+    title: "Cloud projects, built and run in production.",
+    intro:
+      "Real systems, with the architecture and the trade-offs written down. Where a repository is private, I say so.",
+  },
+};
+
+export const trackChoice = {
+  label: "Choose a path",
+  title: "What would you like to see first?",
+};
+
+export const dataProjects: Project[] = [
+  {
+    title: "Diabetes risk prediction",
+    flow: ["Clinical data", "Clean zeros", "Compare models", "Streamlit app"],
+    status: "Live",
+    blurb:
+      "A diabetes risk model for the PIMA Indians dataset, deployed as a live app for real-time risk assessment.",
+    body: "A diabetes prediction model for the PIMA Indians dataset. I used clinical knowledge to correct impossible zero values in key variables, compared several algorithms (Logistic Regression scored best on accuracy and precision), and deployed it as a live app.",
+    stack: ["Python", "scikit-learn", "Streamlit", "Pandas"],
+    links: [
+      {
+        label: "Live app",
+        href: "https://diabetes-prediction-pima-indians.streamlit.app/",
+      },
+    ],
+  },
+  {
+    title: "Currency exchange rate forecasting",
+    flow: ["Rates data", "Stationarity", "ARIMA and Prophet", "Streamlit"],
+    status: "Built",
+    blurb:
+      "Closing-price forecasts for 7 base and 113 target currencies. My team ranked second best.",
+    body: "Forecast closing prices for 7 base and 113 target currencies with ARIMA and Prophet, deployed on Streamlit. Built with a multinational team on the Hamoye Data Science Internship: I tested stationarity, applied log transformations, downsampled the data and evaluated each model. We presented it live on YouTube and ranked second.",
+    stack: ["Python", "ARIMA", "Prophet", "Streamlit"],
+    links: [
+      { label: "Repository", href: repo("Currency-Foreign-Exchange-Rates") },
+    ],
+  },
+  {
+    title: "Awesome Chocolates sales dashboard",
+    flow: ["Raw sales", "Clean", "Calculated fields", "Power BI"],
+    status: "Built",
+    blurb:
+      "Found a 10.8% sales decline hidden behind $34M in revenue, and recommended where to act.",
+    body: "Cleaned the data (missing values, date, revenue and cost formats, currency conversion) and built calculated fields such as profit margin and month-on-month change. The dashboard showed a 10.8% sales decline despite $34M in revenue and a 19.3% cost improvement, so I recommended actions for underperforming products, shipment efficiency and low-demand periods.",
+    stack: ["Power BI", "DAX", "Power Query"],
+    links: [],
+    note: "Screenshots coming soon",
+  },
+  {
+    title: "FordGo bike data exploration",
+    flow: ["183,412 trips", "Clean", "Explore", "Findings"],
+    status: "Built",
+    blurb:
+      "Univariate, bivariate and multivariate analysis of 183,412 trips from the San Francisco Bay area.",
+    body: "Cleaned, transformed and analysed 183,412 trip records using univariate, bivariate and multivariate analysis. Ride duration and distance had an inverse relationship, and female users and customers took longer trips on average. Built for the Udacity Data Analyst Nanodegree.",
+    stack: ["Python", "Pandas", "Matplotlib", "Seaborn"],
+    links: [
+      {
+        label: "Repository",
+        href: repo("Udacity-Stage-3-FordGO-Bike-Data-Exploration-Project"),
+      },
+    ],
+  },
+  {
+    title: "WorldQuant applied data science lab",
+    flow: ["Extract", "Clean", "Model", "Explain"],
+    status: "Built",
+    blurb:
+      "Eight projects from apartment prices in Buenos Aires to air quality in Nairobi and bankruptcy in Poland.",
+    body: "Eight data science projects covering extraction (files, SQL and NoSQL databases, APIs), cleaning, ETL pipelines and machine-learning models: apartment price prediction, air quality modelling, bankruptcy prediction, customer segmentation, A/B testing and volatility forecasting. Each ended with visualisations or a dashboard that explained the result to a non-technical reader.",
+    stack: ["Python", "SQL", "MongoDB", "scikit-learn"],
+    links: [],
+    note: "Write-ups coming soon",
+  },
+  {
+    title: "AI workflow automation",
+    flow: ["Trigger", "n8n", "LLM API", "Business process"],
+    status: "Live",
+    blurb:
+      "Self-hosted n8n workflows that connect Claude, DeepSeek and Perplexity to everyday business processes.",
+    body: "Self-hosted n8n automation workflows that connect LLM APIs (Claude, DeepSeek, Perplexity) to business processes. I also use agentic and AI-assisted tools (Claude Code, GitHub Copilot, Cursor) to speed up development, analysis and research.",
+    stack: ["n8n", "Claude", "Python", "Docker Compose"],
+    links: [],
+    note: "Private repository",
+  },
+];
+
+/** The projects shown on each track's page. */
+export const projectsByTrack: Record<TrackId, Project[]> = {
+  data: dataProjects,
+  cloud: projects,
+};
 
 export const terraformJourney = {
   label: "Terraform, week by week",
