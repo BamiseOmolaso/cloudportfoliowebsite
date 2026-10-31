@@ -228,6 +228,29 @@ password manager, and delete the initial secret, which is no longer needed:
 kubectl -n argocd delete secret argocd-initial-admin-secret
 ```
 
+### If you forget the admin password
+
+You control the cluster, so the password can always be reset. ArgoCD keeps the admin password
+as a **bcrypt hash** (a one-way scrambled form) in the secret `argocd-secret`. Write a new
+hash there, with the Hetzner kubectl context (doc 11):
+
+```bash
+read -s -p "New Argo CD password: " NEWPW; echo
+HASH=$(htpasswd -nbBC 10 "" "$NEWPW" | tr -d ':\n' | sed 's/\$2y/$2a/')
+kubectl -n argocd patch secret argocd-secret -p "{\"stringData\": {\"admin.password\": \"$HASH\", \"admin.passwordMtime\": \"$(date +%FT%T%Z)\"}}"
+unset NEWPW HASH
+```
+
+- `read -s` hides what you type and keeps it out of the shell history.
+- `htpasswd -B` makes the bcrypt hash (it ships with macOS); `sed` changes its prefix from
+  `$2y` to `$2a`, which ArgoCD expects.
+- `admin.passwordMtime` records when the password changed, so older login sessions stop working.
+
+If the login is still refused, restart the server so it re-reads the secret
+(`kubectl -n argocd rollout restart deploy argocd-server`) and start the port-forward again.
+Save the new password in your password manager. The first-login secret
+`argocd-initial-admin-secret` is no use after the password has been changed.
+
 ## 7. Bootstrap: hand ArgoCD the keys to git
 
 This is the **only** manual `kubectl apply` left. From the repo root, after the files

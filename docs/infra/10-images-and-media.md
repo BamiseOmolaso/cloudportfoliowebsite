@@ -41,6 +41,26 @@ flowchart LR
 | `src/components/admin/EntryForm.tsx`, `NewsletterForm.tsx` | One form for posts and projects; one for newsletters |
 | `prisma/migrations/…_media_assets` | The `media_assets` table |
 
+### The CV PDFs (kept in the same bucket, but not uploaded through the admin)
+
+The two CVs the site links to (`/data` and `/cloud`, and the home hero) are PDFs in this
+bucket under `cv/`, served from the bucket's public address. They are **not** in this
+repository, because a CV holds a phone number and this repository is public. The address is
+set in one place: `cvBase` in `src/content/portfolio.ts`.
+
+| Task | How |
+|---|---|
+| Replace a CV | Upload a file with the **same name**; no redeploy is needed (browsers may cache the old one for a while) |
+| Upload from the terminal | `npx wrangler login` once, then `npx wrangler r2 object put portfolio-media/cv/<name>.pdf --file <name>.pdf --content-type application/pdf --remote` |
+| Check it is public | `curl -sI <cvBase>/<name>.pdf` answers `200` and `content-type: application/pdf` |
+
+`--remote` matters: recent wrangler versions write to a local test copy unless it is given.
+`--content-type` makes the browser show the PDF instead of downloading it. Names in use:
+`Oluwabamise_Omolaso_Data_and_Analytics_CV.pdf` and `Oluwabamise_Omolaso_DevOps_CV.pdf`.
+
+Verified on 31 October 2026: both files answered `200` as `application/pdf` with the sizes
+of the uploaded files, and both buttons work on the live site.
+
 ## 3. Turning it on for the live site (once)
 
 1. **Create the bucket.** Cloudflare dashboard → R2 → *Create bucket*, name it
@@ -83,3 +103,4 @@ return a clear error.
 - **Object / key:** a stored file, and its name inside the bucket.
 - **Custom domain (R2):** a name you own (`media.…`) that serves the bucket publicly through Cloudflare.
 - **Magic bytes:** the first few bytes of a file, which identify its real type.
+- **wrangler:** Cloudflare's command-line tool. `wrangler login` signs it in through your browser; `wrangler r2 object put` saves a file in a bucket.

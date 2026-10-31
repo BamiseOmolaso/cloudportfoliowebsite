@@ -191,6 +191,9 @@ is then your only way in.
 | `ssh` works, `kubectl` says the certificate is not valid for `10.8.0.1` | Step 5 was skipped (k3s has not re-issued its certificate) |
 | Worked, then stopped on a new network | Some networks block UDP. Try the phone hotspot; if only one network fails, that network blocks it |
 | Works on its own, but not while another VPN is on | See "Using it with another VPN" below |
+| macOS: `wg-quick: Version mismatch: bash 3 detected, when bash 4+ required` | `wg-quick` needs bash 4 or newer; macOS ships bash 3.2, and `sudo` resets `PATH` so Homebrew's bash is not found. Run `sudo env PATH="/opt/homebrew/bin:$PATH" wg-quick up ~/.config/wireguard-hetzner/hetzner.conf` (or `sudo /opt/homebrew/bin/bash /opt/homebrew/bin/wg-quick up <conf>`; `brew install bash` if it is missing) |
+| `ping 10.8.0.1` loses every packet and no interface has `10.8.0.2` | The tunnel is not up. On a Mac it does not survive a restart or sleep: bring it up again with the command above |
+| `kubectl` says `connection refused` to `127.0.0.1:<port>` | `kubectl` is using your default context (a local `kind` cluster), not Hetzner. `export KUBECONFIG=~/.kube/hetzner-portfolio.yaml` applies to **that terminal only**; a new terminal forgets it. Check with `kubectl config current-context` (it should say `hetzner-portfolio`). A shortcut that never forgets: `alias kh='kubectl --kubeconfig ~/.kube/hetzner-portfolio.yaml'` in `~/.bash_profile` (or `~/.zshrc`) |
 
 ### Using it with another VPN
 
@@ -227,6 +230,7 @@ Seen working on 3 October 2026:
 | Tunnel | `ping 10.8.0.1`: 2 of 2 replies, no loss, about 150 to 190 ms |
 | `kubectl` | With the kubeconfig pointed at `https://10.8.0.1:6443`, `kubectl -n portfolio get pods` and the seed Job ran normally through the tunnel |
 | Second network | The owner reports repeating SSH and `kubectl` over a phone hotspot (not independently verified) |
+| Tunnel brought up again (31 Oct 2026) | After the bash fix in the troubleshooting table the owner reported the tunnel working. Read-only `kubectl` through it then listed the `portfolio` pod and the three ArgoCD apps |
 
 Things that went wrong on the way, so they are not repeated:
 
@@ -247,3 +251,5 @@ Things that went wrong on the way, so they are not repeated:
 - **`tls-san`:** the list of names and addresses a certificate is valid for. The cluster's certificate must list `10.8.0.1` or `kubectl` refuses to connect to it.
 - **Handshake:** the moment two WireGuard ends prove their keys to each other. "Latest handshake" in `wg show` is how you know a tunnel is alive.
 - **Break-glass:** a deliberately kept emergency way in, used only when the normal one fails.
+- **bash:** the command-line interpreter that runs shell scripts such as `wg-quick`. macOS ships an old version (3.2); Homebrew installs a current one in `/opt/homebrew/bin`.
+- **kubectl context:** which cluster `kubectl` talks to. Each cluster has its own; `kubectl config current-context` shows the active one.

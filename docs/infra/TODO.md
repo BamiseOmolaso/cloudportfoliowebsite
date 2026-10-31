@@ -7,7 +7,7 @@ honest: it is the shared memory of the project.
 
 ---
 
-## Pick up here (state on 6 October 2026)
+## Pick up here (state on 31 October 2026)
 
 Written so that a person or another AI agent can continue without the earlier conversation.
 Read [CLAUDE.md](../../CLAUDE.md) and [DESIGN-GUIDE.md](../DESIGN-GUIDE.md) first. If something
@@ -18,13 +18,21 @@ is broken or a check is red, follow [docs/troubleshooting/](../troubleshooting/R
 - **The live site** (https://oluwabamiseomolaso.com.ng) runs on Hetzner k3s. ArgoCD follows
   the `main` branch. The owner confirmed on 6 October that the cluster runs the latest release
   and that `root`, `postgres` and `portfolio` are Synced and Healthy.
-- **Latest release (live):** `sha-6729f9f`, promotion PR #122: self-hosted fonts, minor and
-  patch dependency updates, CI and docs changes. Before it: `sha-c6c190a` (#106), `sha-8f7b6c4`
-  (#102, the OO favicon), `sha-2868248` (#98, first digest-pinned release). Check what runs with
-  `kubectl -n portfolio get pods -o jsonpath='{..image}'`.
-- **On `staging` but NOT released yet:** PR #129 (removed the unused `nodemailer` package and
-  applied non-breaking security updates: ws, prosemirror-view, linkify-it, markdown-it and
-  others; 425 of 425 tests and the production build passed). It needs the release steps below.
+- **Latest release (live):** `sha-e1fecd8`, promotion PR #144 (31 October 2026): the data and
+  cloud tracks (`/data`, `/cloud`, the home "Choose a path" section, two tool-logo rows, the
+  hero for both tracks, CV buttons), plus everything that was waiting on `staging`: #129
+  (removed `nodemailer`, security updates) and Dependabot #141 (Next.js 15.5.28, which fixed a
+  CRITICAL image-optimisation advisory that had turned the Trivy gate red). Verified: the pod
+  runs `sha-e1fecd8`, the migrate Job succeeded, `root`, `postgres` and `portfolio` are Synced
+  and Healthy, and the live pages and both CV links answer. Before it: `sha-6729f9f` (#122),
+  `sha-c6c190a` (#106), `sha-8f7b6c4` (#102), `sha-2868248` (#98, first digest-pinned
+  release). Check what runs with `kubectl -n portfolio get pods -o jsonpath='{..image}'`.
+- **On `staging` but NOT released yet:** nothing, apart from the docs in this change.
+- **Content to know about:** the two CV PDFs live in the R2 media bucket, not in the repository
+  (doc 10, `cvBase`). The data projects are static content (`dataProjects` in `portfolio.ts`),
+  six of about ten CV projects; they are not on `/projects` yet, which reads the database. If
+  the hero text was ever edited in the admin, that saved text overrides the new hero until it
+  is reset (Admin, Pages).
 - **Branches and releases:** work moves one way: feature branch, `staging`, `main`. A release is
   `scripts/release.sh prepare` (opens a PR into `staging` that writes the new image's
   `tag@digest` into `infra/k8s/apps/portfolio/30-deployment.yaml` and `20-migrate-job.yaml`,

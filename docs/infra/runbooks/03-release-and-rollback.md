@@ -49,6 +49,13 @@ Because everything flows forward, `staging` and `main` never disagree about the 
    build, pass its run number: `scripts/release.sh prepare 37239706932`. If `main` ever has
    commits `staging` lacks, this step brings them in first.) Merge it. It touches only
    infrastructure files, so it does not trigger another image build.
+
+   `prepare` refuses to run if the working tree has *any* change, **untracked files
+   included** (for example `.vscode/`). Rather than touching those files, run it from a
+   clean checkout: `git worktree add --detach <dir> origin/staging`, then
+   `bash scripts/release.sh prepare` inside it, then `git worktree remove <dir>`. In a
+   detached checkout the script ends with `fatal: a branch is expected`; that is harmless,
+   because the pull request was already opened.
 3. **Step 2, promote.**
 
    ```bash
@@ -64,6 +71,11 @@ Because everything flows forward, `staging` and `main` never disagree about the 
    kubectl -n portfolio get pods -o jsonpath='{..image}'     # shows the digest now running
    curl -s https://oluwabamiseomolaso.com.ng/api/health
    ```
+
+   You can also watch it in the ArgoCD dashboard (doc 05): the `portfolio` app turns
+   **OutOfSync** (git names the new image; the cluster still runs the old one), then
+   **Syncing** (the migration Job, then the rolling update), then **Synced** and **Healthy**.
+   ArgoCD checks git about every 3 minutes; **Refresh** on the app does it at once.
 
    The migration job runs first. Then pods are replaced one at a time and a new pod only
    receives visitors when its readiness probe passes, so a broken image never takes the site
