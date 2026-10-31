@@ -70,7 +70,7 @@ describe("GET /api/admin/pages/[page]", () => {
       .find((f: { path: string }) => f.path === "homeHero.intro");
     expect(field.value).toBe("Edited");
     expect(field.edited).toBe(true);
-    expect(field.default).toMatch(/doctor turned cloud engineer/);
+    expect(field.default).toMatch(/doctor turned engineer/i);
   });
 
   it("answers 404 for a page that does not exist", async () => {

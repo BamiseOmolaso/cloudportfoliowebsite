@@ -161,7 +161,7 @@ export const profile = {
   name: "Bamise Omolaso",
   fullName: "Dr. Oluwabamise David Omolaso",
   mark: "OO",
-  role: "Cloud and DevSecOps engineer · former medical doctor",
+  role: "Cloud, DevSecOps and data · former medical doctor",
   email: "davidbams3@gmail.com",
   location: "Alberta, Canada · Ile-Ife, Nigeria",
   cv: `${cvBase}/Oluwabamise_Omolaso_DevOps_CV.pdf`,
@@ -174,9 +174,9 @@ export const profile = {
 } as const;
 
 export const hero = {
-  headlineStart: "Cloud systems that are ",
-  headlineEmphasis: "secure,",
-  headlineEnd: " repeatable and cheap to run.",
+  headlineStart: "Cloud and data systems that are ",
+  headlineEmphasis: "secure",
+  headlineEnd: " and repeatable.",
   intro:
     "This is the AWS infrastructure I built for this portfolio, drawn the way I'd document it. It is paused: the site now runs on a Hetzner server (see the VPS section below). Scroll to follow one request through it.",
   primaryCta: "Work with me",
@@ -186,7 +186,7 @@ export const hero = {
 /** The home page's calm hero: who, what, and one way into the detail. */
 export const homeHero = {
   intro:
-    "I'm a doctor turned cloud engineer. I build infrastructure as code, run it in production, and write down what breaks.",
+    "Doctor turned engineer. I build cloud systems and data models, run them in production, and write down what breaks.",
   primaryCta: "See my work",
   secondaryCta: "View CV",
 } as const;

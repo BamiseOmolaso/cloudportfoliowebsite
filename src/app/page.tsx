@@ -53,7 +53,9 @@ export default async function HomePage() {
   const parts: Record<string, React.ReactNode> = {
     hero: (
       <Hero
-        workHref={shown("work") ? "#work" : "/projects"}
+        workHref={
+          shown("tracks") ? "#tracks" : shown("work") ? "#work" : "/projects"
+        }
         content={{
           hero: withOverrides("hero", hero, o),
           homeHero: withOverrides("homeHero", homeHero, o),
