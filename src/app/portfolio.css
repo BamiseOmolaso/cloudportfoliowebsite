@@ -2405,3 +2405,65 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* The home page's two doors into the data and cloud projects. */
+.pf .doors {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
+}
+.pf .door {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: grid;
+  grid-template-rows: auto auto 1fr auto auto;
+  gap: 0.85rem;
+  min-width: 0;
+  color: inherit;
+  text-decoration: none;
+  transition: border-color 0.2s ease;
+}
+.pf .door:hover,
+.pf .door:focus-visible {
+  border-color: var(--accent);
+}
+.pf .door h3 {
+  font-size: clamp(1.3rem, 2.6vw, 1.7rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.pf .door p {
+  color: var(--ink-2);
+  font-size: 0.95rem;
+}
+.pf .door .btn {
+  justify-self: start;
+}
+
+/* One moving row of tools per track, each with a small name above it. */
+.pf .tools-row + .tools-row {
+  margin-top: 1.4rem;
+}
+.pf .tools-row-name {
+  display: block;
+  margin-bottom: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+/* A short mark for a tool that has no logo, the same size as the logos. */
+.pf .tool-mark {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1.5px solid currentColor;
+  border-radius: 10px;
+  color: var(--ink);
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  font-weight: 700;
+}

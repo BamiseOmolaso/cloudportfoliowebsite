@@ -62,7 +62,7 @@ jobs:
             suffix: '-migrator'
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262  # v4
         with:
           persist-credentials: false
 
@@ -74,11 +74,11 @@ jobs:
           echo "name=ghcr.io/${owner}/cloudportfoliowebsite${{ matrix.suffix }}" >> "$GITHUB_OUTPUT"
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v4
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069  # v4
 
       - name: Log in to GHCR
         if: github.event_name != 'pull_request'
-        uses: docker/login-action@v3
+        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9  # v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -86,7 +86,7 @@ jobs:
 
       - name: Image tags
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@dc802804100637a589fabce1cb79ff13a1411302  # v6
         with:
           images: ${{ steps.img.outputs.name }}
           tags: |
@@ -94,7 +94,7 @@ jobs:
 
       - name: Build (and push on staging)
         id: build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8  # v6
         with:
           context: .
           target: ${{ matrix.target }}
@@ -122,7 +122,7 @@ jobs:
       # adds a cluster rule that refuses unsigned images), so this cannot break a deployment.
       - name: Install cosign
         if: github.event_name != 'pull_request'
-        uses: sigstore/cosign-installer@v3
+        uses: sigstore/cosign-installer@398d4b0eeef1380460a10c8013a76f728fb906ac  # v3
 
       - name: Sign the image (keyless)
         if: github.event_name != 'pull_request'
@@ -135,7 +135,7 @@ jobs:
       # base image is clean.
       - name: Block critical vulnerabilities (Trivy)
         if: github.event_name == 'pull_request'
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8  # v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           image-ref: ${{ steps.img.outputs.name }}:${{ steps.meta.outputs.version }}
           format: 'table'
@@ -174,7 +174,7 @@ jobs:
 
       - name: Upload the image reference
         if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a  # v7
         with:
           name: image-${{ matrix.name }}
           path: image.txt
@@ -186,7 +186,7 @@ jobs:
       # have a fix are shown.
       - name: Scan the published image for known vulnerabilities (Trivy)
         if: github.event_name != 'pull_request'
-        uses: aquasecurity/trivy-action@a9c7b0f06e461e9d4b4d1711f154ee024b8d7ab8  # v0.36.0
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25  # v0.36.0
         with:
           # By digest, so the scan covers exactly the bytes that were published.
           image-ref: ${{ steps.img.outputs.name }}@${{ steps.build.outputs.digest }}

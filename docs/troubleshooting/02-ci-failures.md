@@ -25,7 +25,7 @@ a pull request does not need (for example the website tests on a docs-only chang
 | **Image (app/migrator)** red during build | The Dockerfile build failed; read which `RUN` step. Often a `npm` or build error that also fails locally. | `docker build --target runner .` locally. |
 | **Image** red at "Block critical vulnerabilities" | The scan found a CRITICAL weakness that has a fix. | Open the log table; update that package or the base image. |
 | **Security Scan** red | `npm audit` found a vulnerable package. | Read the package name in the log; update it. |
-| **Validate Terraform** or infra **Plan** red | Often a bad input such as `TF_VAR_ADMIN_CIDRS`, which must look like `["1.2.3.4/32"]`. | Read the plan error; see [04-case-files.md](04-case-files.md). |
+| **Format and validate** or infra **Plan** red | Often a bad input such as `TF_VAR_ADMIN_CIDRS`, which must look like `["1.2.3.4/32"]`. | Read the plan error; see [04-case-files.md](04-case-files.md). |
 | **gitleaks** or **GitGuardian** red | A secret-looking string was committed. | Remove it, **change the real secret**, and never push it again. |
 | Check stays `pending` for ages | A runner queue, or a required check that never started because path filters skipped it. | Wait a few minutes; check the Actions tab. |
 

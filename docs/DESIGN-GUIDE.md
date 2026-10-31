@@ -287,7 +287,9 @@ How the layers combine: the page asks `getOverrides()` for the saved edits and p
 
 ## 9. Pages and navigation
 
-Menu: **Home, Projects, Blog, Learning, About, Contact.** (Contact scrolls to the contact
+Menu: **Home, Projects, Data, Cloud, Blog, Learning, About, Contact.** (`/data` and `/cloud` are
+the two tracks: curated project lists in `dataProjects` and `projects` in `portfolio.ts`, reached
+from the home page's "Choose a path" section.) (Contact scrolls to the contact
 section on Home, or goes to `/contact` when that section is hidden.) The platform this site
 runs on is a **project**, not a menu item; its page is
 `/projects/production-platform-on-hetzner`. `/architecture` redirects there.

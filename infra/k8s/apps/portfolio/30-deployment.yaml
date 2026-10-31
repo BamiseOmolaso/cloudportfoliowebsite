@@ -29,7 +29,7 @@ spec:
           type: RuntimeDefault
       containers:
         - name: web
-          image: ghcr.io/bamiseomolaso/cloudportfoliowebsite:sha-6729f9f@sha256:8087bdbb1d79a750493f74b5150a652c7188b6779ea2f82ccb9ae8b9b03e79d6
+          image: ghcr.io/bamiseomolaso/cloudportfoliowebsite:sha-e1fecd8@sha256:ad4f2d5cbe210fabf3ff386197c1f64e230fe040e20ec27a03a140a974f3b100
           ports:
             - name: http
               containerPort: 3000

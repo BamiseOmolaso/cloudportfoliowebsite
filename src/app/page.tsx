@@ -7,6 +7,7 @@ import PlatformFeature from "@/components/portfolio/PlatformFeature";
 import PortfolioShell from "@/components/portfolio/PortfolioShell";
 import Results from "@/components/portfolio/Results";
 import SiteFooter from "@/components/portfolio/SiteFooter";
+import Tracks from "@/components/portfolio/Tracks";
 import ToolsStrip from "@/components/portfolio/ToolsStrip";
 import Work from "@/components/portfolio/Work";
 import YouTube from "@/components/portfolio/YouTube";
@@ -52,7 +53,9 @@ export default async function HomePage() {
   const parts: Record<string, React.ReactNode> = {
     hero: (
       <Hero
-        workHref={shown("work") ? "#work" : "/projects"}
+        workHref={
+          shown("tracks") ? "#tracks" : shown("work") ? "#work" : "/projects"
+        }
         content={{
           hero: withOverrides("hero", hero, o),
           homeHero: withOverrides("homeHero", homeHero, o),
@@ -60,6 +63,7 @@ export default async function HomePage() {
         }}
       />
     ),
+    tracks: <Tracks />,
     tools: <ToolsStrip />,
     results: <Results />,
     work: <Work content={withOverrides("work", work, o)} />,

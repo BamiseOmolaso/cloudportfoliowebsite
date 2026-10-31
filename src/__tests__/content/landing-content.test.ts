@@ -50,7 +50,12 @@ describe("landing page copy", () => {
 
 describe("logos", () => {
   it("has a logo for every tool in the strip under the hero", () => {
-    for (const t of tools.items) {
+    for (const t of tools.rows.flatMap((r) => r.items)) {
+      if (t in tools.marks) {
+        // no logo exists for it: it gets a short mark, and must not also have a logo
+        expect(brandKey(t)).toBeUndefined();
+        continue;
+      }
       const key = brandKey(t);
       expect(key).toBeTruthy();
       expect(pathIcons[key as string] ?? maskIcons[key as string]).toBeTruthy();

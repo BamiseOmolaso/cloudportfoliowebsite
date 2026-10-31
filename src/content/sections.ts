@@ -27,6 +27,11 @@ export const SECTIONS: Record<PageKey, SectionDef[]> = {
       pinned: true,
     },
     {
+      id: "tracks",
+      label: "Choose a path",
+      description: "Two doors: the data projects and the cloud projects.",
+    },
+    {
       id: "tools",
       label: "Technical tools",
       description: "The moving row of tool logos.",
