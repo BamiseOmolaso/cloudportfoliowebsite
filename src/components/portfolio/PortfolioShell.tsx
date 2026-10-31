@@ -11,6 +11,8 @@ const STORAGE_KEY = "pf-theme";
 const NAV = [
   { label: "Home", href: "/" },
   { label: "Projects", href: "/projects" },
+  { label: "Data", href: "/data" },
+  { label: "Cloud", href: "/cloud" },
   { label: "Blog", href: "/blog" },
   { label: "Learning", href: "/learning" },
   { label: "About", href: "/about" },
